@@ -1,0 +1,6 @@
+<svg width="160" height="160" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background ballot shape -->
+  <rect x="15" y="22" width="130" height="130" rx="16" fill="#F5F5F5" stroke="#1976d2" stroke-width="4"/>
+  <!-- Success check (green, rank 3) -->
+  <polyline points="50,103 70,128 120,48" fill="none" stroke="#2e7d32" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+</svg>
