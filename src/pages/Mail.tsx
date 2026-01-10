@@ -13,6 +13,7 @@ import Divider from '@mui/material/Divider';
 import Paper from '@mui/material/Paper';
 import CircularProgress from '@mui/material/CircularProgress';
 import Collapse from '@mui/material/Collapse';
+import Fab from '@mui/material/Fab';
 
 import InboxIcon from '@mui/icons-material/Inbox';
 import SendIcon from '@mui/icons-material/Send';
@@ -21,8 +22,10 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import FolderIcon from '@mui/icons-material/Folder';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
+import EditIcon from '@mui/icons-material/Edit';
 
 import MessageList from '../components/MessageList';
+import ComposeEmail from '../components/ComposeEmail';
 
 const drawerWidth = 240;
 
@@ -58,6 +61,7 @@ export default function Mail({ path }: MailProps) {
 	const [selectedMailbox, setSelectedMailbox] = useState<string>('INBOX');
 	const [loading, setLoading] = useState(true);
 	const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['INBOX']));
+	const [composeOpen, setComposeOpen] = useState(false);
 
 	useEffect(() => {
 		// Check authentication will be handled by the backend
@@ -205,7 +209,7 @@ export default function Mail({ path }: MailProps) {
 			</Drawer>
 
 			{/* Message list area */}
-			<Box component="main" sx={{ flexGrow: 1, p: 3 }}>
+			<Box component="main" sx={{ flexGrow: 1, p: 3, position: 'relative' }}>
 				<Toolbar />
 				<Paper sx={{ height: 'calc(100vh - 112px)', overflow: 'hidden' }}>
 					{selectedMailbox && isActualMailbox ? (
@@ -218,7 +222,24 @@ export default function Mail({ path }: MailProps) {
 						</Box>
 					)}
 				</Paper>
+
+				{/* Floating compose button */}
+				<Fab
+					color="primary"
+					aria-label="compose"
+					onClick={() => setComposeOpen(true)}
+					sx={{
+						position: 'fixed',
+						bottom: 32,
+						right: 32,
+					}}
+				>
+					<EditIcon />
+				</Fab>
 			</Box>
+
+			{/* Compose email drawer */}
+			<ComposeEmail open={composeOpen} onClose={() => setComposeOpen(false)} />
 		</Box>
 	);
 }

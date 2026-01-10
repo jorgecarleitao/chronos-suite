@@ -12,6 +12,15 @@ import MailIcon from '@mui/icons-material/Mail';
 import DraftsIcon from '@mui/icons-material/Drafts';
 import FlagIcon from '@mui/icons-material/Flag';
 import StarIcon from '@mui/icons-material/Star';
+import IconButton from '@mui/material/IconButton';
+import DeleteIcon from '@mui/icons-material/Delete';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogActions from '@mui/material/DialogActions';
+import Button from '@mui/material/Button';
+import MessageViewer from './MessageViewer';
 
 interface Message {
 	uid: number;
@@ -36,10 +45,62 @@ export default function MessageList({ mailbox }: MessageListProps) {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [selectedMessage, setSelectedMessage] = useState<number | null>(null);
+	const [viewerOpen, setViewerOpen] = useState(false);
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+	const [messageToDelete, setMessageToDelete] = useState<number | null>(null);
 
 	useEffect(() => {
 		loadMessages();
 	}, [mailbox]);
+
+	const handleMessageClick = (uid: number) => {
+		setSelectedMessage(uid);
+		setViewerOpen(true);
+	};
+
+	const handleViewerClose = () => {
+		setViewerOpen(false);
+		// Optionally reload messages to update read status
+		loadMessages();
+	};
+
+	const handleDeleteClick = (uid: number, event: Event) => {
+		event.stopPropagation();
+		setMessageToDelete(uid);
+		setDeleteDialogOpen(true);
+	};
+
+	const handleDeleteConfirm = async () => {
+		if (!messageToDelete) return;
+
+		try {
+			const apiUrl = import.meta.env.VITE_API_URL;
+			const response = await fetch(
+				`${apiUrl}/api/imap/mailboxes/${encodeURIComponent(mailbox)}/messages/${messageToDelete}`,
+				{
+					method: 'DELETE',
+					credentials: 'include',
+				}
+			);
+
+			if (!response.ok) {
+				throw new Error('Failed to delete message');
+			}
+
+			// Reload messages after successful deletion
+			await loadMessages();
+		} catch (err) {
+			setError(err instanceof Error ? err.message : 'Failed to delete message');
+		} finally {
+			setDeleteDialogOpen(false);
+			setMessageToDelete(null);
+		}
+	};
+
+	const handleDeleteCancel = () => {
+		setDeleteDialogOpen(false);
+		setMessageToDelete(null);
+	};
 
 	const loadMessages = async () => {
 		setLoading(true);
@@ -144,10 +205,23 @@ export default function MessageList({ mailbox }: MessageListProps) {
 					const draft = isDraft(message.flags);
 					
 					return (
-					<ListItem key={message.uid} disablePadding divider>
+					<ListItem 
+						key={message.uid} 
+						disablePadding 
+						divider
+						secondaryAction={
+							<IconButton 
+								edge="end" 
+								aria-label="delete"
+								onClick={(e) => handleDeleteClick(message.uid, e)}
+							>
+								<DeleteIcon />
+							</IconButton>
+						}
+					>
 						<ListItemButton
 							selected={selectedMessage === message.uid}
-							onClick={() => setSelectedMessage(message.uid)}
+							onClick={() => handleMessageClick(message.uid)}
 							sx={{ userSelect: 'text' }}
 						>
 							<Box sx={{ display: 'flex', alignItems: 'center', mr: 1 }}>
@@ -217,6 +291,33 @@ export default function MessageList({ mailbox }: MessageListProps) {
 					);
 				})}
 			</List>
+			
+			{/* Message Viewer Dialog */}
+			{selectedMessage && (
+				<MessageViewer
+					open={viewerOpen}
+					onClose={handleViewerClose}
+					onDelete={loadMessages}
+					mailbox={mailbox}
+					uid={selectedMessage}
+				/>
+			)}
+
+			{/* Delete Confirmation Dialog */}
+			<Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
+				<DialogTitle>Delete Message</DialogTitle>
+				<DialogContent>
+					<DialogContentText>
+						Are you sure you want to delete this message? This action cannot be undone.
+					</DialogContentText>
+				</DialogContent>
+				<DialogActions>
+					<Button onClick={handleDeleteCancel}>Cancel</Button>
+					<Button onClick={handleDeleteConfirm} color="error" variant="contained">
+						Delete
+					</Button>
+				</DialogActions>
+			</Dialog>
 		</Box>
 	);
 }
