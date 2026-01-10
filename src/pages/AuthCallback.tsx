@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import { route } from 'preact-router';
-import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
 import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
@@ -48,15 +48,11 @@ export default function AuthCallback({ path }: AuthCallbackProps) {
 	}, []);
 
 	return (
-		<Box
-			sx={{
-				display: 'flex',
-				flexDirection: 'column',
-				alignItems: 'center',
-				justifyContent: 'center',
-				minHeight: '100vh',
-				gap: 2,
-			}}
+		<Stack
+			alignItems="center"
+			justifyContent="center"
+			minHeight="100vh"
+			spacing={2}
 		>
 			{error ? (
 				<>
@@ -73,6 +69,6 @@ export default function AuthCallback({ path }: AuthCallbackProps) {
 					</Typography>
 				</>
 			)}
-		</Box>
+		</Stack>
 	);
 }

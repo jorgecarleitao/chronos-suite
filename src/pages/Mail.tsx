@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'preact/hooks';
 import { route } from 'preact-router';
 import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
 import Drawer from '@mui/material/Drawer';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
@@ -107,10 +108,10 @@ export default function Mail({ path }: MailProps) {
 		});
 	};
 
-	const renderMailboxNode = (node: MailboxNode, depth: number = 0): JSX.Element[] => {
-		const hasChildren = node.children.length > 0;
-		const isExpanded = expandedFolders.has(node.name);
-		const elements: JSX.Element[] = [];
+		const renderMailboxNode = (node: MailboxNode, depth: number = 0) => {
+			const hasChildren = node.children.length > 0;
+			const isExpanded = expandedFolders.has(node.name);
+			const elements = [];
 
 		elements.push(
 			<ListItem key={node.name} disablePadding>
@@ -125,7 +126,7 @@ export default function Mail({ path }: MailProps) {
 							setSelectedMailbox(node.name);
 						}
 					}}
-					sx={{ pl: 2 + depth * 2 }}
+					style={{ paddingLeft: (2 + depth * 2) * 8 }}
 				>
 					<ListItemIcon>
 						{getMailboxIcon(node.name)}
@@ -177,29 +178,29 @@ export default function Mail({ path }: MailProps) {
 	};
 
 	return (
-		<Box sx={{ display: 'flex', height: '100vh' }}>
+		<Box display="flex">
 			{/* Mailbox sidebar */}
 			<Drawer
 				variant="permanent"
 				sx={{
 					width: drawerWidth,
 					flexShrink: 0,
-					[`& .MuiDrawer-paper`]: {
+					'& .MuiDrawer-paper': {
 						width: drawerWidth,
 						boxSizing: 'border-box',
 					},
 				}}
 			>
 				<Toolbar />
-				<Box sx={{ overflow: 'auto' }}>
-					<Typography variant="h6" sx={{ p: 2 }}>
+					<Box style={{ overflow: 'auto' }}>
+						<Typography variant="h6" padding={2}>
 						Mailboxes
 					</Typography>
 					<Divider />
 					{loading ? (
-						<Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+							<Stack justifyContent="center" padding={3}>
 							<CircularProgress />
-						</Box>
+					</Stack>
 					) : (
 						<List>
 							{mailboxTree.map((node) => renderMailboxNode(node))}
@@ -209,17 +210,17 @@ export default function Mail({ path }: MailProps) {
 			</Drawer>
 
 			{/* Message list area */}
-			<Box component="main" sx={{ flexGrow: 1, p: 3, position: 'relative' }}>
+			<Box component="main" flexGrow={1} padding={3}>
 				<Toolbar />
-				<Paper sx={{ height: 'calc(100vh - 112px)', overflow: 'hidden' }}>
+				<Paper style={{ height: 'calc(100vh - 112px)', overflow: 'hidden' }}>
 					{selectedMailbox && isActualMailbox ? (
 						<MessageList mailbox={selectedMailbox} />
 					) : (
-						<Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+						<Stack justifyContent="center" alignItems="center" height="100%">
 							<Typography color="text.secondary">
 								{selectedMailbox ? 'This is a folder. Select a mailbox to view messages.' : 'Select a mailbox to view messages'}
 							</Typography>
-						</Box>
+						</Stack>
 					)}
 				</Paper>
 
@@ -228,10 +229,10 @@ export default function Mail({ path }: MailProps) {
 					color="primary"
 					aria-label="compose"
 					onClick={() => setComposeOpen(true)}
-					sx={{
+					style={{
 						position: 'fixed',
 						bottom: 32,
-						right: 32,
+						right: 32
 					}}
 				>
 					<EditIcon />

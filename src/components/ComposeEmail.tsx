@@ -9,6 +9,7 @@ import Stack from '@mui/material/Stack';
 import Toolbar from '@mui/material/Toolbar';
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
+import Divider from '@mui/material/Divider';
 
 import CloseIcon from '@mui/icons-material/Close';
 import SendIcon from '@mui/icons-material/Send';
@@ -137,39 +138,34 @@ export default function ComposeEmail({ open, onClose, mailbox = 'Drafts' }: Comp
 			anchor="right"
 			open={open}
 			onClose={onClose}
-			sx={{
-				width: drawerWidth,
-				flexShrink: 0,
-				[`& .MuiDrawer-paper`]: {
-					width: drawerWidth,
-					boxSizing: 'border-box',
-				},
+			PaperProps={{
+				style: { width: drawerWidth }
 			}}
 		>
 			<Toolbar />
-			<Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+			<Stack padding={2} spacing={2} height="100%">
 				{/* Header */}
-				<Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+				<Stack direction="row" justifyContent="space-between" alignItems="center">
 					<Typography variant="h6">New Message</Typography>
 					<IconButton onClick={onClose} size="small">
 						<CloseIcon />
 					</IconButton>
-				</Box>
+				</Stack>
 
 				{/* Success/Error messages */}
 				{success && (
-					<Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
+					<Alert severity="success" onClose={() => setSuccess(null)}>
 						{success}
 					</Alert>
 				)}
 				{error && (
-					<Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+					<Alert severity="error" onClose={() => setError(null)}>
 						{error}
 					</Alert>
 				)}
 
 				{/* Form */}
-				<Stack spacing={2} sx={{ flex: 1, overflow: 'auto' }}>
+				<Stack spacing={2} style={{ flex: 1, overflow: 'auto' }}>
 					<TextField
 						label="To"
 						variant="outlined"
@@ -181,14 +177,14 @@ export default function ComposeEmail({ open, onClose, mailbox = 'Drafts' }: Comp
 						helperText="Separate multiple addresses with commas or semicolons"
 					/>
 
-					<Box sx={{ display: 'flex', gap: 1 }}>
+					<Stack direction="row" spacing={1}>
 						<Button size="small" onClick={() => setShowCc(!showCc)}>
 							{showCc ? 'Remove Cc' : 'Add Cc'}
 						</Button>
 						<Button size="small" onClick={() => setShowBcc(!showBcc)}>
 							{showBcc ? 'Remove Bcc' : 'Add Bcc'}
 						</Button>
-					</Box>
+					</Stack>
 
 					{showCc && (
 						<TextField
@@ -225,8 +221,8 @@ export default function ComposeEmail({ open, onClose, mailbox = 'Drafts' }: Comp
 					/>
 
 					{/* Markdown Editor */}
-					<Box sx={{ flex: 1, minHeight: '300px' }}>
-						<Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+					<Box style={{ flex: 1, minHeight: '300px' }}>
+						<Typography variant="caption" color="text.secondary" display="block" marginBottom={1}>
 							Body (Markdown supported - paste images directly)
 						</Typography>
 						<div data-color-mode="light" onPaste={handlePaste}>
@@ -243,7 +239,8 @@ export default function ComposeEmail({ open, onClose, mailbox = 'Drafts' }: Comp
 				</Stack>
 
 				{/* Actions */}
-				<Box sx={{ display: 'flex', gap: 1, mt: 2, pt: 2, borderTop: 1, borderColor: 'divider' }}>
+				<Divider />
+				<Stack direction="row" spacing={1} paddingTop={2}>
 					<Button
 						variant="contained"
 						startIcon={saving ? <CircularProgress size={20} /> : <SaveIcon />}
@@ -260,8 +257,8 @@ export default function ComposeEmail({ open, onClose, mailbox = 'Drafts' }: Comp
 					>
 						Clear
 					</Button>
-				</Box>
-			</Box>
+				</Stack>
+			</Stack>
 		</Drawer>
 	);
 }

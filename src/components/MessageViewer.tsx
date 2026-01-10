@@ -9,6 +9,8 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
+import Paper from '@mui/material/Paper';
+import Divider from '@mui/material/Divider';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SendIcon from '@mui/icons-material/Send';
@@ -200,11 +202,11 @@ const renderMessageHeader = (
 	onDelete: () => void,
 	onClose: () => void
 ) => (
-	<Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
-		<Typography variant="h6" sx={{ flex: 1, pr: 2 }}>
+	<Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
+		<Typography variant="h6" flexGrow={1}>
 			{message.subject || '(No Subject)'}
 		</Typography>
-		<Box sx={{ display: 'flex', gap: 1 }}>
+		<Stack direction="row" spacing={1}>
 			{isDraft && (
 				<Button
 					variant="contained"
@@ -222,8 +224,8 @@ const renderMessageHeader = (
 			<IconButton onClick={onClose} size="small">
 				<CloseIcon />
 			</IconButton>
-		</Box>
-	</Box>
+		</Stack>
+	</Stack>
 );
 
 const renderMessageMetadata = (message: MessageDetail) => (
@@ -234,7 +236,7 @@ const renderMessageMetadata = (message: MessageDetail) => (
 		<Typography variant="body2">
 			<strong>To:</strong> {message.to || 'Unknown'}
 		</Typography>
-		<Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+		<Stack direction="row" spacing={2} alignItems="center">
 			<Typography variant="body2" color="text.secondary">
 				{message.date ? new Date(message.date).toLocaleString() : 'Unknown'}
 			</Typography>
@@ -245,7 +247,7 @@ const renderMessageMetadata = (message: MessageDetail) => (
 					))}
 				</Stack>
 			)}
-		</Box>
+		</Stack>
 	</Stack>
 );
 
@@ -261,14 +263,9 @@ const renderMessageBody = (parsedBody: { html?: string; text?: string } | null) 
 
 	if (parsedBody.text) {
 		return (
-			<Box
-				sx={{
-					fontFamily: 'monospace',
-					whiteSpace: 'pre-wrap',
-				}}
-			>
+			<Typography component="pre" fontFamily="monospace" whiteSpace="pre-wrap">
 				{parsedBody.text}
-			</Box>
+			</Typography>
 		);
 	}
 
@@ -277,77 +274,70 @@ const renderMessageBody = (parsedBody: { html?: string; text?: string } | null) 
 
 	return (
 		<Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
-			<DialogContent sx={{ p: 0, display: 'flex', flexDirection: 'column', height: '80vh' }}>
-				{loading && (
-					<Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-						<CircularProgress />
-					</Box>
-				)}
-
-				{error && (
-					<Alert severity="error" sx={{ m: 2 }} onClose={() => setError(null)}>
-						{error}
-					</Alert>
-				)}
-
-				{sendSuccess && (
-					<Alert severity="success" sx={{ m: 2 }} onClose={() => setSendSuccess(null)}>
-						{sendSuccess}
-					</Alert>
-				)}
-
-				{message && !loading && (
-					<>
-						{/* Compact header section */}
-						<Box
-							sx={{
-								borderBottom: 1,
-								borderColor: 'divider',
-								p: 2,
-								bgcolor: 'background.paper',
-							}}
-						>
-						{renderMessageHeader(
-							message,
-							isDraft(),
-							sending,
-							handleSendClick,
-							handleDeleteClick,
-							onClose
-						)}
-						{renderMessageMetadata(message)}
-					</Box>
-
-					{/* Large body section */}
-					<Box
-						sx={{
-							flex: 1,
-							overflow: 'auto',
-							p: 3,
-							bgcolor: 'white',
-						}}
-					>
-						{renderMessageBody(parsedBody)}
-					</Box>
-				</>
-			)}
-		</DialogContent>
-
-		{/* Delete Confirmation Dialog */}
-		<Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
-			<DialogTitle>Delete Message</DialogTitle>
 			<DialogContent>
-				<DialogContentText>
-					Are you sure you want to delete this message? This action cannot be undone.
-				</DialogContentText>
+				<Stack spacing={0} height="80vh">
+					{loading && (
+						<Stack justifyContent="center" alignItems="center" padding={3}>
+							<CircularProgress />
+						</Stack>
+					)}
+
+					{error && (
+						<Alert severity="error" onClose={() => setError(null)}>
+							{error}
+						</Alert>
+					)}
+
+					{sendSuccess && (
+						<Alert severity="success" onClose={() => setSendSuccess(null)}>
+							{sendSuccess}
+						</Alert>
+					)}
+
+					{message && !loading && (
+						<>
+							{/* Compact header section */}
+							<Paper elevation={0} square>
+								<Stack spacing={1.5} padding={2}>
+									{renderMessageHeader(
+										message,
+										isDraft(),
+										sending,
+										handleSendClick,
+										handleDeleteClick,
+										onClose
+									)}
+									{renderMessageMetadata(message)}
+								</Stack>
+								<Divider />
+							</Paper>
+
+							{/* Large body section */}
+							<Paper elevation={0} square style={{ flex: 1, overflow: 'auto', backgroundColor: 'white' }}>
+								<Box padding={3}>
+									{renderMessageBody(parsedBody)}
+								</Box>
+							</Paper>
+						</>
+					)}
+				</Stack>
 			</DialogContent>
-			<DialogActions>
-				<Button onClick={handleDeleteCancel}>Cancel</Button>
-				<Button onClick={handleDeleteConfirm} color="error" variant="contained">
-					Delete
-				</Button>
-			</DialogActions>
+
+			{/* Delete Confirmation Dialog */}
+			<Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
+				<DialogTitle>Delete Message</DialogTitle>
+				<DialogContent>
+					<DialogContentText>
+						Are you sure you want to delete this message? This action cannot be undone.
+					</DialogContentText>
+				</DialogContent>
+				<DialogActions>
+					<Button onClick={handleDeleteCancel}>Cancel</Button>
+					<Button onClick={handleDeleteConfirm} color="error" variant="contained">
+						Delete
+					</Button>
+				</DialogActions>
+			</Dialog>
 		</Dialog>
-	</Dialog>
 	);
 }

@@ -8,6 +8,9 @@ import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
 import Chip from '@mui/material/Chip';
+import Stack from '@mui/material/Stack';
+import Paper from '@mui/material/Paper';
+import Divider from '@mui/material/Divider';
 import MailIcon from '@mui/icons-material/Mail';
 import DraftsIcon from '@mui/icons-material/Drafts';
 import FlagIcon from '@mui/icons-material/Flag';
@@ -164,15 +167,15 @@ export default function MessageList({ mailbox }: MessageListProps) {
 
 	if (loading) {
 		return (
-			<Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+			<Stack justifyContent="center" alignItems="center" height="100%">
 				<CircularProgress />
-			</Box>
+			</Stack>
 		);
 	}
 
 	if (error) {
 		return (
-			<Box sx={{ p: 3 }}>
+			<Box padding={3}>
 				<Alert severity="error">{error}</Alert>
 			</Box>
 		);
@@ -180,23 +183,26 @@ export default function MessageList({ mailbox }: MessageListProps) {
 
 	if (messages.length === 0) {
 		return (
-			<Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+			<Stack justifyContent="center" alignItems="center" height="100%">
 				<Typography color="text.secondary">
 					No messages in this mailbox
 				</Typography>
-			</Box>
+			</Stack>
 		);
 	}
 
 	return (
-		<Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-			<Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-				<Typography variant="h6">
-					{mailbox}
-					<Chip label={`${total} messages`} size="small" sx={{ ml: 2 }} />
-				</Typography>
-			</Box>
-			<List sx={{ flexGrow: 1, overflow: 'auto' }}>
+		<Stack height="100%">
+			<Paper elevation={0} square>
+				<Box padding={2}>
+					<Stack direction="row" spacing={2} alignItems="center">
+						<Typography variant="h6">{mailbox}</Typography>
+						<Chip label={`${total} messages`} size="small" />
+					</Stack>
+				</Box>
+				<Divider />
+			</Paper>
+			<List style={{ flexGrow: 1, overflow: 'auto' }}>
 				{messages.map((message) => {
 					const displayName = message.from_name || message.from_email || 'Unknown Sender';
 					const formattedDate = formatDate(message.date);
@@ -222,70 +228,21 @@ export default function MessageList({ mailbox }: MessageListProps) {
 						<ListItemButton
 							selected={selectedMessage === message.uid}
 							onClick={() => handleMessageClick(message.uid)}
-							sx={{ userSelect: 'text' }}
 						>
-							<Box sx={{ display: 'flex', alignItems: 'center', mr: 1 }}>
-								{unread ? (
-									<MailIcon sx={{ color: 'primary.main', fontSize: 20 }} />
-								) : (
-									<DraftsIcon sx={{ color: 'text.disabled', fontSize: 20 }} />
-								)}
-							</Box>
-							{flagged && (
-								<Box sx={{ display: 'flex', alignItems: 'center', mr: 1 }}>
-									<StarIcon sx={{ color: 'warning.main', fontSize: 20 }} />
-								</Box>
-							)}
-							{draft && (
-								<Box sx={{ display: 'flex', alignItems: 'center', mr: 1 }}>
-									<Chip label="Draft" size="small" sx={{ height: 20, fontSize: '0.7rem' }} />
-								</Box>
-							)}
-							<ListItemText
-								primary={
-									<Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', userSelect: 'text' }}>
-										<Typography
-											component="span"
-											variant="body1"
-											sx={{
-												fontWeight: unread ? 'bold' : 'normal',
-												flexGrow: 1,
-												overflow: 'hidden',
-												textOverflow: 'ellipsis',
-												whiteSpace: 'nowrap',
-												userSelect: 'text',
-											}}
-										>
-											{displayName}
-										</Typography>
-										<Typography
-											component="span"
-											variant="caption"
-											color="text.secondary"
-											sx={{ ml: 2, flexShrink: 0, userSelect: 'text' }}
-										>
-											{formattedDate}
-										</Typography>
-									</Box>
-								}
-								secondary={
-									<Typography
-										component="span"
-										variant="body2"
-										color="text.secondary"
-										sx={{
-											fontWeight: unread ? 'bold' : 'normal',
-											overflow: 'hidden',
-											textOverflow: 'ellipsis',
-											whiteSpace: 'nowrap',
-											display: 'block',
-											userSelect: 'text',
-										}}
-									>
-										{message.subject || '(No subject)'}
-									</Typography>
-								}
-							/>
+							<Stack direction="row" spacing={1} alignItems="center" width="100%">
+								{unread ? <MailIcon color="primary" /> : <DraftsIcon />}
+								{flagged && <StarIcon color="warning" />}
+								<ListItemText
+									primary={displayName}
+									secondary={message.subject || '(No subject)'}
+									primaryTypographyProps={{
+										fontWeight: unread ? 'bold' : 'normal'
+									}}
+								/>
+								<Typography variant="caption" color="text.secondary">
+									{formattedDate}
+								</Typography>
+							</Stack>
 						</ListItemButton>
 					</ListItem>
 					);
@@ -318,6 +275,6 @@ export default function MessageList({ mailbox }: MessageListProps) {
 					</Button>
 				</DialogActions>
 			</Dialog>
-		</Box>
+		</Stack>
 	);
 }
