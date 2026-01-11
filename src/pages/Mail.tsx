@@ -153,8 +153,33 @@ export default function Mail({ path }: MailProps) {
 		return elements;
 	};
 
-	// Convert backend tree structure to frontend nodes
-	const mailboxTree = mailboxes.map(convertToNode);
+	// Custom order for main mailboxes
+	const MAIN_ORDER = ['inbox', 'drafts', 'sent items', 'junk mail', 'deleted items'];
+
+	// Helper to flatten and sort mailboxes by MAIN_ORDER, then others
+	function sortMailboxes(nodes: MailboxNode[]): MailboxNode[] {
+		// Separate main mailboxes and others
+		const main: MailboxNode[] = [];
+		const others: MailboxNode[] = [];
+		for (const node of nodes) {
+			const idx = MAIN_ORDER.findIndex(
+				name => node.displayName.toLowerCase() === name
+			);
+			if (idx !== -1) {
+				main[idx] = node;
+			} else {
+				others.push(node);
+			}
+		}
+		// Filter out undefined slots in main
+		const orderedMain = main.filter(Boolean);
+		// Sort others alphabetically
+		others.sort((a, b) => a.displayName.localeCompare(b.displayName));
+		return [...orderedMain, ...others];
+	}
+
+	// Convert backend tree structure to frontend nodes and sort
+	const mailboxTree = sortMailboxes(mailboxes.map(convertToNode));
 
 	// Check if selected mailbox is selectable
 	const isSelectableMailbox = (name: string, mailboxes: Mailbox[]): boolean => {
