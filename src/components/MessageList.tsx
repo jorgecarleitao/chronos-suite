@@ -24,27 +24,15 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import MessageViewer from './MessageViewer';
-import { fetchMessages, deleteMessage } from '../data/messages';
+import { fetchMessages, deleteMessage, MessageMetadata } from '../data/messages';
 
-interface Message {
-	uid: number;
-	sequence: number;
-	flags: string[];
-	size?: number;
-	from_name?: string;
-	from_email?: string;
-	to_name?: string;
-	to_email?: string;
-	subject?: string;
-	date?: string;
-}
 
 interface MessageListProps {
 	mailbox: string;
 }
 
 export default function MessageList({ mailbox }: MessageListProps) {
-	const [messages, setMessages] = useState<Message[]>([]);
+	const [messages, setMessages] = useState<MessageMetadata[]>([]);
 	const [total, setTotal] = useState(0);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
@@ -97,8 +85,8 @@ export default function MessageList({ mailbox }: MessageListProps) {
 		setError(null);
 		try {
 			const data = await fetchMessages(mailbox);
-			setMessages(data.messages || []);
-			setTotal(data.total || 0);
+			setMessages(data.messages);
+			setTotal(data.total);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'Failed to load messages');
 		} finally {
@@ -118,18 +106,11 @@ export default function MessageList({ mailbox }: MessageListProps) {
 		return flags.some(flag => flag === 'Draft');
 	};
 
-	const formatDate = (dateStr?: string) => {
-		if (!dateStr) return '';
+	const now = new Date();
+	const formatDate = (date: Date | null) => {
+		if (!date) return '';
 		try {
-			const date = new Date(dateStr);
-			// Check if date is valid
-			if (isNaN(date.getTime())) {
-				return '';
-			}
-			const now = new Date();
-			const isToday = date.toDateString() === now.toDateString();
-			
-			if (isToday) {
+			if (date.toDateString() === now.toDateString()) {
 				return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 			}
 			return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
@@ -182,46 +163,46 @@ export default function MessageList({ mailbox }: MessageListProps) {
 					const unread = isUnread(message.flags);
 					const flagged = isFlagged(message.flags);
 					const draft = isDraft(message.flags);
-					
+
 					return (
-					<ListItem 
-						key={message.uid} 
-						disablePadding 
-						divider
-						secondaryAction={
-							<IconButton 
-								edge="end" 
-								aria-label="delete"
-								onClick={(e) => handleDeleteClick(message.uid, e)}
-							>
-								<DeleteIcon />
-							</IconButton>
-						}
-					>
-						<ListItemButton
-							selected={selectedMessage === message.uid}
-							onClick={() => handleMessageClick(message.uid)}
+						<ListItem
+							key={message.uid}
+							disablePadding
+							divider
+							secondaryAction={
+								<IconButton
+									edge="end"
+									aria-label="delete"
+									onClick={(e) => handleDeleteClick(message.uid, e)}
+								>
+									<DeleteIcon />
+								</IconButton>
+							}
 						>
-							<Stack direction="row" spacing={1} alignItems="center" width="100%">
-								{unread ? <MailIcon color="primary" /> : <DraftsIcon />}
-								{flagged && <StarIcon color="warning" />}
-								<ListItemText
-									primary={displayName}
-									secondary={message.subject || '(No subject)'}
-									primaryTypographyProps={{
-										fontWeight: unread ? 'bold' : 'normal'
-									}}
-								/>
-								<Typography variant="caption" color="text.secondary">
-									{formattedDate}
-								</Typography>
-							</Stack>
-						</ListItemButton>
-					</ListItem>
+							<ListItemButton
+								selected={selectedMessage === message.uid}
+								onClick={() => handleMessageClick(message.uid)}
+							>
+								<Stack direction="row" spacing={1} alignItems="center" width="100%">
+									{unread ? <MailIcon color="primary" /> : <DraftsIcon />}
+									{flagged && <StarIcon color="warning" />}
+									<ListItemText
+										primary={displayName}
+										secondary={message.subject || '(No subject)'}
+										primaryTypographyProps={{
+											fontWeight: unread ? 'bold' : 'normal'
+										}}
+									/>
+									<Typography variant="caption" color="text.secondary">
+										{formattedDate}
+									</Typography>
+								</Stack>
+							</ListItemButton>
+						</ListItem>
 					);
 				})}
 			</List>
-			
+
 			{/* Message Viewer Dialog */}
 			{selectedMessage && (
 				<MessageViewer
