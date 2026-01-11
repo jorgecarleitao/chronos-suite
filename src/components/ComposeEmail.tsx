@@ -16,8 +16,11 @@ import SendIcon from '@mui/icons-material/Send';
 import SaveIcon from '@mui/icons-material/Save';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 
+
 import MDEditor from '@uiw/react-md-editor';
 import rehypeSanitize from "rehype-sanitize";
+import { marked } from 'marked';
+import { sendMessage } from '../data/messages';
 
 const drawerWidth = 600;
 
@@ -44,6 +47,32 @@ export default function ComposeEmail({ open, onClose, mailbox = 'Drafts' }: Comp
 			.split(/[,;]/)
 			.map(e => e.trim())
 			.filter(e => e.length > 0);
+	};
+
+	const handleSend = async () => {
+		setSaving(true);
+		setError(null);
+		setSuccess(null);
+		try {
+			let htmlBody = marked.parse(body);
+			if (htmlBody instanceof Promise) {
+				htmlBody = await htmlBody;
+			}
+			const data = await sendMessage(
+				parseEmailList(to),
+				subject,
+				htmlBody
+			);
+			setSuccess(data.message || 'Email sent successfully');
+			setTimeout(() => {
+				handleClear();
+				onClose();
+			}, 1500);
+		} catch (err) {
+			setError(err instanceof Error ? err.message : 'Failed to send email');
+		} finally {
+			setSaving(false);
+		}
 	};
 
 	const handleSaveDraft = async () => {
@@ -243,10 +272,19 @@ export default function ComposeEmail({ open, onClose, mailbox = 'Drafts' }: Comp
 				<Stack direction="row" spacing={1} paddingTop={2}>
 					<Button
 						variant="contained"
-						startIcon={saving ? <CircularProgress size={20} /> : <SaveIcon />}
-						onClick={handleSaveDraft}
+						startIcon={saving ? <CircularProgress size={20} /> : <SendIcon />}
+						onClick={handleSend}
 						disabled={saving}
 						fullWidth
+						color="primary"
+					>
+						Send
+					</Button>
+					<Button
+						variant="outlined"
+						startIcon={<SaveIcon />}
+						onClick={handleSaveDraft}
+						disabled={saving}
 					>
 						Save Draft
 					</Button>

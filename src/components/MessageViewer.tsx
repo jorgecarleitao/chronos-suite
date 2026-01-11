@@ -18,6 +18,7 @@ import Button from '@mui/material/Button';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogActions from '@mui/material/DialogActions';
 import DOMPurify from 'dompurify';
+import { fetchMessage as apiFetchMessage, deleteMessage as apiDeleteMessage, sendMessage as apiSendMessage } from '../data/messages';
 
 interface MessageViewerProps {
 	open: boolean;
@@ -59,24 +60,9 @@ export default function MessageViewer({ open, onClose, onDelete, mailbox, uid }:
 	const fetchMessage = async () => {
 		setLoading(true);
 		setError(null);
-		
 		try {
-			const apiUrl = import.meta.env.VITE_API_URL;
-			const response = await fetch(
-				`${apiUrl}/api/imap/mailboxes/${encodeURIComponent(mailbox)}/messages/${uid}`,
-				{
-					credentials: 'include',
-				}
-			);
-
-			if (!response.ok) {
-				throw new Error('Failed to fetch message');
-			}
-
-			const data: MessageDetail = await response.json();
+			const data: MessageDetail = await apiFetchMessage(mailbox, uid);
 			setMessage(data);
-
-			// Backend already parsed the email body
 			if (data.html_body) {
 				setParsedBody({ html: sanitizeHTML(data.html_body), text: data.text_body });
 			} else if (data.text_body) {
@@ -99,20 +85,7 @@ const handleDeleteClick = () => {
 
 const handleDeleteConfirm = async () => {
 	try {
-		const apiUrl = import.meta.env.VITE_API_URL;
-		const response = await fetch(
-			`${apiUrl}/api/imap/mailboxes/${encodeURIComponent(mailbox)}/messages/${uid}`,
-			{
-				method: 'DELETE',
-				credentials: 'include',
-			}
-		);
-
-		if (!response.ok) {
-			throw new Error('Failed to delete message');
-		}
-
-		// Close dialog and notify parent
+		await apiDeleteMessage(mailbox, uid);
 		setDeleteDialogOpen(false);
 		onClose();
 		if (onDelete) {
@@ -130,44 +103,21 @@ const handleDeleteCancel = () => {
 
 const handleSendClick = async () => {
 	if (!message) return;
-	
 	setSending(true);
 	setError(null);
 	setSendSuccess(null);
-	
 	try {
-		// Parse recipients from message
 		const toList = message.to?.split(',').map(e => e.trim()).filter(e => e.length > 0) || [];
-		
-		const apiUrl = import.meta.env.VITE_API_URL;
-		const response = await fetch(`${apiUrl}/api/smtp/send`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-			},
-			credentials: 'include',
-			body: JSON.stringify({
-				to: toList,
-				subject: message.subject || '',
-				body: parsedBody?.text || parsedBody?.html || '',
-				cc: [],
-				bcc: [],
-			}),
-		});
-		
-		if (!response.ok) {
-			const errorData = await response.json().catch(() => ({}));
-			throw new Error(errorData.error || 'Failed to send email');
-		}
-		
-		const data = await response.json();
+		const data = await apiSendMessage(
+			toList,
+			message.subject || '',
+			parsedBody?.text || parsedBody?.html || ''
+		);
 		setSendSuccess(data.message || 'Email sent successfully');
-		
-		// Close dialog after short delay
 		setTimeout(() => {
 			onClose();
 			if (onDelete) {
-				onDelete(); // Refresh message list
+				onDelete();
 			}
 		}, 1500);
 	} catch (err) {

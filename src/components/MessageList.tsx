@@ -24,6 +24,7 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import MessageViewer from './MessageViewer';
+import { fetchMessages, deleteMessage } from '../data/messages';
 
 interface Message {
 	uid: number;
@@ -75,22 +76,8 @@ export default function MessageList({ mailbox }: MessageListProps) {
 
 	const handleDeleteConfirm = async () => {
 		if (!messageToDelete) return;
-
 		try {
-			const apiUrl = import.meta.env.VITE_API_URL;
-			const response = await fetch(
-				`${apiUrl}/api/imap/mailboxes/${encodeURIComponent(mailbox)}/messages/${messageToDelete}`,
-				{
-					method: 'DELETE',
-					credentials: 'include',
-				}
-			);
-
-			if (!response.ok) {
-				throw new Error('Failed to delete message');
-			}
-
-			// Reload messages after successful deletion
+			await deleteMessage(mailbox, messageToDelete);
 			await loadMessages();
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'Failed to delete message');
@@ -108,22 +95,8 @@ export default function MessageList({ mailbox }: MessageListProps) {
 	const loadMessages = async () => {
 		setLoading(true);
 		setError(null);
-
 		try {
-			const apiUrl = import.meta.env.VITE_API_URL;
-			
-			const response = await fetch(
-				`${apiUrl}/api/imap/mailboxes/${encodeURIComponent(mailbox)}/messages?limit=50`,
-				{
-					credentials: 'include', // Include HttpOnly session cookie
-				}
-			);
-
-			if (!response.ok) {
-				throw new Error('Failed to load messages');
-			}
-
-			const data = await response.json();
+			const data = await fetchMessages(mailbox);
 			setMessages(data.messages || []);
 			setTotal(data.total || 0);
 		} catch (err) {
