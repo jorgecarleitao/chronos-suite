@@ -14,13 +14,11 @@ import Divider from '@mui/material/Divider';
 import CloseIcon from '@mui/icons-material/Close';
 import SendIcon from '@mui/icons-material/Send';
 import SaveIcon from '@mui/icons-material/Save';
-import AttachFileIcon from '@mui/icons-material/AttachFile';
-
 
 import MDEditor from '@uiw/react-md-editor';
 import rehypeSanitize from "rehype-sanitize";
 import { marked } from 'marked';
-import { sendMessage } from '../data/messages';
+import { sendMessage, createDraft, updateDraft } from '../data/messages';
 
 const drawerWidth = 600;
 
@@ -28,14 +26,18 @@ interface ComposeEmailProps {
 	open: boolean;
 	onClose: () => void;
 	mailbox?: string;
+	to?: string;
+	subject?: string;
+	body?: string;
+	draftUid?: number;
 }
 
-export default function ComposeEmail({ open, onClose, mailbox = 'Drafts' }: ComposeEmailProps) {
-	const [to, setTo] = useState('');
+export default function ComposeEmail({ open, onClose, mailbox = 'Drafts', to: initialTo = '', subject: initialSubject = '', body: initialBody = '', draftUid }: ComposeEmailProps) {
+	const [to, setTo] = useState(initialTo);
 	const [cc, setCc] = useState('');
 	const [bcc, setBcc] = useState('');
-	const [subject, setSubject] = useState('');
-	const [body, setBody] = useState('');
+	const [subject, setSubject] = useState(initialSubject);
+	const [body, setBody] = useState(initialBody);
 	const [showCc, setShowCc] = useState(false);
 	const [showBcc, setShowBcc] = useState(false);
 	const [saving, setSaving] = useState(false);
@@ -81,31 +83,19 @@ export default function ComposeEmail({ open, onClose, mailbox = 'Drafts' }: Comp
 		setSuccess(null);
 
 		try {
-			const apiUrl = import.meta.env.VITE_API_URL;
-			
-			const response = await fetch(`${apiUrl}/api/imap/mailboxes/${encodeURIComponent(mailbox)}/messages`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				credentials: 'include',
-				body: JSON.stringify({
-					to: parseEmailList(to),
-					subject,
-					body,
-					cc: showCc ? parseEmailList(cc) : [],
-					bcc: showBcc ? parseEmailList(bcc) : [],
-				}),
-			});
-
-			if (!response.ok) {
-				throw new Error('Failed to save draft');
+			const draftData = {
+				to: parseEmailList(to),
+				subject,
+				body,
+				cc: showCc ? parseEmailList(cc) : [],
+				bcc: showBcc ? parseEmailList(bcc) : [],
+			};
+			if (draftUid) {
+				await updateDraft(mailbox, draftUid, draftData);
+			} else {
+				await createDraft(mailbox, draftData);
 			}
-
-			const data = await response.json();
-			setSuccess(data.message || 'Draft saved successfully');
-			
-			// Clear form after successful save
+			setSuccess('Draft saved successfully');
 			setTimeout(() => {
 				handleClear();
 				onClose();

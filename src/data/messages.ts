@@ -1,6 +1,43 @@
-// API functions for IMAP messages
+export interface Draft {
+  to: string[];
+  subject: string;
+  body: string;
+  cc?: string[];
+  bcc?: string[];
+}
 
 const apiUrl = import.meta.env.VITE_API_URL;
+
+// Create a new draft
+export async function createDraft(mailbox: string, draft: Draft) {
+  const response = await fetch(`${apiUrl}/api/imap/mailboxes/${encodeURIComponent(mailbox)}/messages`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(draft),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to save draft');
+  }
+  return response.json();
+}
+
+// Update an existing draft
+export async function updateDraft(mailbox: string, uid: number, draft: Draft) {
+  const response = await fetch(`${apiUrl}/api/imap/mailboxes/${encodeURIComponent(mailbox)}/messages/${uid}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(draft),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to update draft');
+  }
+}
 
 // JSON from the server
 interface MessageMetadataWire {

@@ -24,7 +24,8 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import MessageViewer from './MessageViewer';
-import { fetchMessages, deleteMessage, MessageMetadata } from '../data/messages';
+import ComposeEmail from './ComposeEmail';
+import { fetchMessages, fetchMessage, deleteMessage, MessageMetadata } from '../data/messages';
 
 
 interface MessageListProps {
@@ -38,6 +39,8 @@ export default function MessageList({ mailbox }: MessageListProps) {
 	const [error, setError] = useState<string | null>(null);
 	const [selectedMessage, setSelectedMessage] = useState<number | null>(null);
 	const [viewerOpen, setViewerOpen] = useState(false);
+	const [composeOpen, setComposeOpen] = useState(false);
+	const [draftMessage, setDraftMessage] = useState<any | null>(null);
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [messageToDelete, setMessageToDelete] = useState<number | null>(null);
 
@@ -45,14 +48,26 @@ export default function MessageList({ mailbox }: MessageListProps) {
 		loadMessages();
 	}, [mailbox]);
 
-	const handleMessageClick = (uid: number) => {
-		setSelectedMessage(uid);
-		setViewerOpen(true);
+	const handleMessageClick = async (message: MessageMetadata) => {
+		console.log('Message clicked:', message);
+		// Find the message in the list
+		if (mailbox.toLowerCase() === 'drafts') {
+			// Fetch full message details for draft
+			try {
+				const data = await fetchMessage(mailbox, message.uid);
+				setDraftMessage(data);
+				setComposeOpen(true);
+			} catch (err) {
+				setError('Failed to load draft for editing');
+			}
+		} else {
+			setSelectedMessage(message.uid);
+			setViewerOpen(true);
+		}
 	};
 
 	const handleViewerClose = () => {
 		setViewerOpen(false);
-		// Optionally reload messages to update read status
 		loadMessages();
 	};
 
@@ -181,7 +196,7 @@ export default function MessageList({ mailbox }: MessageListProps) {
 						>
 							<ListItemButton
 								selected={selectedMessage === message.uid}
-								onClick={() => handleMessageClick(message.uid)}
+								onClick={() => handleMessageClick(message)}
 							>
 								<Stack direction="row" spacing={1} alignItems="center" width="100%">
 									{unread ? <MailIcon color="primary" /> : <DraftsIcon />}
@@ -211,6 +226,20 @@ export default function MessageList({ mailbox }: MessageListProps) {
 					onDelete={loadMessages}
 					mailbox={mailbox}
 					uid={selectedMessage}
+				/>
+			)}
+
+			{/* Compose Email for Drafts */}
+			{composeOpen && draftMessage && (
+				<ComposeEmail
+					open={composeOpen}
+					onClose={() => { setComposeOpen(false); setDraftMessage(null); }}
+					mailbox={mailbox}
+					// Pass draft fields as props if ComposeEmail supports it
+					to={draftMessage.to || ''}
+					subject={draftMessage.subject || ''}
+					body={draftMessage.text_body || draftMessage.html_body || ''}
+					draftUid={draftMessage.uid}
 				/>
 			)}
 
