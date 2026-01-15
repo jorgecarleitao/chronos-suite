@@ -73,6 +73,83 @@ class JmapService {
     }
 
     /**
+     * Create a new mailbox
+     */
+    async createMailbox(accountId: string, name: string, parentId?: string) {
+        const client = this.getClient();
+
+        const mailboxData: any = {
+            name,
+        };
+
+        if (parentId) {
+            mailboxData.parentId = parentId;
+        }
+
+        const [response] = await client.request([
+            'Mailbox/set',
+            {
+                accountId,
+                create: {
+                    newMailbox: mailboxData,
+                },
+            },
+        ]);
+
+        if (response.notCreated) {
+            throw new Error(`Failed to create mailbox: ${JSON.stringify(response.notCreated)}`);
+        }
+
+        return response.created.newMailbox;
+    }
+
+    /**
+     * Rename a mailbox
+     */
+    async renameMailbox(accountId: string, mailboxId: string, newName: string) {
+        const client = this.getClient();
+
+        const [response] = await client.request([
+            'Mailbox/set',
+            {
+                accountId,
+                update: {
+                    [mailboxId]: {
+                        name: newName,
+                    },
+                },
+            },
+        ]);
+
+        if (response.notUpdated) {
+            throw new Error(`Failed to rename mailbox: ${JSON.stringify(response.notUpdated)}`);
+        }
+
+        return response.updated[mailboxId];
+    }
+
+    /**
+     * Delete a mailbox
+     */
+    async deleteMailbox(accountId: string, mailboxId: string) {
+        const client = this.getClient();
+
+        const [response] = await client.request([
+            'Mailbox/set',
+            {
+                accountId,
+                destroy: [mailboxId],
+            },
+        ]);
+
+        if (response.notDestroyed) {
+            throw new Error(`Failed to delete mailbox: ${JSON.stringify(response.notDestroyed)}`);
+        }
+
+        return true;
+    }
+
+    /**
      * Get emails from a mailbox
      */
     async getEmails(accountId: string, mailboxId?: string, limit = 50) {

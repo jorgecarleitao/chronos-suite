@@ -13,6 +13,7 @@ interface JmapMailbox {
 
 // What the rest of the app uses
 export interface Mailbox {
+    id: string; // JMAP mailbox ID
     name: string;
     display_name: string;
     role?: string;
@@ -20,6 +21,7 @@ export interface Mailbox {
     children: Mailbox[];
     accountId?: string;
     accountName?: string;
+    parentId?: string | null;
 }
 
 interface MailboxesResponse {
@@ -39,11 +41,13 @@ function mapJmapToMailbox(
         .map((child) => mapJmapToMailbox(child, allMailboxes, accountId, accountName));
 
     const mailbox: Mailbox = {
+        id: jmapMailbox.id,
         name: jmapMailbox.name,
         display_name: jmapMailbox.name,
         role: jmapMailbox.role || undefined,
         is_selectable: true, // JMAP mailboxes are generally selectable
         children,
+        parentId: jmapMailbox.parentId,
     };
 
     if (accountId) mailbox.accountId = accountId;
@@ -104,4 +108,45 @@ export async function fetchSharedMailboxes(): Promise<Mailbox[]> {
     }
 
     return sharedMailboxes;
+}
+
+/**
+ * Create a new mailbox/folder
+ */
+export async function createMailbox(
+    accountId: string,
+    name: string,
+    parentId?: string
+): Promise<any> {
+    if (!jmapService.isInitialized()) {
+        throw new Error('JMAP client not initialized. Please log in first.');
+    }
+
+    return await jmapService.createMailbox(accountId, name, parentId);
+}
+
+/**
+ * Rename a mailbox/folder
+ */
+export async function renameMailbox(
+    accountId: string,
+    mailboxId: string,
+    newName: string
+): Promise<any> {
+    if (!jmapService.isInitialized()) {
+        throw new Error('JMAP client not initialized. Please log in first.');
+    }
+
+    return await jmapService.renameMailbox(accountId, mailboxId, newName);
+}
+
+/**
+ * Delete a mailbox/folder
+ */
+export async function deleteMailbox(accountId: string, mailboxId: string): Promise<boolean> {
+    if (!jmapService.isInitialized()) {
+        throw new Error('JMAP client not initialized. Please log in first.');
+    }
+
+    return await jmapService.deleteMailbox(accountId, mailboxId);
 }

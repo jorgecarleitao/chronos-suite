@@ -16,6 +16,18 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Collapse from '@mui/material/Collapse';
 import Fab from '@mui/material/Fab';
 
+import IconButton from '@mui/material/IconButton';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import Button from '@mui/material/Button';
+import TextField from '@mui/material/TextField';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import AddIcon from '@mui/icons-material/Add';
+
 import InboxIcon from '@mui/icons-material/Inbox';
 import SendIcon from '@mui/icons-material/Send';
 import DraftsIcon from '@mui/icons-material/Drafts';
@@ -29,7 +41,14 @@ import EditIcon from '@mui/icons-material/Edit';
 
 import MessageList from '../components/MessageList';
 import ComposeEmail from '../components/ComposeEmail';
-import { fetchMailboxes, fetchSharedMailboxes, Mailbox } from '../data/mailboxes';
+import {
+    fetchMailboxes,
+    fetchSharedMailboxes,
+    createMailbox,
+    renameMailbox,
+    deleteMailbox,
+    Mailbox,
+} from '../data/mailboxes';
 import { getPrimaryAccountId } from '../data/accounts';
 
 const drawerWidth = 240;
@@ -44,6 +63,8 @@ interface MailboxNode {
     children: MailboxNode[];
     isLeaf: boolean;
     role?: string;
+    id?: string; // JMAP mailbox ID
+    parentId?: string | null;
 }
 
 // Convert backend tree to frontend node structure (if needed for compatibility)
@@ -53,6 +74,8 @@ const convertToNode = (mailbox: Mailbox): MailboxNode => ({
     children: mailbox.children.map(convertToNode),
     isLeaf: mailbox.is_selectable,
     role: mailbox.role,
+    id: mailbox.id,
+    parentId: mailbox.parentId,
 });
 
 export default function Mail({ path }: MailProps) {
@@ -63,6 +86,18 @@ export default function Mail({ path }: MailProps) {
     const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['INBOX']));
     const [composeOpen, setComposeOpen] = useState(false);
     const [accountId, setAccountId] = useState<string | null>(null);
+    const [contextMenu, setContextMenu] = useState<{
+        mouseX: number;
+        mouseY: number;
+        mailbox: MailboxNode;
+    } | null>(null);
+    const [createDialogOpen, setCreateDialogOpen] = useState(false);
+    const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [newMailboxName, setNewMailboxName] = useState('');
+    const [selectedMailboxForAction, setSelectedMailboxForAction] = useState<MailboxNode | null>(
+        null
+    );
 
     useEffect(() => {
         // Check authentication will be handled by the backend
@@ -119,13 +154,86 @@ export default function Mail({ path }: MailProps) {
         });
     };
 
+    const handleContextMenu = (event: MouseEvent, mailbox: MailboxNode) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setContextMenu({
+            mouseX: event.clientX - 2,
+            mouseY: event.clientY - 4,
+            mailbox,
+        });
+    };
+
+    const handleCloseContextMenu = () => {
+        setContextMenu(null);
+    };
+
+    const handleCreateMailbox = async () => {
+        if (!accountId || !newMailboxName.trim()) return;
+        try {
+            const parentId = selectedMailboxForAction?.id;
+            await createMailbox(accountId, newMailboxName.trim(), parentId);
+            await loadMailboxes(accountId);
+            setCreateDialogOpen(false);
+            setNewMailboxName('');
+            setSelectedMailboxForAction(null);
+        } catch (error) {
+            console.error('Failed to create mailbox:', error);
+            alert(error instanceof Error ? error.message : 'Failed to create mailbox');
+        }
+    };
+
+    const handleRenameMailbox = async () => {
+        if (!accountId || !selectedMailboxForAction?.id || !newMailboxName.trim()) return;
+        try {
+            await renameMailbox(accountId, selectedMailboxForAction.id, newMailboxName.trim());
+            await loadMailboxes(accountId);
+            setRenameDialogOpen(false);
+            setNewMailboxName('');
+            setSelectedMailboxForAction(null);
+        } catch (error) {
+            console.error('Failed to rename mailbox:', error);
+            alert(error instanceof Error ? error.message : 'Failed to rename mailbox');
+        }
+    };
+
+    const handleDeleteMailbox = async () => {
+        if (!accountId || !selectedMailboxForAction?.id) return;
+        try {
+            await deleteMailbox(accountId, selectedMailboxForAction.id);
+            await loadMailboxes(accountId);
+            setDeleteDialogOpen(false);
+            setSelectedMailboxForAction(null);
+        } catch (error) {
+            console.error('Failed to delete mailbox:', error);
+            alert(error instanceof Error ? error.message : 'Failed to delete mailbox');
+        }
+    };
+
     const renderMailboxNode = (node: MailboxNode, depth: number = 0) => {
         const hasChildren = node.children.length > 0;
         const isExpanded = expandedFolders.has(node.name);
         const elements = [];
 
         elements.push(
-            <ListItem key={node.name} disablePadding>
+            <ListItem
+                key={node.name}
+                disablePadding
+                secondaryAction={
+                    !node.role && (
+                        <IconButton
+                            edge="end"
+                            size="small"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleContextMenu(e as any, node);
+                            }}
+                        >
+                            <MoreVertIcon fontSize="small" />
+                        </IconButton>
+                    )
+                }
+            >
                 <ListItemButton
                     selected={selectedMailbox === node.name && node.isLeaf}
                     onClick={() => {
@@ -137,6 +245,7 @@ export default function Mail({ path }: MailProps) {
                             setSelectedMailbox(node.name);
                         }
                     }}
+                    onContextMenu={(e) => !node.role && handleContextMenu(e as any, node)}
                     style={{ paddingLeft: (2 + depth * 2) * 8 }}
                 >
                     <ListItemIcon>{getMailboxIcon(node.role, node.name)}</ListItemIcon>
@@ -240,9 +349,22 @@ export default function Mail({ path }: MailProps) {
             >
                 <Toolbar />
                 <Box style={{ overflow: 'auto' }}>
-                    <Typography variant="h6" padding={2}>
-                        Mailboxes
-                    </Typography>
+                    <Stack direction="row" alignItems="center" padding={2} spacing={1}>
+                        <Typography variant="h6" sx={{ flex: 1 }}>
+                            Mailboxes
+                        </Typography>
+                        <IconButton
+                            size="small"
+                            onClick={() => {
+                                setSelectedMailboxForAction(null);
+                                setNewMailboxName('');
+                                setCreateDialogOpen(true);
+                            }}
+                            title="Create new mailbox"
+                        >
+                            <AddIcon />
+                        </IconButton>
+                    </Stack>
                     <Divider />
                     {loading ? (
                         <Stack justifyContent="center" padding={3}>
@@ -383,6 +505,119 @@ export default function Mail({ path }: MailProps) {
                 onClose={() => setComposeOpen(false)}
                 accountId={accountId || ''}
             />
+
+            {/* Context Menu */}
+            <Menu
+                open={contextMenu !== null}
+                onClose={handleCloseContextMenu}
+                anchorReference="anchorPosition"
+                anchorPosition={
+                    contextMenu !== null
+                        ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
+                        : undefined
+                }
+            >
+                <MenuItem
+                    onClick={() => {
+                        setSelectedMailboxForAction(contextMenu?.mailbox || null);
+                        setNewMailboxName('');
+                        setCreateDialogOpen(true);
+                        handleCloseContextMenu();
+                    }}
+                >
+                    Create Subfolder
+                </MenuItem>
+                <MenuItem
+                    onClick={() => {
+                        setSelectedMailboxForAction(contextMenu?.mailbox || null);
+                        setNewMailboxName(contextMenu?.mailbox.displayName || '');
+                        setRenameDialogOpen(true);
+                        handleCloseContextMenu();
+                    }}
+                >
+                    Rename
+                </MenuItem>
+                <MenuItem
+                    onClick={() => {
+                        setSelectedMailboxForAction(contextMenu?.mailbox || null);
+                        setDeleteDialogOpen(true);
+                        handleCloseContextMenu();
+                    }}
+                >
+                    Delete
+                </MenuItem>
+            </Menu>
+
+            {/* Create Mailbox Dialog */}
+            <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)}>
+                <DialogTitle>
+                    {selectedMailboxForAction ? 'Create Subfolder' : 'Create Mailbox'}
+                </DialogTitle>
+                <DialogContent>
+                    <TextField
+                        autoFocus
+                        margin="dense"
+                        label="Mailbox Name"
+                        fullWidth
+                        value={newMailboxName}
+                        onChange={(e) => setNewMailboxName((e.target as HTMLInputElement).value)}
+                        onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                                handleCreateMailbox();
+                            }
+                        }}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={handleCreateMailbox} variant="contained">
+                        Create
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Rename Mailbox Dialog */}
+            <Dialog open={renameDialogOpen} onClose={() => setRenameDialogOpen(false)}>
+                <DialogTitle>Rename Mailbox</DialogTitle>
+                <DialogContent>
+                    <TextField
+                        autoFocus
+                        margin="dense"
+                        label="New Name"
+                        fullWidth
+                        value={newMailboxName}
+                        onChange={(e) => setNewMailboxName((e.target as HTMLInputElement).value)}
+                        onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                                handleRenameMailbox();
+                            }
+                        }}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setRenameDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={handleRenameMailbox} variant="contained">
+                        Rename
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Delete Mailbox Dialog */}
+            <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+                <DialogTitle>Delete Mailbox</DialogTitle>
+                <DialogContent>
+                    <Typography>
+                        Are you sure you want to delete "{selectedMailboxForAction?.displayName}"?
+                        This will permanently delete the mailbox and all its contents.
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={handleDeleteMailbox} color="error" variant="contained">
+                        Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 }
