@@ -1,4 +1,4 @@
-import { jmapService } from './jmapClient';
+import { jmapService, EmailData } from './jmapClient';
 
 export interface Draft {
     to: string[];
@@ -247,7 +247,7 @@ export async function sendMessage(
         throw new Error('JMAP client not initialized. Please log in first.');
     }
 
-    const emailData: any = {
+    const emailData: EmailData = {
         to: to.map((email) => ({ email })),
         subject,
     };
@@ -267,9 +267,7 @@ export async function sendMessage(
         emailData.bodyText = body;
     }
 
-    const result = await jmapService.sendEmail(accountId, emailData);
-
-    return result;
+    return await jmapService.sendEmail(accountId, emailData);
 }
 
 export async function deleteMessage(accountId: string, emailId: string) {
@@ -277,14 +275,5 @@ export async function deleteMessage(accountId: string, emailId: string) {
         throw new Error('JMAP client not initialized. Please log in first.');
     }
 
-    // Get the trash mailbox
-    const trashMailbox =
-        (await getMailboxByName(accountId, 'Trash')) ||
-        (await getMailboxByName(accountId, 'Deleted'));
-
-    if (!trashMailbox) {
-        throw new Error('Trash mailbox not found');
-    }
-
-    await jmapService.deleteEmail(accountId, emailId, trashMailbox.id);
+    await jmapService.deleteEmail(accountId, emailId);
 }

@@ -1,6 +1,20 @@
 import Client from 'jmap-jam';
 import { config } from '../config';
 
+export interface EmailAddress {
+    email: string;
+    name?: string;
+}
+
+export interface EmailData {
+    to: EmailAddress[];
+    cc?: EmailAddress[];
+    bcc?: EmailAddress[];
+    subject: string;
+    bodyText?: string;
+    bodyHtml?: string;
+}
+
 /**
  * JMAP Client wrapper for email operations
  */
@@ -139,24 +153,29 @@ class JmapService {
     /**
      * Send an email
      */
-    async sendEmail(
-        accountId: string,
-        email: {
-            to: { email: string; name?: string }[];
-            cc?: { email: string; name?: string }[];
-            bcc?: { email: string; name?: string }[];
-            subject: string;
-            bodyText?: string;
-            bodyHtml?: string;
-        }
-    ) {
+    async sendEmail(accountId: string, email: EmailData) {
         const client = this.getClient();
 
-        // Get the default identity for sending
+        // Get identities
         const [identities] = await client.request(['Identity/get', { accountId }]);
+
+        if (!identities.list || identities.list.length === 0) {
+            throw new Error('No identities available for this account');
+        }
+
         const defaultIdentity = identities.list[0];
 
+        // Get mailboxes for drafts folder
+        const [mailboxes] = await client.request(['Mailbox/get', { accountId }]);
+        const draftsMailbox = mailboxes.list.find((m: any) => m.role === 'drafts');
+
+        if (!draftsMailbox) {
+            throw new Error('Drafts mailbox not found');
+        }
+
         const emailObject: any = {
+            mailboxIds: { [draftsMailbox.id]: true },
+            keywords: { $draft: true },
             from: [{ email: defaultIdentity.email, name: defaultIdentity.name }],
             to: email.to,
             subject: email.subject,
@@ -166,48 +185,101 @@ class JmapService {
         if (email.bcc) emailObject.bcc = email.bcc;
 
         // Build body structure
-        if (email.bodyText && email.bodyHtml) {
-            emailObject.bodyValues = {
-                text: { value: email.bodyText },
-                html: { value: email.bodyHtml },
-            };
-            emailObject.textBody = [{ partId: 'text', type: 'text/plain' }];
-            emailObject.htmlBody = [{ partId: 'html', type: 'text/html' }];
-        } else if (email.bodyText) {
-            emailObject.bodyValues = {
-                text: { value: email.bodyText },
-            };
-            emailObject.textBody = [{ partId: 'text', type: 'text/plain' }];
-        } else if (email.bodyHtml) {
-            emailObject.bodyValues = {
-                html: { value: email.bodyHtml },
-            };
-            emailObject.htmlBody = [{ partId: 'html', type: 'text/html' }];
+        const bodyValues: any = {};
+        let bodyStructure: any;
+
+        if (!email.bodyText && !email.bodyHtml) {
+            throw new Error('Email must have at least bodyText or bodyHtml');
         }
 
-        const [response] = await client.requestMany((ref) => {
-            const createEmail = ref.Email.set({
-                accountId,
-                create: {
-                    draft: emailObject,
-                },
-            });
+        if (email.bodyText && email.bodyHtml) {
+            // Both text and HTML: use multipart/alternative
+            bodyValues.text = { value: email.bodyText };
+            bodyValues.html = { value: email.bodyHtml };
+            bodyStructure = {
+                type: 'multipart/alternative',
+                subParts: [
+                    {
+                        partId: 'text',
+                        type: 'text/plain',
+                    },
+                    {
+                        partId: 'html',
+                        type: 'text/html',
+                    },
+                ],
+            };
+        } else if (email.bodyText) {
+            // Text only
+            bodyValues.text = { value: email.bodyText };
+            bodyStructure = {
+                partId: 'text',
+                type: 'text/plain',
+            };
+        } else {
+            // HTML only
+            bodyValues.html = { value: email.bodyHtml };
+            bodyStructure = {
+                partId: 'html',
+                type: 'text/html',
+            };
+        }
 
-            const submit = ref.EmailSubmission.set({
+        emailObject.bodyValues = bodyValues;
+        emailObject.bodyStructure = bodyStructure;
+
+        // Create the email
+        const [createResponse] = await client.request([
+            'Email/set',
+            {
                 accountId,
                 create: {
-                    submission: {
-                        emailId: createEmail.$ref('/created/draft/id') as any,
+                    email1: emailObject,
+                },
+            },
+        ]);
+
+        if (createResponse.notCreated) {
+            throw new Error(`Failed to create email: ${JSON.stringify(createResponse.notCreated)}`);
+        }
+
+        const createdEmail = createResponse.created.email1;
+
+        // Submit the email
+        const [submitResponse] = await client.request([
+            'EmailSubmission/set',
+            {
+                accountId,
+                create: {
+                    sub1: {
+                        emailId: createdEmail.id,
                         identityId: defaultIdentity.id,
+                        envelope: {
+                            mailFrom: {
+                                email: defaultIdentity.email,
+                            },
+                            rcptTo: [
+                                ...email.to.map((addr) => ({ email: addr.email })),
+                                ...(email.cc || []).map((addr) => ({
+                                    email: addr.email,
+                                })),
+                                ...(email.bcc || []).map((addr) => ({
+                                    email: addr.email,
+                                })),
+                            ],
+                        },
                     },
                 },
-                onSuccessDestroyEmail: [createEmail.$ref('/created/draft/id')] as any,
-            });
+            },
+        ]);
 
-            return { createEmail, submit };
-        });
+        if (submitResponse.notCreated) {
+            throw new Error(`Failed to submit email: ${JSON.stringify(submitResponse.notCreated)}`);
+        }
 
-        return (response.submit as any).created?.submission;
+        const submission = submitResponse.created.sub1;
+
+        return submission;
     }
 
     /**
@@ -250,24 +322,64 @@ class JmapService {
     }
 
     /**
-     * Delete (trash) an email
+     * Delete (trash) an email or permanently delete if already in trash
      */
-    async deleteEmail(accountId: string, emailId: string, trashMailboxId: string) {
+    async deleteEmail(accountId: string, emailId: string) {
         const client = this.getClient();
 
-        const [response] = await client.request([
-            'Email/set',
+        // Get the email to check which mailboxes it's in
+        const [emailResponse] = await client.request([
+            'Email/get',
             {
                 accountId,
-                update: {
-                    [emailId]: {
-                        mailboxIds: { [trashMailboxId]: true },
-                    },
-                } as any,
+                ids: [emailId],
+                properties: ['mailboxIds'],
             },
         ]);
 
-        return response.updated?.[emailId];
+        const email = emailResponse.list[0];
+        if (!email) {
+            throw new Error('Email not found');
+        }
+
+        // Get mailboxes to find trash folder
+        const [mailboxes] = await client.request(['Mailbox/get', { accountId }]);
+        const trashMailbox = mailboxes.list.find((m: any) => m.role === 'trash');
+
+        if (!trashMailbox) {
+            throw new Error('Trash mailbox not found');
+        }
+
+        // Check if email is already in trash
+        const isInTrash = email.mailboxIds && trashMailbox.id in email.mailboxIds;
+
+        if (isInTrash) {
+            // Permanently delete the email
+            const [response] = await client.request([
+                'Email/set',
+                {
+                    accountId,
+                    destroy: [emailId],
+                },
+            ]);
+
+            return response.destroyed?.[0];
+        } else {
+            // Move to trash
+            const [response] = await client.request([
+                'Email/set',
+                {
+                    accountId,
+                    update: {
+                        [emailId]: {
+                            mailboxIds: { [trashMailbox.id]: true },
+                        },
+                    } as any,
+                },
+            ]);
+
+            return response.updated?.[emailId];
+        }
     }
 
     /**
