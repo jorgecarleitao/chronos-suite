@@ -23,6 +23,8 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
+import Checkbox from '@mui/material/Checkbox';
+import Toolbar from '@mui/material/Toolbar';
 import MessageViewer from './MessageViewer';
 import ComposeEmail from './ComposeEmail';
 import { fetchMessages, fetchMessage, deleteMessage, MessageMetadata } from '../data/messages';
@@ -45,6 +47,8 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
     const [draftMessage, setDraftMessage] = useState<any | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
 
     useEffect(() => {
         loadMessages();
@@ -102,6 +106,47 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
     const handleDeleteCancel = () => {
         setDeleteDialogOpen(false);
         setMessageToDelete(null);
+    };
+
+    const handleCheckboxChange = (messageId: string) => {
+        const newSelected = new Set(selectedIds);
+        if (newSelected.has(messageId)) {
+            newSelected.delete(messageId);
+        } else {
+            newSelected.add(messageId);
+        }
+        setSelectedIds(newSelected);
+    };
+
+    const handleSelectAll = () => {
+        if (selectedIds.size === messages.length) {
+            setSelectedIds(new Set());
+        } else {
+            const allIds = new Set(messages.map((m) => m.id).filter((id): id is string => !!id));
+            setSelectedIds(allIds);
+        }
+    };
+
+    const handleBulkDeleteClick = () => {
+        if (selectedIds.size > 0) {
+            setBulkDeleteDialogOpen(true);
+        }
+    };
+
+    const handleBulkDeleteConfirm = async () => {
+        try {
+            await Promise.all(Array.from(selectedIds).map((id) => deleteMessage(accountId, id)));
+            setSelectedIds(new Set());
+            await loadMessages();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to delete messages');
+        } finally {
+            setBulkDeleteDialogOpen(false);
+        }
+    };
+
+    const handleBulkDeleteCancel = () => {
+        setBulkDeleteDialogOpen(false);
     };
 
     const loadMessages = async () => {
@@ -177,6 +222,26 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
                     </Stack>
                 </Box>
                 <Divider />
+                {selectedIds.size > 0 && (
+                    <>
+                        <Toolbar sx={{ bgcolor: 'action.selected' }}>
+                            <Checkbox
+                                checked={selectedIds.size === messages.length}
+                                indeterminate={
+                                    selectedIds.size > 0 && selectedIds.size < messages.length
+                                }
+                                onChange={handleSelectAll}
+                            />
+                            <Typography sx={{ flex: '1 1 100%' }} variant="subtitle1">
+                                {selectedIds.size} selected
+                            </Typography>
+                            <IconButton onClick={handleBulkDeleteClick} color="error">
+                                <DeleteIcon />
+                            </IconButton>
+                        </Toolbar>
+                        <Divider />
+                    </>
+                )}
             </Paper>
             <List style={{ flexGrow: 1, overflow: 'auto' }}>
                 {messages.map((message) => {
@@ -201,6 +266,11 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
                                 </IconButton>
                             }
                         >
+                            <Checkbox
+                                checked={message.id ? selectedIds.has(message.id) : false}
+                                onChange={() => message.id && handleCheckboxChange(message.id)}
+                                disabled={!message.id}
+                            />
                             <ListItemButton
                                 selected={selectedMessage?.uid === message.uid}
                                 onClick={() => handleMessageClick(message)}
@@ -261,9 +331,31 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
 
             {/* Delete Confirmation Dialog */}
             <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
+                <DialogTitle>Delete Message</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Are you sure you want to delete this message?
+                    </DialogContentText>
+                </DialogContent>
                 <DialogActions>
                     <Button onClick={handleDeleteCancel}>Cancel</Button>
                     <Button onClick={handleDeleteConfirm} color="error" variant="contained">
+                        Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Bulk Delete Confirmation Dialog */}
+            <Dialog open={bulkDeleteDialogOpen} onClose={handleBulkDeleteCancel}>
+                <DialogTitle>Delete Messages</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Are you sure you want to delete {selectedIds.size} message(s)?
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleBulkDeleteCancel}>Cancel</Button>
+                    <Button onClick={handleBulkDeleteConfirm} color="error" variant="contained">
                         Delete
                     </Button>
                 </DialogActions>
