@@ -20,15 +20,86 @@ async function getMailboxByName(name: string) {
 }
 
 // Create a new draft
-export async function createDraft(mailbox: string, draft: Draft) {
-  // For JMAP, we'll need to implement draft saving
-  // This is a simplified version - JMAP drafts are more complex
-  throw new Error('Draft creation not yet implemented for JMAP');
+export async function createDraft(draft: Draft) {
+  if (!jmapService.isInitialized()) {
+    throw new Error('JMAP client not initialized. Please log in first.');
+  }
+
+  // Get the drafts mailbox
+  const draftsMailbox = await getMailboxByName('Drafts');
+  if (!draftsMailbox) {
+    throw new Error('Drafts mailbox not found');
+  }
+
+  const client = jmapService.getClient();
+  const accountId = jmapService.getAccountId();
+
+  // Get the default identity for the from address
+  const [identities] = await client.request(['Identity/get', { accountId }]);
+  const defaultIdentity = identities.list[0];
+
+  // Build the email object
+  const emailObject: any = {
+    mailboxIds: { [draftsMailbox.id]: true },
+    keywords: { $draft: true },
+    from: [{ email: defaultIdentity.email, name: defaultIdentity.name }],
+    to: draft.to.map(email => ({ email })),
+    subject: draft.subject,
+  };
+
+  if (draft.cc && draft.cc.length > 0) {
+    emailObject.cc = draft.cc.map(email => ({ email }));
+  }
+  if (draft.bcc && draft.bcc.length > 0) {
+    emailObject.bcc = draft.bcc.map(email => ({ email }));
+  }
+
+  // Build body structure
+  emailObject.bodyValues = {
+    text: { value: draft.body },
+  };
+  emailObject.textBody = [{ partId: 'text', type: 'text/plain' }];
+
+  // Create the draft
+  const [response] = await client.request(['Email/set', {
+    accountId,
+    create: {
+      draft: emailObject,
+    },
+  }]);
+
+  if (response.created?.draft) {
+    return response.created.draft;
+  } else {
+    throw new Error('Failed to create draft');
+  }
 }
 
 // Update an existing draft
-export async function updateDraft(mailbox: string, uid: number, draft: Draft) {
-  throw new Error('Draft update not yet implemented for JMAP');
+export async function updateDraft(emailId: string, draft: Draft) {
+  if (!jmapService.isInitialized()) {
+    throw new Error('JMAP client not initialized. Please log in first.');
+  }
+
+  const client = jmapService.getClient();
+  const accountId = jmapService.getAccountId();
+
+  // In JMAP, updating email bodies is complex. The standard approach is:
+  // Create a new draft first, then delete the old one (to avoid losing data if create fails)
+  const newDraft = await createDraft(draft);
+
+  // Only if creation succeeds, delete the old draft
+  try {
+    await client.request(['Email/set', {
+      accountId,
+      destroy: [emailId],
+    }]);
+  } catch (err) {
+    // If deletion fails, we still have the new draft, so just log the error
+    console.warn('Failed to delete old draft, but new draft was created:', err);
+  }
+
+  return newDraft;
 }
 
 
@@ -115,21 +186,12 @@ export async function fetchMessages(mailbox: string): Promise<Messages> {
   };
 }
 
-export async function fetchMessage(mailbox: string, uid: number) {
+export async function fetchMessage(emailId: string, uid: number) {
   if (!jmapService.isInitialized()) {
     throw new Error('JMAP client not initialized. Please log in first.');
   }
-
-  // We need to find the email ID from the UID
-  // Since UID is a hash, we'll need to search by fetching messages
-  const messages = await fetchMessages(mailbox);
-  const messageMetadata = messages.messages.find(m => m.uid === uid);
   
-  if (!messageMetadata?.id) {
-    throw new Error('Message not found');
-  }
-  
-  const email = await jmapService.getEmail(messageMetadata.id);
+  const email = await jmapService.getEmail(emailId);
   
   // Convert to expected format
   const from = email.from?.[0];
@@ -145,13 +207,21 @@ export async function fetchMessage(mailbox: string, uid: number) {
     bodyText = email.bodyValues?.[partId]?.value || '';
   }
   
+  // Format to/cc/bcc as comma-separated strings for draft editing
+  const toStr = email.to?.map((addr: any) => addr.email).join(', ') || '';
+  const ccStr = email.cc?.map((addr: any) => addr.email).join(', ') || '';
+  const bccStr = email.bcc?.map((addr: any) => addr.email).join(', ') || '';
+  
   return {
-    uid: messageMetadata.uid,
+    uid,
     id: email.id,
     from_name: from?.name,
     from_email: from?.email,
     to_name: to?.name,
     to_email: to?.email,
+    to: toStr,
+    cc: ccStr,
+    bcc: bccStr,
     subject: email.subject,
     date: parseDate(email.receivedAt),
     body: bodyText,
@@ -159,31 +229,48 @@ export async function fetchMessage(mailbox: string, uid: number) {
   };
 }
 
-export async function sendMessage(to: string[], subject: string, body: string) {
+export async function sendMessage(
+  to: string[], 
+  subject: string, 
+  body: string,
+  options?: {
+    cc?: string[];
+    bcc?: string[];
+    isHtml?: boolean;
+  }
+) {
   if (!jmapService.isInitialized()) {
     throw new Error('JMAP client not initialized. Please log in first.');
   }
 
-  const result = await jmapService.sendEmail({
+  const emailData: any = {
     to: to.map(email => ({ email })),
     subject,
-    bodyText: body,
-  });
+  };
+
+  // Add cc and bcc if provided
+  if (options?.cc && options.cc.length > 0) {
+    emailData.cc = options.cc.map(email => ({ email }));
+  }
+  if (options?.bcc && options.bcc.length > 0) {
+    emailData.bcc = options.bcc.map(email => ({ email }));
+  }
+
+  // Set body as HTML or text
+  if (options?.isHtml) {
+    emailData.bodyHtml = body;
+  } else {
+    emailData.bodyText = body;
+  }
+
+  const result = await jmapService.sendEmail(emailData);
   
   return result;
 }
 
-export async function deleteMessage(mailbox: string, uid: number) {
+export async function deleteMessage(emailId: string) {
   if (!jmapService.isInitialized()) {
     throw new Error('JMAP client not initialized. Please log in first.');
-  }
-
-  // Find the email ID from the UID
-  const messages = await fetchMessages(mailbox);
-  const messageMetadata = messages.messages.find(m => m.uid === uid);
-  
-  if (!messageMetadata?.id) {
-    throw new Error('Message not found');
   }
   
   // Get the trash mailbox
@@ -193,5 +280,5 @@ export async function deleteMessage(mailbox: string, uid: number) {
     throw new Error('Trash mailbox not found');
   }
   
-  await jmapService.deleteEmail(messageMetadata.id, trashMailbox.id);
+  await jmapService.deleteEmail(emailId, trashMailbox.id);
 }

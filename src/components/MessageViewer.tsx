@@ -26,6 +26,7 @@ interface MessageViewerProps {
 	onDelete?: () => void;
 	mailbox: string;
 	uid: number;
+	emailId?: string;
 }
 
 interface MessageDetail {
@@ -42,7 +43,7 @@ interface MessageDetail {
 	text_body?: string;
 }
 
-export default function MessageViewer({ open, onClose, onDelete, mailbox, uid }: MessageViewerProps) {
+export default function MessageViewer({ open, onClose, onDelete, mailbox, uid, emailId }: MessageViewerProps) {
 	const [message, setMessage] = useState<MessageDetail | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -61,7 +62,10 @@ export default function MessageViewer({ open, onClose, onDelete, mailbox, uid }:
 		setLoading(true);
 		setError(null);
 		try {
-			const data: MessageDetail = await apiFetchMessage(mailbox, uid);
+			if (!emailId) {
+				throw new Error('Email ID is required');
+			}
+			const data: MessageDetail = await apiFetchMessage(emailId, uid);
 			setMessage(data);
 			if (data.html_body) {
 				setParsedBody({ html: sanitizeHTML(data.html_body), text: data.text_body });
@@ -85,7 +89,10 @@ const handleDeleteClick = () => {
 
 const handleDeleteConfirm = async () => {
 	try {
-		await apiDeleteMessage(mailbox, uid);
+		if (!emailId) {
+			throw new Error('Email ID is required');
+		}
+		await apiDeleteMessage(emailId);
 		setDeleteDialogOpen(false);
 		onClose();
 		if (onDelete) {

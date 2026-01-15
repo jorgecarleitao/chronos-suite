@@ -37,31 +37,34 @@ export default function MessageList({ mailbox }: MessageListProps) {
 	const [total, setTotal] = useState(0);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
-	const [selectedMessage, setSelectedMessage] = useState<number | null>(null);
+	const [selectedMessage, setSelectedMessage] = useState<{ uid: number; id?: string } | null>(null);
 	const [viewerOpen, setViewerOpen] = useState(false);
 	const [composeOpen, setComposeOpen] = useState(false);
 	const [draftMessage, setDraftMessage] = useState<any | null>(null);
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-	const [messageToDelete, setMessageToDelete] = useState<number | null>(null);
+	const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
 
 	useEffect(() => {
 		loadMessages();
 	}, [mailbox]);
 
 	const handleMessageClick = async (message: MessageMetadata) => {
-		console.log('Message clicked:', message);
 		// Find the message in the list
 		if (mailbox.toLowerCase() === 'drafts') {
 			// Fetch full message details for draft
 			try {
-				const data = await fetchMessage(mailbox, message.uid);
+				if (!message.id) {
+					setError('Invalid message: missing email ID');
+					return;
+				}
+				const data = await fetchMessage(message.id, message.uid);
 				setDraftMessage(data);
 				setComposeOpen(true);
 			} catch (err) {
 				setError('Failed to load draft for editing');
 			}
 		} else {
-			setSelectedMessage(message.uid);
+			setSelectedMessage({ uid: message.uid, id: message.id });
 			setViewerOpen(true);
 		}
 	};
@@ -71,16 +74,20 @@ export default function MessageList({ mailbox }: MessageListProps) {
 		loadMessages();
 	};
 
-	const handleDeleteClick = (uid: number, event: Event) => {
+	const handleDeleteClick = (message: MessageMetadata, event: Event) => {
 		event.stopPropagation();
-		setMessageToDelete(uid);
+		if (!message.id) {
+			setError('Invalid message: missing email ID');
+			return;
+		}
+		setMessageToDelete(message.id);
 		setDeleteDialogOpen(true);
 	};
 
 	const handleDeleteConfirm = async () => {
 		if (!messageToDelete) return;
 		try {
-			await deleteMessage(mailbox, messageToDelete);
+			await deleteMessage(messageToDelete);
 			await loadMessages();
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'Failed to delete message');
@@ -188,14 +195,14 @@ export default function MessageList({ mailbox }: MessageListProps) {
 								<IconButton
 									edge="end"
 									aria-label="delete"
-									onClick={(e) => handleDeleteClick(message.uid, e)}
+									onClick={(e) => handleDeleteClick(message, e)}
 								>
 									<DeleteIcon />
 								</IconButton>
 							}
 						>
 							<ListItemButton
-								selected={selectedMessage === message.uid}
+								selected={selectedMessage?.uid === message.uid}
 								onClick={() => handleMessageClick(message)}
 							>
 								<Stack direction="row" spacing={1} alignItems="center" width="100%">
@@ -225,7 +232,8 @@ export default function MessageList({ mailbox }: MessageListProps) {
 					onClose={handleViewerClose}
 					onDelete={loadMessages}
 					mailbox={mailbox}
-					uid={selectedMessage}
+					uid={selectedMessage.uid}
+					emailId={selectedMessage.id}
 				/>
 			)}
 
@@ -235,11 +243,12 @@ export default function MessageList({ mailbox }: MessageListProps) {
 					open={composeOpen}
 					onClose={() => { setComposeOpen(false); setDraftMessage(null); }}
 					mailbox={mailbox}
-					// Pass draft fields as props if ComposeEmail supports it
 					to={draftMessage.to || ''}
+					cc={draftMessage.cc || ''}
+					bcc={draftMessage.bcc || ''}
 					subject={draftMessage.subject || ''}
-					body={draftMessage.text_body || draftMessage.html_body || ''}
-					draftUid={draftMessage.uid}
+					body={draftMessage.body || ''}
+					draftEmailId={draftMessage.id}
 				/>
 			)}
 

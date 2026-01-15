@@ -27,19 +27,21 @@ interface ComposeEmailProps {
 	onClose: () => void;
 	mailbox?: string;
 	to?: string;
+	cc?: string;
+	bcc?: string;
 	subject?: string;
 	body?: string;
-	draftUid?: number;
+	draftEmailId?: string;
 }
 
-export default function ComposeEmail({ open, onClose, mailbox = 'Drafts', to: initialTo = '', subject: initialSubject = '', body: initialBody = '', draftUid }: ComposeEmailProps) {
+export default function ComposeEmail({ open, onClose, mailbox = 'Drafts', to: initialTo = '', cc: initialCc = '', bcc: initialBcc = '', subject: initialSubject = '', body: initialBody = '', draftEmailId }: ComposeEmailProps) {
 	const [to, setTo] = useState(initialTo);
-	const [cc, setCc] = useState('');
-	const [bcc, setBcc] = useState('');
+	const [cc, setCc] = useState(initialCc);
+	const [bcc, setBcc] = useState(initialBcc);
 	const [subject, setSubject] = useState(initialSubject);
 	const [body, setBody] = useState(initialBody);
-	const [showCc, setShowCc] = useState(false);
-	const [showBcc, setShowBcc] = useState(false);
+	const [showCc, setShowCc] = useState(!!initialCc);
+	const [showBcc, setShowBcc] = useState(!!initialBcc);
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [success, setSuccess] = useState<string | null>(null);
@@ -63,9 +65,14 @@ export default function ComposeEmail({ open, onClose, mailbox = 'Drafts', to: in
 			const data = await sendMessage(
 				parseEmailList(to),
 				subject,
-				htmlBody
+				htmlBody,
+				{
+					cc: showCc && cc ? parseEmailList(cc) : undefined,
+					bcc: showBcc && bcc ? parseEmailList(bcc) : undefined,
+					isHtml: true,
+				}
 			);
-			setSuccess(data.message || 'Email sent successfully');
+			setSuccess(data?.message || 'Email sent successfully');
 			setTimeout(() => {
 				handleClear();
 				onClose();
@@ -90,10 +97,10 @@ export default function ComposeEmail({ open, onClose, mailbox = 'Drafts', to: in
 				cc: showCc ? parseEmailList(cc) : [],
 				bcc: showBcc ? parseEmailList(bcc) : [],
 			};
-			if (draftUid) {
-				await updateDraft(mailbox, draftUid, draftData);
+			if (draftEmailId) {
+				await updateDraft(draftEmailId, draftData);
 			} else {
-				await createDraft(mailbox, draftData);
+				await createDraft(draftData);
 			}
 			setSuccess('Draft saved successfully');
 			setTimeout(() => {
