@@ -11,28 +11,27 @@ export interface Draft {
 // Mailbox cache to map names to IDs
 let mailboxCache: Map<string, any> | null = null;
 
-async function getMailboxByName(name: string) {
+async function getMailboxByName(accountId: string, name: string) {
   if (!mailboxCache) {
-    const mailboxes = await jmapService.getMailboxes();
+    const mailboxes = await jmapService.getMailboxes(accountId);
     mailboxCache = new Map(mailboxes.map((m: any) => [m.name.toLowerCase(), m]));
   }
   return mailboxCache.get(name.toLowerCase());
 }
 
 // Create a new draft
-export async function createDraft(draft: Draft) {
+export async function createDraft(accountId: string, draft: Draft) {
   if (!jmapService.isInitialized()) {
     throw new Error('JMAP client not initialized. Please log in first.');
   }
 
   // Get the drafts mailbox
-  const draftsMailbox = await getMailboxByName('Drafts');
+  const draftsMailbox = await getMailboxByName(accountId, 'Drafts');
   if (!draftsMailbox) {
     throw new Error('Drafts mailbox not found');
   }
 
   const client = jmapService.getClient();
-  const accountId = jmapService.getAccountId();
 
   // Get the default identity for the from address
   const [identities] = await client.request(['Identity/get', { accountId }]);
@@ -76,17 +75,16 @@ export async function createDraft(draft: Draft) {
 }
 
 // Update an existing draft
-export async function updateDraft(emailId: string, draft: Draft) {
+export async function updateDraft(accountId: string, emailId: string, draft: Draft) {
   if (!jmapService.isInitialized()) {
     throw new Error('JMAP client not initialized. Please log in first.');
   }
 
   const client = jmapService.getClient();
-  const accountId = jmapService.getAccountId();
 
   // In JMAP, updating email bodies is complex. The standard approach is:
   // Create a new draft first, then delete the old one (to avoid losing data if create fails)
-  const newDraft = await createDraft(draft);
+  const newDraft = await createDraft(accountId, draft);
 
   // Only if creation succeeds, delete the old draft
   try {
@@ -169,16 +167,16 @@ function hashStringToNumber(str: string): number {
   return Math.abs(hash);
 }
 
-export async function fetchMessages(mailbox: string): Promise<Messages> {
+export async function fetchMessages(accountId: string, mailbox: string): Promise<Messages> {
   if (!jmapService.isInitialized()) {
     throw new Error('JMAP client not initialized. Please log in first.');
   }
 
   // Get mailbox ID from name
-  const mailboxObj = await getMailboxByName(mailbox);
+  const mailboxObj = await getMailboxByName(accountId, mailbox);
   const mailboxId = mailboxObj?.id;
   
-  const emails = await jmapService.getEmails(mailboxId, 50);
+  const emails = await jmapService.getEmails(accountId, mailboxId, 50);
   
   return {
     messages: emails.map(mapJmapToMessageMetadata),
@@ -186,12 +184,12 @@ export async function fetchMessages(mailbox: string): Promise<Messages> {
   };
 }
 
-export async function fetchMessage(emailId: string, uid: number) {
+export async function fetchMessage(accountId: string, emailId: string, uid: number) {
   if (!jmapService.isInitialized()) {
     throw new Error('JMAP client not initialized. Please log in first.');
   }
   
-  const email = await jmapService.getEmail(emailId);
+  const email = await jmapService.getEmail(accountId, emailId);
   
   // Convert to expected format
   const from = email.from?.[0];
@@ -230,6 +228,7 @@ export async function fetchMessage(emailId: string, uid: number) {
 }
 
 export async function sendMessage(
+  accountId: string,
   to: string[], 
   subject: string, 
   body: string,
@@ -263,22 +262,22 @@ export async function sendMessage(
     emailData.bodyText = body;
   }
 
-  const result = await jmapService.sendEmail(emailData);
+  const result = await jmapService.sendEmail(accountId, emailData);
   
   return result;
 }
 
-export async function deleteMessage(emailId: string) {
+export async function deleteMessage(accountId: string, emailId: string) {
   if (!jmapService.isInitialized()) {
     throw new Error('JMAP client not initialized. Please log in first.');
   }
   
   // Get the trash mailbox
-  const trashMailbox = await getMailboxByName('Trash') || await getMailboxByName('Deleted');
+  const trashMailbox = await getMailboxByName(accountId, 'Trash') || await getMailboxByName(accountId, 'Deleted');
   
   if (!trashMailbox) {
     throw new Error('Trash mailbox not found');
   }
   
-  await jmapService.deleteEmail(emailId, trashMailbox.id);
+  await jmapService.deleteEmail(accountId, emailId, trashMailbox.id);
 }

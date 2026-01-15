@@ -30,9 +30,10 @@ import { fetchMessages, fetchMessage, deleteMessage, MessageMetadata } from '../
 
 interface MessageListProps {
 	mailbox: string;
+	accountId: string;
 }
 
-export default function MessageList({ mailbox }: MessageListProps) {
+export default function MessageList({ mailbox, accountId }: MessageListProps) {
 	const [messages, setMessages] = useState<MessageMetadata[]>([]);
 	const [total, setTotal] = useState(0);
 	const [loading, setLoading] = useState(true);
@@ -57,7 +58,7 @@ export default function MessageList({ mailbox }: MessageListProps) {
 					setError('Invalid message: missing email ID');
 					return;
 				}
-				const data = await fetchMessage(message.id, message.uid);
+				const data = await fetchMessage(accountId, message.id, message.uid);
 				setDraftMessage(data);
 				setComposeOpen(true);
 			} catch (err) {
@@ -87,7 +88,7 @@ export default function MessageList({ mailbox }: MessageListProps) {
 	const handleDeleteConfirm = async () => {
 		if (!messageToDelete) return;
 		try {
-			await deleteMessage(messageToDelete);
+			await deleteMessage(accountId, messageToDelete);
 			await loadMessages();
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'Failed to delete message');
@@ -106,7 +107,7 @@ export default function MessageList({ mailbox }: MessageListProps) {
 		setLoading(true);
 		setError(null);
 		try {
-			const data = await fetchMessages(mailbox);
+			const data = await fetchMessages(accountId, mailbox);
 			setMessages(data.messages);
 			setTotal(data.total);
 		} catch (err) {
@@ -234,6 +235,7 @@ export default function MessageList({ mailbox }: MessageListProps) {
 					mailbox={mailbox}
 					uid={selectedMessage.uid}
 					emailId={selectedMessage.id}
+					accountId={accountId}
 				/>
 			)}
 
@@ -249,6 +251,7 @@ export default function MessageList({ mailbox }: MessageListProps) {
 					subject={draftMessage.subject || ''}
 					body={draftMessage.body || ''}
 					draftEmailId={draftMessage.id}
+					accountId={accountId}
 				/>
 			)}
 

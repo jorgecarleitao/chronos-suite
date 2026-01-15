@@ -32,9 +32,10 @@ interface ComposeEmailProps {
 	subject?: string;
 	body?: string;
 	draftEmailId?: string;
+	accountId: string;
 }
 
-export default function ComposeEmail({ open, onClose, mailbox = 'Drafts', to: initialTo = '', cc: initialCc = '', bcc: initialBcc = '', subject: initialSubject = '', body: initialBody = '', draftEmailId }: ComposeEmailProps) {
+export default function ComposeEmail({ open, onClose, mailbox = 'Drafts', to: initialTo = '', cc: initialCc = '', bcc: initialBcc = '', subject: initialSubject = '', body: initialBody = '', draftEmailId, accountId }: ComposeEmailProps) {
 	const [to, setTo] = useState(initialTo);
 	const [cc, setCc] = useState(initialCc);
 	const [bcc, setBcc] = useState(initialBcc);
@@ -63,6 +64,7 @@ export default function ComposeEmail({ open, onClose, mailbox = 'Drafts', to: in
 				htmlBody = await htmlBody;
 			}
 			const data = await sendMessage(
+				accountId,
 				parseEmailList(to),
 				subject,
 				htmlBody,
@@ -98,9 +100,9 @@ export default function ComposeEmail({ open, onClose, mailbox = 'Drafts', to: in
 				bcc: showBcc ? parseEmailList(bcc) : [],
 			};
 			if (draftEmailId) {
-				await updateDraft(draftEmailId, draftData);
+				await updateDraft(accountId, draftEmailId, draftData);
 			} else {
-				await createDraft(draftData);
+				await createDraft(accountId, draftData);
 			}
 			setSuccess('Draft saved successfully');
 			setTimeout(() => {

@@ -6,7 +6,6 @@ import { config } from '../config';
  */
 class JmapService {
   private client: Client | null = null;
-  private accountId: string | null = null;
 
   /**
    * Initialize the JMAP client with an access token
@@ -16,9 +15,14 @@ class JmapService {
       sessionUrl: config.jmap.sessionEndpoint,
       bearerToken: accessToken,
     });
+  }
 
-    // Get primary account ID from session
-    this.accountId = await this.client.getPrimaryAccount();
+  /**
+   * Get the primary account ID from the session
+   */
+  async getPrimaryAccountId(): Promise<string> {
+    const client = this.getClient();
+    return await client.getPrimaryAccount();
   }
 
   /**
@@ -32,28 +36,17 @@ class JmapService {
   }
 
   /**
-   * Get the account ID
-   */
-  getAccountId(): string {
-    if (!this.accountId) {
-      throw new Error('JMAP client not initialized. Call initialize() first.');
-    }
-    return this.accountId;
-  }
-
-  /**
    * Check if the client is initialized
    */
   isInitialized(): boolean {
-    return this.client !== null && this.accountId !== null;
+    return this.client !== null;
   }
 
   /**
    * Get mailboxes (folders)
    */
-  async getMailboxes() {
+  async getMailboxes(accountId: string) {
     const client = this.getClient();
-    const accountId = this.getAccountId();
     
     const [response] = await client.request(['Mailbox/get', {
       accountId,
@@ -65,9 +58,8 @@ class JmapService {
   /**
    * Get emails from a mailbox
    */
-  async getEmails(mailboxId?: string, limit = 50) {
+  async getEmails(accountId: string, mailboxId?: string, limit = 50) {
     const client = this.getClient();
-    const accountId = this.getAccountId();
     
     const filter: any = {};
     if (mailboxId) {
@@ -109,9 +101,8 @@ class JmapService {
   /**
    * Get a single email with full body
    */
-  async getEmail(emailId: string) {
+  async getEmail(accountId: string, emailId: string) {
     const client = this.getClient();
-    const accountId = this.getAccountId();
     
     const [response] = await client.request(['Email/get', {
       accountId,
@@ -142,7 +133,7 @@ class JmapService {
   /**
    * Send an email
    */
-  async sendEmail(email: {
+  async sendEmail(accountId: string, email: {
     to: { email: string; name?: string }[];
     cc?: { email: string; name?: string }[];
     bcc?: { email: string; name?: string }[];
@@ -151,7 +142,6 @@ class JmapService {
     bodyHtml?: string;
   }) {
     const client = this.getClient();
-    const accountId = this.getAccountId();
     
     // Get the default identity for sending
     const [identities] = await client.request(['Identity/get', { accountId }]);
@@ -214,9 +204,8 @@ class JmapService {
   /**
    * Update email keywords (flags)
    */
-  async updateEmailKeywords(emailId: string, keywords: Record<string, boolean>) {
+  async updateEmailKeywords(accountId: string, emailId: string, keywords: Record<string, boolean>) {
     const client = this.getClient();
-    const accountId = this.getAccountId();
     
     const [response] = await client.request(['Email/set', {
       accountId,
@@ -233,23 +222,22 @@ class JmapService {
   /**
    * Mark email as read
    */
-  async markAsRead(emailId: string) {
-    return this.updateEmailKeywords(emailId, { $seen: true });
+  async markAsRead(accountId: string, emailId: string) {
+    return this.updateEmailKeywords(accountId, emailId, { $seen: true });
   }
 
   /**
    * Mark email as unread
    */
-  async markAsUnread(emailId: string) {
-    return this.updateEmailKeywords(emailId, { $seen: false });
+  async markAsUnread(accountId: string, emailId: string) {
+    return this.updateEmailKeywords(accountId, emailId, { $seen: false });
   }
 
   /**
    * Delete (trash) an email
    */
-  async deleteEmail(emailId: string, trashMailboxId: string) {
+  async deleteEmail(accountId: string, emailId: string, trashMailboxId: string) {
     const client = this.getClient();
-    const accountId = this.getAccountId();
     
     const [response] = await client.request(['Email/set', {
       accountId,
@@ -268,9 +256,9 @@ class JmapService {
    */
   clear(): void {
     this.client = null;
-    this.accountId = null;
   }
 }
 
 // Export singleton instance
 export const jmapService = new JmapService();
+  

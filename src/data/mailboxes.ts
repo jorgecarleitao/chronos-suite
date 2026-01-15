@@ -61,12 +61,12 @@ function buildMailboxTree(mailboxes: readonly any[]): Mailbox[] {
   return rootMailboxes.map((m: any) => mapJmapToMailbox(m, [...mailboxes]));
 }
 
-export async function fetchMailboxes(): Promise<MailboxesResponse> {
+export async function fetchMailboxes(accountId: string): Promise<MailboxesResponse> {
   if (!jmapService.isInitialized()) {
     throw new Error('JMAP client not initialized. Please log in first.');
   }
 
-  const jmapMailboxes = await jmapService.getMailboxes();
+  const jmapMailboxes = await jmapService.getMailboxes(accountId);
   const mailboxTree = buildMailboxTree(jmapMailboxes);
 
   return {

@@ -28,6 +28,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import MessageList from '../components/MessageList';
 import ComposeEmail from '../components/ComposeEmail';
 import { fetchMailboxes } from '../data/mailboxes';
+import { getPrimaryAccountId } from '../data/accounts';
 
 const drawerWidth = 240;
 
@@ -64,16 +65,30 @@ export default function Mail({ path }: MailProps) {
 	const [loading, setLoading] = useState(true);
 	const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['INBOX']));
 	const [composeOpen, setComposeOpen] = useState(false);
+	const [accountId, setAccountId] = useState<string | null>(null);
 
 	useEffect(() => {
 		// Check authentication will be handled by the backend
 		// If session cookie is invalid, API calls will return 401
-		loadMailboxes();
+		loadAccount();
 	}, []);
 
-	const loadMailboxes = async () => {
+	const loadAccount = async () => {
 		try {
-			const data = await fetchMailboxes();
+			const id = await getPrimaryAccountId();
+			setAccountId(id);
+			loadMailboxes(id);
+		} catch (error) {
+			console.error('Failed to load account:', error);
+			if (error instanceof Error && error.message.includes('not initialized')) {
+				route('/login');
+			}
+		}
+	};
+
+	const loadMailboxes = async (accId: string) => {
+		try {
+			const data = await fetchMailboxes(accId);
 			setMailboxes(data.mailboxes || []);
 		} catch (error) {
 			console.error('Failed to load mailboxes:', error);
@@ -228,8 +243,8 @@ export default function Mail({ path }: MailProps) {
 			<Box component="main" flexGrow={1} padding={3}>
 				<Toolbar />
 				<Paper style={{ height: 'calc(100vh - 112px)', overflow: 'hidden' }}>
-					{selectedMailbox && isActualMailbox ? (
-						<MessageList mailbox={selectedMailbox} />
+					{selectedMailbox && isActualMailbox && accountId ? (
+						<MessageList mailbox={selectedMailbox} accountId={accountId} />
 					) : (
 						<Stack justifyContent="center" alignItems="center" height="100%">
 							<Typography color="text.secondary">
@@ -255,7 +270,11 @@ export default function Mail({ path }: MailProps) {
 			</Box>
 
 			{/* Compose email drawer */}
-			<ComposeEmail open={composeOpen} onClose={() => setComposeOpen(false)} />
+			<ComposeEmail 
+				open={composeOpen} 
+				onClose={() => setComposeOpen(false)} 
+				accountId={accountId || ''} 
+			/>
 		</Box>
 	);
 }

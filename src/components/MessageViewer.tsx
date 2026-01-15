@@ -27,6 +27,7 @@ interface MessageViewerProps {
 	mailbox: string;
 	uid: number;
 	emailId?: string;
+	accountId: string;
 }
 
 interface MessageDetail {
@@ -43,7 +44,7 @@ interface MessageDetail {
 	text_body?: string;
 }
 
-export default function MessageViewer({ open, onClose, onDelete, mailbox, uid, emailId }: MessageViewerProps) {
+export default function MessageViewer({ open, onClose, onDelete, mailbox, uid, emailId, accountId }: MessageViewerProps) {
 	const [message, setMessage] = useState<MessageDetail | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -65,12 +66,24 @@ export default function MessageViewer({ open, onClose, onDelete, mailbox, uid, e
 			if (!emailId) {
 				throw new Error('Email ID is required');
 			}
-			const data: MessageDetail = await apiFetchMessage(emailId, uid);
-			setMessage(data);
-			if (data.html_body) {
-				setParsedBody({ html: sanitizeHTML(data.html_body), text: data.text_body });
-			} else if (data.text_body) {
-				setParsedBody({ text: data.text_body });
+			const data = await apiFetchMessage(accountId, emailId, uid);
+			// Map to MessageDetail format
+			const messageDetail: MessageDetail = {
+				uid: data.uid,
+				sequence: data.uid, // Use uid as sequence for compatibility
+				flags: [],
+				from: data.from_email ? `${data.from_name || ''} <${data.from_email}>`.trim() : undefined,
+				to: data.to_email ? `${data.to_name || ''} <${data.to_email}>`.trim() : undefined,
+				subject: data.subject || undefined,
+				date: data.date ? data.date.toISOString() : undefined,
+				html_body: data.body?.includes('<') ? data.body : undefined,
+				text_body: !data.body?.includes('<') ? data.body : undefined,
+			};
+			setMessage(messageDetail);
+			if (messageDetail.html_body) {
+				setParsedBody({ html: sanitizeHTML(messageDetail.html_body), text: messageDetail.text_body });
+			} else if (messageDetail.text_body) {
+				setParsedBody({ text: messageDetail.text_body });
 			}
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'Failed to fetch message');
@@ -92,7 +105,7 @@ const handleDeleteConfirm = async () => {
 		if (!emailId) {
 			throw new Error('Email ID is required');
 		}
-		await apiDeleteMessage(emailId);
+		await apiDeleteMessage(accountId, emailId);
 		setDeleteDialogOpen(false);
 		onClose();
 		if (onDelete) {
@@ -116,6 +129,7 @@ const handleSendClick = async () => {
 	try {
 		const toList = message.to?.split(',').map(e => e.trim()).filter(e => e.length > 0) || [];
 		const data = await apiSendMessage(
+			accountId,
 			toList,
 			message.subject || '',
 			parsedBody?.text || parsedBody?.html || ''
