@@ -137,10 +137,10 @@ function mapJmapToMessageMetadata(jmapEmail: any): MessageMetadata {
   // Convert JMAP keywords to flags
   const flags: string[] = [];
   if (jmapEmail.keywords) {
-    if (jmapEmail.keywords.$seen) flags.push('\\Seen');
-    if (jmapEmail.keywords.$flagged) flags.push('\\Flagged');
-    if (jmapEmail.keywords.$draft) flags.push('\\Draft');
-    if (jmapEmail.keywords.$answered) flags.push('\\Answered');
+    if (jmapEmail.keywords.$seen) flags.push('Seen');
+    if (jmapEmail.keywords.$flagged) flags.push('Flagged');
+    if (jmapEmail.keywords.$draft) flags.push('Draft');
+    if (jmapEmail.keywords.$answered) flags.push('Answered');
   }
   
   return {

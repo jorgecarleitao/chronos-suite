@@ -245,24 +245,20 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
 					open={composeOpen}
 					onClose={() => { setComposeOpen(false); setDraftMessage(null); }}
 					mailbox={mailbox}
-					to={draftMessage.to || ''}
-					cc={draftMessage.cc || ''}
-					bcc={draftMessage.bcc || ''}
-					subject={draftMessage.subject || ''}
-					body={draftMessage.body || ''}
-					draftEmailId={draftMessage.id}
-					accountId={accountId}
-				/>
-			)}
+				fromName={draftMessage.from_name}
+				fromEmail={draftMessage.from_email}
+				to={draftMessage.to || ''}
+				cc={draftMessage.cc || ''}
+				bcc={draftMessage.bcc || ''}
+				subject={draftMessage.subject || ''}
+				body={draftMessage.body || ''}
+				draftEmailId={draftMessage.id}
+				accountId={accountId}
+			/>
+		)}
 
-			{/* Delete Confirmation Dialog */}
-			<Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
-				<DialogTitle>Delete Message</DialogTitle>
-				<DialogContent>
-					<DialogContentText>
-						Are you sure you want to delete this message? This action cannot be undone.
-					</DialogContentText>
-				</DialogContent>
+		{/* Delete Confirmation Dialog */}
+		<Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
 				<DialogActions>
 					<Button onClick={handleDeleteCancel}>Cancel</Button>
 					<Button onClick={handleDeleteConfirm} color="error" variant="contained">

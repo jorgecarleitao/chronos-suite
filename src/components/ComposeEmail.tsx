@@ -26,6 +26,8 @@ interface ComposeEmailProps {
 	open: boolean;
 	onClose: () => void;
 	mailbox?: string;
+	fromName?: string;
+	fromEmail?: string;
 	to?: string;
 	cc?: string;
 	bcc?: string;
@@ -35,7 +37,7 @@ interface ComposeEmailProps {
 	accountId: string;
 }
 
-export default function ComposeEmail({ open, onClose, mailbox = 'Drafts', to: initialTo = '', cc: initialCc = '', bcc: initialBcc = '', subject: initialSubject = '', body: initialBody = '', draftEmailId, accountId }: ComposeEmailProps) {
+export default function ComposeEmail({ open, onClose, mailbox = 'Drafts', fromName = '', fromEmail = '', to: initialTo = '', cc: initialCc = '', bcc: initialBcc = '', subject: initialSubject = '', body: initialBody = '', draftEmailId, accountId }: ComposeEmailProps) {
 	const [to, setTo] = useState(initialTo);
 	const [cc, setCc] = useState(initialCc);
 	const [bcc, setBcc] = useState(initialBcc);
@@ -194,6 +196,18 @@ export default function ComposeEmail({ open, onClose, mailbox = 'Drafts', to: in
 
 				{/* Form */}
 				<Stack spacing={2} style={{ flex: 1, overflow: 'auto' }}>
+					{(fromName || fromEmail) && (
+						<TextField
+							label="From"
+							variant="outlined"
+							size="small"
+							fullWidth
+							value={fromName ? `${fromName} <${fromEmail}>` : fromEmail}
+							disabled
+							InputProps={{ readOnly: true }}
+						/>
+					)}
+
 					<TextField
 						label="To"
 						variant="outlined"
