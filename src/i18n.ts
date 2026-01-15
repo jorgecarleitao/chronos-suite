@@ -5,13 +5,12 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 import en_us from './locales/en-US/translation.json';
 import pt_pt from './locales/pt-PT/translation.json';
 
-i18n
-    .use(LanguageDetector)
+i18n.use(LanguageDetector)
     .use(initReactI18next)
     .init({
         resources: {
-            "en-US": { translation: en_us },
-            "pt-PT": { translation: pt_pt },
+            'en-US': { translation: en_us },
+            'pt-PT': { translation: pt_pt },
         },
         fallbackLng: 'en-US',
         load: 'currentOnly',
@@ -21,10 +20,18 @@ i18n
         },
         detection: {
             // optional: customize detection settings if needed
-            order: ['navigator', 'htmlTag', 'querystring', 'cookie', 'localStorage', 'sessionStorage', 'path', 'subdomain'],
+            order: [
+                'navigator',
+                'htmlTag',
+                'querystring',
+                'cookie',
+                'localStorage',
+                'sessionStorage',
+                'path',
+                'subdomain',
+            ],
             caches: ['localStorage', 'cookie'],
-        }
+        },
     });
-
 
 export default i18n;

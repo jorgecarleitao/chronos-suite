@@ -27,245 +27,247 @@ import MessageViewer from './MessageViewer';
 import ComposeEmail from './ComposeEmail';
 import { fetchMessages, fetchMessage, deleteMessage, MessageMetadata } from '../data/messages';
 
-
 interface MessageListProps {
-	mailbox: string;
-	accountId: string;
+    mailbox: string;
+    accountId: string;
 }
 
 export default function MessageList({ mailbox, accountId }: MessageListProps) {
-	const [messages, setMessages] = useState<MessageMetadata[]>([]);
-	const [total, setTotal] = useState(0);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
-	const [selectedMessage, setSelectedMessage] = useState<{ uid: number; id?: string } | null>(null);
-	const [viewerOpen, setViewerOpen] = useState(false);
-	const [composeOpen, setComposeOpen] = useState(false);
-	const [draftMessage, setDraftMessage] = useState<any | null>(null);
-	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-	const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
+    const [messages, setMessages] = useState<MessageMetadata[]>([]);
+    const [total, setTotal] = useState(0);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [selectedMessage, setSelectedMessage] = useState<{ uid: number; id?: string } | null>(
+        null
+    );
+    const [viewerOpen, setViewerOpen] = useState(false);
+    const [composeOpen, setComposeOpen] = useState(false);
+    const [draftMessage, setDraftMessage] = useState<any | null>(null);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
 
-	useEffect(() => {
-		loadMessages();
-	}, [mailbox]);
+    useEffect(() => {
+        loadMessages();
+    }, [mailbox]);
 
-	const handleMessageClick = async (message: MessageMetadata) => {
-		// Find the message in the list
-		if (mailbox.toLowerCase() === 'drafts') {
-			// Fetch full message details for draft
-			try {
-				if (!message.id) {
-					setError('Invalid message: missing email ID');
-					return;
-				}
-				const data = await fetchMessage(accountId, message.id, message.uid);
-				setDraftMessage(data);
-				setComposeOpen(true);
-			} catch (err) {
-				setError('Failed to load draft for editing');
-			}
-		} else {
-			setSelectedMessage({ uid: message.uid, id: message.id });
-			setViewerOpen(true);
-		}
-	};
+    const handleMessageClick = async (message: MessageMetadata) => {
+        // Find the message in the list
+        if (mailbox.toLowerCase() === 'drafts') {
+            // Fetch full message details for draft
+            try {
+                if (!message.id) {
+                    setError('Invalid message: missing email ID');
+                    return;
+                }
+                const data = await fetchMessage(accountId, message.id, message.uid);
+                setDraftMessage(data);
+                setComposeOpen(true);
+            } catch (err) {
+                setError('Failed to load draft for editing');
+            }
+        } else {
+            setSelectedMessage({ uid: message.uid, id: message.id });
+            setViewerOpen(true);
+        }
+    };
 
-	const handleViewerClose = () => {
-		setViewerOpen(false);
-		loadMessages();
-	};
+    const handleViewerClose = () => {
+        setViewerOpen(false);
+        loadMessages();
+    };
 
-	const handleDeleteClick = (message: MessageMetadata, event: Event) => {
-		event.stopPropagation();
-		if (!message.id) {
-			setError('Invalid message: missing email ID');
-			return;
-		}
-		setMessageToDelete(message.id);
-		setDeleteDialogOpen(true);
-	};
+    const handleDeleteClick = (message: MessageMetadata, event: Event) => {
+        event.stopPropagation();
+        if (!message.id) {
+            setError('Invalid message: missing email ID');
+            return;
+        }
+        setMessageToDelete(message.id);
+        setDeleteDialogOpen(true);
+    };
 
-	const handleDeleteConfirm = async () => {
-		if (!messageToDelete) return;
-		try {
-			await deleteMessage(accountId, messageToDelete);
-			await loadMessages();
-		} catch (err) {
-			setError(err instanceof Error ? err.message : 'Failed to delete message');
-		} finally {
-			setDeleteDialogOpen(false);
-			setMessageToDelete(null);
-		}
-	};
+    const handleDeleteConfirm = async () => {
+        if (!messageToDelete) return;
+        try {
+            await deleteMessage(accountId, messageToDelete);
+            await loadMessages();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to delete message');
+        } finally {
+            setDeleteDialogOpen(false);
+            setMessageToDelete(null);
+        }
+    };
 
-	const handleDeleteCancel = () => {
-		setDeleteDialogOpen(false);
-		setMessageToDelete(null);
-	};
+    const handleDeleteCancel = () => {
+        setDeleteDialogOpen(false);
+        setMessageToDelete(null);
+    };
 
-	const loadMessages = async () => {
-		setLoading(true);
-		setError(null);
-		try {
-			const data = await fetchMessages(accountId, mailbox);
-			setMessages(data.messages);
-			setTotal(data.total);
-		} catch (err) {
-			setError(err instanceof Error ? err.message : 'Failed to load messages');
-		} finally {
-			setLoading(false);
-		}
-	};
+    const loadMessages = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const data = await fetchMessages(accountId, mailbox);
+            setMessages(data.messages);
+            setTotal(data.total);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to load messages');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-	const isUnread = (flags: string[]) => {
-		return !flags.some(flag => flag === 'Seen');
-	};
+    const isUnread = (flags: string[]) => {
+        return !flags.some((flag) => flag === 'Seen');
+    };
 
-	const isFlagged = (flags: string[]) => {
-		return flags.some(flag => flag === 'Flagged');
-	};
+    const isFlagged = (flags: string[]) => {
+        return flags.some((flag) => flag === 'Flagged');
+    };
 
-	const isDraft = (flags: string[]) => {
-		return flags.some(flag => flag === 'Draft');
-	};
+    const isDraft = (flags: string[]) => {
+        return flags.some((flag) => flag === 'Draft');
+    };
 
-	const now = new Date();
-	const formatDate = (date: Date | null) => {
-		if (!date) return '';
-		try {
-			if (date.toDateString() === now.toDateString()) {
-				return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-			}
-			return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-		} catch {
-			return '';
-		}
-	};
+    const now = new Date();
+    const formatDate = (date: Date | null) => {
+        if (!date) return '';
+        try {
+            if (date.toDateString() === now.toDateString()) {
+                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+            return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        } catch {
+            return '';
+        }
+    };
 
-	if (loading) {
-		return (
-			<Stack justifyContent="center" alignItems="center" height="100%">
-				<CircularProgress />
-			</Stack>
-		);
-	}
+    if (loading) {
+        return (
+            <Stack justifyContent="center" alignItems="center" height="100%">
+                <CircularProgress />
+            </Stack>
+        );
+    }
 
-	if (error) {
-		return (
-			<Box padding={3}>
-				<Alert severity="error">{error}</Alert>
-			</Box>
-		);
-	}
+    if (error) {
+        return (
+            <Box padding={3}>
+                <Alert severity="error">{error}</Alert>
+            </Box>
+        );
+    }
 
-	if (messages.length === 0) {
-		return (
-			<Stack justifyContent="center" alignItems="center" height="100%">
-				<Typography color="text.secondary">
-					No messages in this mailbox
-				</Typography>
-			</Stack>
-		);
-	}
+    if (messages.length === 0) {
+        return (
+            <Stack justifyContent="center" alignItems="center" height="100%">
+                <Typography color="text.secondary">No messages in this mailbox</Typography>
+            </Stack>
+        );
+    }
 
-	return (
-		<Stack height="100%">
-			<Paper elevation={0} square>
-				<Box padding={2}>
-					<Stack direction="row" spacing={2} alignItems="center">
-						<Typography variant="h6">{mailbox}</Typography>
-						<Chip label={`${total} messages`} size="small" />
-					</Stack>
-				</Box>
-				<Divider />
-			</Paper>
-			<List style={{ flexGrow: 1, overflow: 'auto' }}>
-				{messages.map((message) => {
-					const displayName = message.from_name || message.from_email || 'Unknown Sender';
-					const formattedDate = formatDate(message.date);
-					const unread = isUnread(message.flags);
-					const flagged = isFlagged(message.flags);
-					const draft = isDraft(message.flags);
+    return (
+        <Stack height="100%">
+            <Paper elevation={0} square>
+                <Box padding={2}>
+                    <Stack direction="row" spacing={2} alignItems="center">
+                        <Typography variant="h6">{mailbox}</Typography>
+                        <Chip label={`${total} messages`} size="small" />
+                    </Stack>
+                </Box>
+                <Divider />
+            </Paper>
+            <List style={{ flexGrow: 1, overflow: 'auto' }}>
+                {messages.map((message) => {
+                    const displayName = message.from_name || message.from_email || 'Unknown Sender';
+                    const formattedDate = formatDate(message.date);
+                    const unread = isUnread(message.flags);
+                    const flagged = isFlagged(message.flags);
+                    const draft = isDraft(message.flags);
 
-					return (
-						<ListItem
-							key={message.uid}
-							disablePadding
-							divider
-							secondaryAction={
-								<IconButton
-									edge="end"
-									aria-label="delete"
-									onClick={(e) => handleDeleteClick(message, e)}
-								>
-									<DeleteIcon />
-								</IconButton>
-							}
-						>
-							<ListItemButton
-								selected={selectedMessage?.uid === message.uid}
-								onClick={() => handleMessageClick(message)}
-							>
-								<Stack direction="row" spacing={1} alignItems="center" width="100%">
-									{unread ? <MailIcon color="primary" /> : <DraftsIcon />}
-									{flagged && <StarIcon color="warning" />}
-									<ListItemText
-										primary={displayName}
-										secondary={message.subject || '(No subject)'}
-										primaryTypographyProps={{
-											fontWeight: unread ? 'bold' : 'normal'
-										}}
-									/>
-									<Typography variant="caption" color="text.secondary">
-										{formattedDate}
-									</Typography>
-								</Stack>
-							</ListItemButton>
-						</ListItem>
-					);
-				})}
-			</List>
+                    return (
+                        <ListItem
+                            key={message.uid}
+                            disablePadding
+                            divider
+                            secondaryAction={
+                                <IconButton
+                                    edge="end"
+                                    aria-label="delete"
+                                    onClick={(e) => handleDeleteClick(message, e)}
+                                >
+                                    <DeleteIcon />
+                                </IconButton>
+                            }
+                        >
+                            <ListItemButton
+                                selected={selectedMessage?.uid === message.uid}
+                                onClick={() => handleMessageClick(message)}
+                            >
+                                <Stack direction="row" spacing={1} alignItems="center" width="100%">
+                                    {unread ? <MailIcon color="primary" /> : <DraftsIcon />}
+                                    {flagged && <StarIcon color="warning" />}
+                                    <ListItemText
+                                        primary={displayName}
+                                        secondary={message.subject || '(No subject)'}
+                                        primaryTypographyProps={{
+                                            fontWeight: unread ? 'bold' : 'normal',
+                                        }}
+                                    />
+                                    <Typography variant="caption" color="text.secondary">
+                                        {formattedDate}
+                                    </Typography>
+                                </Stack>
+                            </ListItemButton>
+                        </ListItem>
+                    );
+                })}
+            </List>
 
-			{/* Message Viewer Dialog */}
-			{selectedMessage && (
-				<MessageViewer
-					open={viewerOpen}
-					onClose={handleViewerClose}
-					onDelete={loadMessages}
-					mailbox={mailbox}
-					uid={selectedMessage.uid}
-					emailId={selectedMessage.id}
-					accountId={accountId}
-				/>
-			)}
+            {/* Message Viewer Dialog */}
+            {selectedMessage && (
+                <MessageViewer
+                    open={viewerOpen}
+                    onClose={handleViewerClose}
+                    onDelete={loadMessages}
+                    mailbox={mailbox}
+                    uid={selectedMessage.uid}
+                    emailId={selectedMessage.id}
+                    accountId={accountId}
+                />
+            )}
 
-			{/* Compose Email for Drafts */}
-			{composeOpen && draftMessage && (
-				<ComposeEmail
-					open={composeOpen}
-					onClose={() => { setComposeOpen(false); setDraftMessage(null); }}
-					mailbox={mailbox}
-				fromName={draftMessage.from_name}
-				fromEmail={draftMessage.from_email}
-				to={draftMessage.to || ''}
-				cc={draftMessage.cc || ''}
-				bcc={draftMessage.bcc || ''}
-				subject={draftMessage.subject || ''}
-				body={draftMessage.body || ''}
-				draftEmailId={draftMessage.id}
-				accountId={accountId}
-			/>
-		)}
+            {/* Compose Email for Drafts */}
+            {composeOpen && draftMessage && (
+                <ComposeEmail
+                    open={composeOpen}
+                    onClose={() => {
+                        setComposeOpen(false);
+                        setDraftMessage(null);
+                    }}
+                    mailbox={mailbox}
+                    fromName={draftMessage.from_name}
+                    fromEmail={draftMessage.from_email}
+                    to={draftMessage.to || ''}
+                    cc={draftMessage.cc || ''}
+                    bcc={draftMessage.bcc || ''}
+                    subject={draftMessage.subject || ''}
+                    body={draftMessage.body || ''}
+                    draftEmailId={draftMessage.id}
+                    accountId={accountId}
+                />
+            )}
 
-		{/* Delete Confirmation Dialog */}
-		<Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
-				<DialogActions>
-					<Button onClick={handleDeleteCancel}>Cancel</Button>
-					<Button onClick={handleDeleteConfirm} color="error" variant="contained">
-						Delete
-					</Button>
-				</DialogActions>
-			</Dialog>
-		</Stack>
-	);
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
+                <DialogActions>
+                    <Button onClick={handleDeleteCancel}>Cancel</Button>
+                    <Button onClick={handleDeleteConfirm} color="error" variant="contained">
+                        Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        </Stack>
+    );
 }

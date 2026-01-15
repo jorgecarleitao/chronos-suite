@@ -48,7 +48,7 @@ export default function Navigation({ mode, toggleTheme }: NavigationProps) {
     }, []);
 
     const handleDrawerToggle = () => {
-        setMobileOpen(prevState => !prevState);
+        setMobileOpen((prevState) => !prevState);
     };
 
     const handleLogout = () => {
@@ -77,10 +77,13 @@ export default function Navigation({ mode, toggleTheme }: NavigationProps) {
             </Typography>
             <Divider />
             <List>
-                {navItems.map(item => (
+                {navItems.map((item) => (
                     <ListItem key={item.path} disablePadding>
                         <ListItemButton component="a" href={item.path}>
-                            <ListItemText primary={item.label} primaryTypographyProps={{ textAlign: 'center' }} />
+                            <ListItemText
+                                primary={item.label}
+                                primaryTypographyProps={{ textAlign: 'center' }}
+                            />
                         </ListItemButton>
                     </ListItem>
                 ))}
@@ -117,40 +120,40 @@ export default function Navigation({ mode, toggleTheme }: NavigationProps) {
                     )}
                     {!isMobile && (
                         <Stack direction="row" spacing={1}>
-                        {navItems.map(item => (
-                            <Button key={item.path} component="a" href={item.path} color="inherit">
-                                {item.label}
-                            </Button>
-                        ))}
+                            {navItems.map((item) => (
+                                <Button
+                                    key={item.path}
+                                    component="a"
+                                    href={item.path}
+                                    color="inherit"
+                                >
+                                    {item.label}
+                                </Button>
+                            ))}
                         </Stack>
                     )}
                     {isAuthenticated && (
-                        <IconButton
-                            onClick={handleLogout}
-                            color="inherit"
-                            title="Logout"
-                        >
+                        <IconButton onClick={handleLogout} color="inherit" title="Logout">
                             <LogoutIcon />
                         </IconButton>
                     )}
                     <Stack direction="row" spacing={1} alignItems="center">
-                        <IconButton
-                            onClick={toggleTheme}
-                            color="inherit"
-                        >
+                        <IconButton onClick={toggleTheme} color="inherit">
                             {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
                         </IconButton>
                         <Select
                             variant="standard"
                             value={i18n.language}
-                            onChange={e => i18n.changeLanguage((e.target as HTMLInputElement).value)}
+                            onChange={(e) =>
+                                i18n.changeLanguage((e.target as HTMLInputElement).value)
+                            }
                             style={{ color: 'inherit' }}
                         >
-                        {languages.map(lang => (
-                            <MenuItem key={lang} value={lang}>
-                                {locale.getLanguageNativeName(lang)}
-                            </MenuItem>
-                        ))}
+                            {languages.map((lang) => (
+                                <MenuItem key={lang} value={lang}>
+                                    {locale.getLanguageNativeName(lang)}
+                                </MenuItem>
+                            ))}
                         </Select>
                     </Stack>
                 </Toolbar>
@@ -165,7 +168,7 @@ export default function Navigation({ mode, toggleTheme }: NavigationProps) {
                             keepMounted: true,
                         }}
                         PaperProps={{
-                            style: { boxSizing: 'border-box', width: drawerWidth }
+                            style: { boxSizing: 'border-box', width: drawerWidth },
                         }}
                     >
                         {drawerContent}
