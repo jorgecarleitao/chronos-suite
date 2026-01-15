@@ -5,10 +5,10 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
-import TextField from '@mui/material/TextField';
 import Container from '@mui/material/Container';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
+import { oauthService } from '../data/authService';
 
 interface LoginProps {
 	path: string;
@@ -23,12 +23,8 @@ export default function Login({ path }: LoginProps) {
 		setError(null);
 
 		try {
-			const apiUrl = import.meta.env.VITE_API_URL;
-			const nextUrl = encodeURIComponent(window.location.origin + '/mail');
-			
-			// Simply navigate to the backend login endpoint with the next URL
-			// Backend will redirect to IdP, then back to callback, then to the next URL
-			window.location.href = `${apiUrl}/auth/login?next=${nextUrl}`;
+			// Start OAuth PKCE flow - will redirect to authorization server
+			await oauthService.login();
 		} catch (err) {
 			console.error('Login error:', err);
 			setError(err instanceof Error ? err.message : 'Failed to initiate login');

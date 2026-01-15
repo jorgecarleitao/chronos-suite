@@ -4,6 +4,8 @@ import Stack from '@mui/material/Stack';
 import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
+import { oauthService } from '../data/authService';
+import { jmapService } from '../data/jmapClient';
 
 interface AuthCallbackProps {
 	path: string;
@@ -17,25 +19,27 @@ export default function AuthCallback({ path }: AuthCallbackProps) {
 			try {
 				// Check if there's an error parameter from the IdP
 				const params = new URLSearchParams(window.location.search);
-				const error = params.get('error');
+				const errorParam = params.get('error');
 				const errorDescription = params.get('error_description');
 
-				if (error) {
-					setError(`Authorization failed: ${errorDescription || error}`);
+				if (errorParam) {
+					setError(`Authorization failed: ${errorDescription || errorParam}`);
 					setTimeout(() => route('/login'), 3000);
 					return;
 				}
 
-				// The backend's /auth/callback endpoint has already handled:
-				// 1. Exchanging the authorization code for tokens
-				// 2. Validating the access token
-				// 3. Storing the user in the database
-				// 4. Creating an authenticated session
-				// 5. Setting an HttpOnly session cookie
-				// 6. Redirecting here
-				
-				// The browser now has the session cookie and we can redirect to the app
-				// All subsequent API calls will automatically include the session cookie
+				// Handle OAuth callback - exchanges code for tokens
+				await oauthService.handleCallback(window.location.href);
+
+				// Get access token and initialize JMAP client
+				const accessToken = oauthService.getAccessToken();
+				if (!accessToken) {
+					throw new Error('No access token received');
+				}
+
+				await jmapService.initialize(accessToken);
+
+				// Redirect to mail page
 				setTimeout(() => route('/mail'), 500);
 			} catch (err) {
 				console.error('OAuth callback error:', err);

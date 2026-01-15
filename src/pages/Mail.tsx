@@ -27,6 +27,7 @@ import EditIcon from '@mui/icons-material/Edit';
 
 import MessageList from '../components/MessageList';
 import ComposeEmail from '../components/ComposeEmail';
+import { fetchMailboxes } from '../data/mailboxes';
 
 const drawerWidth = 240;
 
@@ -72,25 +73,14 @@ export default function Mail({ path }: MailProps) {
 
 	const loadMailboxes = async () => {
 		try {
-			const apiUrl = import.meta.env.VITE_API_URL;
-			
-			const response = await fetch(`${apiUrl}/api/imap/mailboxes`, {
-				credentials: 'include', // Include HttpOnly session cookie
-			});
-
-			if (!response.ok) {
-				if (response.status === 401) {
-					// Session expired or invalid, redirect to login
-					route('/login');
-					return;
-				}
-				throw new Error('Failed to load mailboxes');
-			}
-
-			const data = await response.json();
+			const data = await fetchMailboxes();
 			setMailboxes(data.mailboxes || []);
 		} catch (error) {
 			console.error('Failed to load mailboxes:', error);
+			// If JMAP client not initialized, redirect to login
+			if (error instanceof Error && error.message.includes('not initialized')) {
+				route('/login');
+			}
 		} finally {
 			setLoading(false);
 		}
