@@ -277,3 +277,19 @@ export async function deleteMessage(accountId: string, emailId: string) {
 
     await jmapService.deleteEmail(accountId, emailId);
 }
+
+export async function markAsRead(accountId: string, emailIds: string | string[]) {
+    if (!jmapService.isInitialized()) {
+        throw new Error('JMAP client not initialized. Please log in first.');
+    }
+
+    await jmapService.markAsRead(accountId, emailIds);
+}
+
+export async function markAsUnread(accountId: string, emailIds: string | string[]) {
+    if (!jmapService.isInitialized()) {
+        throw new Error('JMAP client not initialized. Please log in first.');
+    }
+
+    await jmapService.markAsUnread(accountId, emailIds);
+}

@@ -283,42 +283,45 @@ class JmapService {
     }
 
     /**
-     * Update email keywords (flags)
+     * Update email keywords (flags) for one or more emails
      */
     async updateEmailKeywords(
         accountId: string,
-        emailId: string,
+        emailIds: string[],
         keywords: Record<string, boolean>
     ) {
         const client = this.getClient();
+
+        const update: any = {};
+        emailIds.forEach((id) => {
+            update[id] = { keywords };
+        });
 
         const [response] = await client.request([
             'Email/set',
             {
                 accountId,
-                update: {
-                    [emailId]: {
-                        keywords,
-                    },
-                } as any,
+                update,
             },
         ]);
 
-        return response.updated?.[emailId];
+        return response.updated;
     }
 
     /**
-     * Mark email as read
+     * Mark email(s) as read
      */
-    async markAsRead(accountId: string, emailId: string) {
-        return this.updateEmailKeywords(accountId, emailId, { $seen: true });
+    async markAsRead(accountId: string, emailIds: string | string[]) {
+        const ids = Array.isArray(emailIds) ? emailIds : [emailIds];
+        return this.updateEmailKeywords(accountId, ids, { $seen: true });
     }
 
     /**
-     * Mark email as unread
+     * Mark email(s) as unread
      */
-    async markAsUnread(accountId: string, emailId: string) {
-        return this.updateEmailKeywords(accountId, emailId, { $seen: false });
+    async markAsUnread(accountId: string, emailIds: string | string[]) {
+        const ids = Array.isArray(emailIds) ? emailIds : [emailIds];
+        return this.updateEmailKeywords(accountId, ids, { $seen: false });
     }
 
     /**

@@ -17,6 +17,8 @@ import FlagIcon from '@mui/icons-material/Flag';
 import StarIcon from '@mui/icons-material/Star';
 import IconButton from '@mui/material/IconButton';
 import DeleteIcon from '@mui/icons-material/Delete';
+import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
+import MarkEmailUnreadIcon from '@mui/icons-material/MarkEmailUnread';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -27,7 +29,7 @@ import Checkbox from '@mui/material/Checkbox';
 import Toolbar from '@mui/material/Toolbar';
 import MessageViewer from './MessageViewer';
 import ComposeEmail from './ComposeEmail';
-import { fetchMessages, fetchMessage, deleteMessage, MessageMetadata } from '../data/messages';
+import { fetchMessages, fetchMessage, deleteMessage, markAsRead, markAsUnread, MessageMetadata } from '../data/messages';
 
 interface MessageListProps {
     mailbox: string;
@@ -72,6 +74,23 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
         } else {
             setSelectedMessage({ uid: message.uid, id: message.id });
             setViewerOpen(true);
+            
+            // Mark as read if it's unread
+            if (message.id && isUnread(message.flags)) {
+                try {
+                    await markAsRead(accountId, message.id);
+                    // Update local state
+                    setMessages((prev) =>
+                        prev.map((m) =>
+                            m.id === message.id
+                                ? { ...m, flags: [...m.flags.filter(f => f !== 'Unseen'), 'Seen'] }
+                                : m
+                        )
+                    );
+                } catch (err) {
+                    console.error('Failed to mark as read:', err);
+                }
+            }
         }
     };
 
@@ -147,6 +166,30 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
 
     const handleBulkDeleteCancel = () => {
         setBulkDeleteDialogOpen(false);
+    };
+
+    const handleMarkAsRead = async () => {
+        if (selectedIds.size === 0) return;
+        try {
+            const ids = Array.from(selectedIds);
+            await markAsRead(accountId, ids);
+            setSelectedIds(new Set());
+            await loadMessages();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to mark messages as read');
+        }
+    };
+
+    const handleMarkAsUnread = async () => {
+        if (selectedIds.size === 0) return;
+        try {
+            const ids = Array.from(selectedIds);
+            await markAsUnread(accountId, ids);
+            setSelectedIds(new Set());
+            await loadMessages();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to mark messages as unread');
+        }
     };
 
     const loadMessages = async () => {
@@ -235,7 +278,13 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
                             <Typography sx={{ flex: '1 1 100%' }} variant="subtitle1">
                                 {selectedIds.size} selected
                             </Typography>
-                            <IconButton onClick={handleBulkDeleteClick} color="error">
+                            <IconButton onClick={handleMarkAsRead} title="Mark as read">
+                                <MarkEmailReadIcon />
+                            </IconButton>
+                            <IconButton onClick={handleMarkAsUnread} title="Mark as unread">
+                                <MarkEmailUnreadIcon />
+                            </IconButton>
+                            <IconButton onClick={handleBulkDeleteClick} color="error" title="Delete">
                                 <DeleteIcon />
                             </IconButton>
                         </Toolbar>
