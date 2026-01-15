@@ -50,6 +50,7 @@ import {
     Mailbox,
 } from '../data/mailboxes';
 import { getPrimaryAccountId } from '../data/accounts';
+import { moveMessages } from '../data/messages';
 
 const drawerWidth = 240;
 
@@ -86,6 +87,7 @@ export default function Mail({ path }: MailProps) {
     const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['INBOX']));
     const [composeOpen, setComposeOpen] = useState(false);
     const [accountId, setAccountId] = useState<string | null>(null);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [contextMenu, setContextMenu] = useState<{
         mouseX: number;
         mouseY: number;
@@ -210,6 +212,30 @@ export default function Mail({ path }: MailProps) {
         }
     };
 
+    const handleDrop = async (e: DragEvent, targetMailboxId: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (!accountId) return;
+        
+        try {
+            const messageIds = JSON.parse(e.dataTransfer!.getData('messageIds') || '[]');
+            if (messageIds.length > 0) {
+                await moveMessages(accountId, messageIds, targetMailboxId);
+                // Trigger refresh of message list
+                setRefreshTrigger((prev) => prev + 1);
+            }
+        } catch (error) {
+            console.error('Failed to move messages:', error);
+            alert(error instanceof Error ? error.message : 'Failed to move messages');
+        }
+    };
+
+    const handleDragOver = (e: DragEvent) => {
+        e.preventDefault();
+        e.dataTransfer!.dropEffect = 'move';
+    };
+
     const renderMailboxNode = (node: MailboxNode, depth: number = 0) => {
         const hasChildren = node.children.length > 0;
         const isExpanded = expandedFolders.has(node.name);
@@ -246,7 +272,17 @@ export default function Mail({ path }: MailProps) {
                         }
                     }}
                     onContextMenu={(e) => !node.role && handleContextMenu(e as any, node)}
+                    onDrop={(e) => node.id && handleDrop(e as any, node.id)}
+                    onDragOver={handleDragOver as any}
                     style={{ paddingLeft: (2 + depth * 2) * 8 }}
+                    sx={{
+                        '&.MuiListItemButton-root': {
+                            transition: 'background-color 0.2s',
+                        },
+                        '&:hover': {
+                            backgroundColor: 'action.hover',
+                        },
+                    }}
                 >
                     <ListItemIcon>{getMailboxIcon(node.role, node.name)}</ListItemIcon>
                     <ListItemText primary={node.displayName} />
@@ -472,7 +508,11 @@ export default function Mail({ path }: MailProps) {
                 <Toolbar />
                 <Paper style={{ height: 'calc(100vh - 112px)', overflow: 'hidden' }}>
                     {selectedMailbox && isActualMailbox && accountId ? (
-                        <MessageList mailbox={selectedMailbox} accountId={accountId} />
+                        <MessageList
+                            key={`${selectedMailbox}-${refreshTrigger}`}
+                            mailbox={selectedMailbox}
+                            accountId={accountId}
+                        />
                     ) : (
                         <Stack justifyContent="center" alignItems="center" height="100%">
                             <Typography color="text.secondary">

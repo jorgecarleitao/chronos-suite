@@ -293,3 +293,15 @@ export async function markAsUnread(accountId: string, emailIds: string | string[
 
     await jmapService.markAsUnread(accountId, emailIds);
 }
+
+export async function moveMessages(
+    accountId: string,
+    emailIds: string[],
+    targetMailboxId: string
+) {
+    if (!jmapService.isInitialized()) {
+        throw new Error('JMAP client not initialized. Please log in first.');
+    }
+
+    await jmapService.moveEmails(accountId, emailIds, targetMailboxId);
+}

@@ -305,6 +305,17 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
                             key={message.uid}
                             disablePadding
                             divider
+                            draggable={!!message.id}
+                            onDragStart={(e) => {
+                                if (message.id) {
+                                    // If this message is in the selection, drag all selected
+                                    const dragIds = selectedIds.has(message.id)
+                                        ? Array.from(selectedIds)
+                                        : [message.id];
+                                    e.dataTransfer!.setData('messageIds', JSON.stringify(dragIds));
+                                    e.dataTransfer!.effectAllowed = 'move';
+                                }
+                            }}
                             secondaryAction={
                                 <IconButton
                                     edge="end"

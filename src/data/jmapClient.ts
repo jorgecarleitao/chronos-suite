@@ -402,6 +402,34 @@ class JmapService {
     }
 
     /**
+     * Move email(s) to a different mailbox
+     */
+    async moveEmails(accountId: string, emailIds: string[], targetMailboxId: string) {
+        const client = this.getClient();
+
+        const update: any = {};
+        emailIds.forEach((id) => {
+            update[id] = {
+                mailboxIds: { [targetMailboxId]: true },
+            };
+        });
+
+        const [response] = await client.request([
+            'Email/set',
+            {
+                accountId,
+                update,
+            },
+        ]);
+
+        if (response.notUpdated) {
+            throw new Error(`Failed to move emails: ${JSON.stringify(response.notUpdated)}`);
+        }
+
+        return response.updated;
+    }
+
+    /**
      * Delete (trash) an email or permanently delete if already in trash
      */
     async deleteEmail(accountId: string, emailId: string) {
