@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'preact/hooks';
 import Box from '@mui/material/Box';
 import Dialog from '@mui/material/Dialog';
-import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogActions from '@mui/material/DialogActions';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -13,11 +15,13 @@ import Paper from '@mui/material/Paper';
 import Divider from '@mui/material/Divider';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
+import ReplyIcon from '@mui/icons-material/Reply';
+import ReplyAllIcon from '@mui/icons-material/ReplyAll';
+import ForwardIcon from '@mui/icons-material/Forward';
 import SendIcon from '@mui/icons-material/Send';
 import Button from '@mui/material/Button';
-import DialogContentText from '@mui/material/DialogContentText';
-import DialogActions from '@mui/material/DialogActions';
 import DOMPurify from 'dompurify';
+import ComposeEmail from './ComposeEmail';
 import {
     fetchMessage as apiFetchMessage,
     deleteMessage as apiDeleteMessage,
@@ -25,18 +29,25 @@ import {
 } from '../data/messages';
 
 interface MessageViewerProps {
-    open: boolean;
     onClose: () => void;
     onDelete?: () => void;
     mailbox: string;
-    uid: number;
-    emailId?: string;
+    emailId: string;
     accountId: string;
+    renderActions?: (handlers: {
+        onReply: () => void;
+        onReplyAll: () => void;
+        onForward: () => void;
+        onDelete: () => void;
+        onSend: () => void;
+        onClose: () => void;
+        isDraft: boolean;
+        sending: boolean;
+    }) => JSX.Element;
 }
 
 interface MessageDetail {
-    uid: number;
-    sequence: number;
+    id: string;
     flags: string[];
     size?: number;
     from?: string;
@@ -49,13 +60,12 @@ interface MessageDetail {
 }
 
 export default function MessageViewer({
-    open,
     onClose,
     onDelete,
     mailbox,
-    uid,
     emailId,
     accountId,
+    renderActions,
 }: MessageViewerProps) {
     const [message, setMessage] = useState<MessageDetail | null>(null);
     const [loading, setLoading] = useState(false);
@@ -64,25 +74,29 @@ export default function MessageViewer({
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [sending, setSending] = useState(false);
     const [sendSuccess, setSendSuccess] = useState<string | null>(null);
+    const [composeOpen, setComposeOpen] = useState(false);
+    const [composeMode, setComposeMode] = useState<'reply' | 'replyAll' | 'forward'>('reply');
+    const [composeData, setComposeData] = useState<{
+        to?: string;
+        cc?: string;
+        subject?: string;
+        body?: string;
+    }>({});
 
     useEffect(() => {
-        if (open && uid) {
+        if (emailId) {
             fetchMessage();
         }
-    }, [open, mailbox, uid]);
+    }, [mailbox, emailId]);
 
     const fetchMessage = async () => {
         setLoading(true);
         setError(null);
         try {
-            if (!emailId) {
-                throw new Error('Email ID is required');
-            }
-            const data = await apiFetchMessage(accountId, emailId, uid);
+            const data = await apiFetchMessage(accountId, emailId);
             // Map to MessageDetail format
             const messageDetail: MessageDetail = {
-                uid: data.uid,
-                sequence: data.uid, // Use uid as sequence for compatibility
+                id: data.id,
                 flags: [],
                 from: data.from_email
                     ? `${data.from_name || ''} <${data.from_email}>`.trim()
@@ -90,17 +104,27 @@ export default function MessageViewer({
                 to: data.to_email ? `${data.to_name || ''} <${data.to_email}>`.trim() : undefined,
                 subject: data.subject || undefined,
                 date: data.date ? data.date.toISOString() : undefined,
-                html_body: data.body?.includes('<') ? data.body : undefined,
-                text_body: !data.body?.includes('<') ? data.body : undefined,
+                html_body: data.htmlBody,
+                text_body: data.textBody,
             };
             setMessage(messageDetail);
-            if (messageDetail.html_body) {
-                setParsedBody({
-                    html: sanitizeHTML(messageDetail.html_body),
-                    text: messageDetail.text_body,
+            setParsedBody({
+                html: messageDetail.html_body ? sanitizeHTML(messageDetail.html_body) : undefined,
+                text: messageDetail.text_body,
+            });
+            
+            // Notify parent to render actions
+            if (renderActions) {
+                renderActions({
+                    onReply: handleReply,
+                    onReplyAll: handleReplyAll,
+                    onForward: handleForward,
+                    onDelete: handleDeleteClick,
+                    onSend: handleSendClick,
+                    onClose,
+                    isDraft: isDraft(),
+                    sending,
                 });
-            } else if (messageDetail.text_body) {
-                setParsedBody({ text: messageDetail.text_body });
             }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to fetch message');
@@ -119,9 +143,6 @@ export default function MessageViewer({
 
     const handleDeleteConfirm = async () => {
         try {
-            if (!emailId) {
-                throw new Error('Email ID is required');
-            }
             await apiDeleteMessage(accountId, emailId);
             setDeleteDialogOpen(false);
             onClose();
@@ -136,6 +157,58 @@ export default function MessageViewer({
 
     const handleDeleteCancel = () => {
         setDeleteDialogOpen(false);
+    };
+
+    const extractEmail = (emailStr?: string): string => {
+        if (!emailStr) return '';
+        const match = emailStr.match(/<(.+)>/);
+        return match ? match[1] : emailStr;
+    };
+
+    const handleReply = () => {
+        if (!message) return;
+        const replyTo = extractEmail(message.from);
+        const originalBody = parsedBody?.text || parsedBody?.html || '';
+        const quotedBody = `\n\n---\nOn ${message.date || ''}, ${message.from || 'Unknown'} wrote:\n\n${originalBody}`;
+        
+        setComposeMode('reply');
+        setComposeData({
+            to: replyTo,
+            subject: message.subject?.startsWith('Re:') ? message.subject : `Re: ${message.subject || ''}`,
+            body: quotedBody,
+        });
+        setComposeOpen(true);
+    };
+
+    const handleReplyAll = () => {
+        if (!message) return;
+        const replyTo = extractEmail(message.from);
+        const originalTo = message.to?.split(',').map((e) => extractEmail(e.trim())).filter((e) => e) || [];
+        const allRecipients = [replyTo, ...originalTo].filter((e, i, arr) => arr.indexOf(e) === i);
+        
+        const originalBody = parsedBody?.text || parsedBody?.html || '';
+        const quotedBody = `\n\n---\nOn ${message.date || ''}, ${message.from || 'Unknown'} wrote:\n\n${originalBody}`;
+        
+        setComposeMode('replyAll');
+        setComposeData({
+            to: allRecipients.join(', '),
+            subject: message.subject?.startsWith('Re:') ? message.subject : `Re: ${message.subject || ''}`,
+            body: quotedBody,
+        });
+        setComposeOpen(true);
+    };
+
+    const handleForward = () => {
+        if (!message) return;
+        const originalBody = parsedBody?.text || parsedBody?.html || '';
+        const forwardedBody = `\n\n---\nForwarded message from ${message.from || 'Unknown'}:\nSubject: ${message.subject || '(No Subject)'}\nDate: ${message.date || ''}\n\n${originalBody}`;
+        
+        setComposeMode('forward');
+        setComposeData({
+            subject: message.subject?.startsWith('Fwd:') ? message.subject : `Fwd: ${message.subject || ''}`,
+            body: forwardedBody,
+        });
+        setComposeOpen(true);
     };
 
     const handleSendClick = async () => {
@@ -155,7 +228,7 @@ export default function MessageViewer({
                 message.subject || '',
                 parsedBody?.text || parsedBody?.html || ''
             );
-            setSendSuccess(data.message || 'Email sent successfully');
+            setSendSuccess('Email sent successfully');
             setTimeout(() => {
                 onClose();
                 if (onDelete) {
@@ -170,80 +243,32 @@ export default function MessageViewer({
     };
 
     const sanitizeHTML = (html: string): string => {
-        // Configure DOMPurify to be strict
+        // Configure DOMPurify using blacklist approach - forbid dangerous elements
         return DOMPurify.sanitize(html, {
-            ALLOWED_TAGS: [
-                'b',
-                'i',
-                'em',
-                'strong',
-                'a',
-                'p',
-                'br',
-                'div',
-                'span',
-                'ul',
-                'ol',
-                'li',
-                'h1',
-                'h2',
-                'h3',
-                'h4',
-                'h5',
-                'h6',
-                'blockquote',
-                'pre',
-                'code',
-                'table',
-                'thead',
-                'tbody',
-                'tr',
-                'td',
-                'th',
-                'img',
+            FORBID_TAGS: [
+                'script', 'iframe', 'object', 'embed', 'applet',
+                'base', 'link', 'meta', 'noscript',
+                'form', 'input', 'button', 'textarea', 'select', 'option',
+                'frame', 'frameset',
             ],
-            ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'id', 'style'],
+            FORBID_ATTR: [
+                'onerror', 'onload', 'onclick', 'onmouseover', 'onmouseout',
+                'onmousemove', 'onmouseenter', 'onmouseleave', 'onchange',
+                'onsubmit', 'onfocus', 'onblur', 'onkeydown', 'onkeyup',
+                'onkeypress', 'ondblclick', 'oncontextmenu', 'oninput',
+                'onpaste', 'oncopy', 'oncut', 'ondrag', 'ondrop',
+                'formaction', 'action',
+            ],
             ALLOW_DATA_ATTR: false,
-            // Remove all event handlers and javascript: URLs
-            FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover'],
-            FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form', 'input'],
+            KEEP_CONTENT: true,
+            WHOLE_DOCUMENT: false,
         });
     };
 
-    const renderMessageHeader = (
-        message: MessageDetail,
-        isDraft: boolean,
-        sending: boolean,
-        onSend: () => void,
-        onDelete: () => void,
-        onClose: () => void
-    ) => (
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
-            <Typography variant="h6" flexGrow={1}>
-                {message.subject || '(No Subject)'}
-            </Typography>
-            <Stack direction="row" spacing={1}>
-                {isDraft && (
-                    <Button
-                        variant="contained"
-                        startIcon={
-                            sending ? <CircularProgress size={16} color="inherit" /> : <SendIcon />
-                        }
-                        onClick={onSend}
-                        disabled={sending}
-                        size="small"
-                    >
-                        {sending ? 'Sending...' : 'Send'}
-                    </Button>
-                )}
-                <IconButton onClick={onDelete} size="small" color="error">
-                    <DeleteIcon />
-                </IconButton>
-                <IconButton onClick={onClose} size="small">
-                    <CloseIcon />
-                </IconButton>
-            </Stack>
-        </Stack>
+    const renderMessageHeader = (message: MessageDetail) => (
+        <Typography variant="h6">
+            {message.subject || '(No Subject)'}
+        </Typography>
     );
 
     const renderMessageMetadata = (message: MessageDetail) => (
@@ -291,57 +316,46 @@ export default function MessageViewer({
     };
 
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
-            <DialogContent>
-                <Stack spacing={0} height="80vh">
-                    {loading && (
-                        <Stack justifyContent="center" alignItems="center" padding={3}>
-                            <CircularProgress />
-                        </Stack>
-                    )}
-
-                    {error && (
-                        <Alert severity="error" onClose={() => setError(null)}>
-                            {error}
-                        </Alert>
-                    )}
-
-                    {sendSuccess && (
-                        <Alert severity="success" onClose={() => setSendSuccess(null)}>
-                            {sendSuccess}
-                        </Alert>
-                    )}
-
-                    {message && !loading && (
-                        <>
-                            {/* Compact header section */}
-                            <Paper elevation={0} square>
-                                <Stack spacing={1.5} padding={2}>
-                                    {renderMessageHeader(
-                                        message,
-                                        isDraft(),
-                                        sending,
-                                        handleSendClick,
-                                        handleDeleteClick,
-                                        onClose
-                                    )}
-                                    {renderMessageMetadata(message)}
-                                </Stack>
-                                <Divider />
-                            </Paper>
-
-                            {/* Large body section */}
-                            <Paper
-                                elevation={0}
-                                square
-                                style={{ flex: 1, overflow: 'auto', backgroundColor: 'white' }}
-                            >
-                                <Box padding={3}>{renderMessageBody(parsedBody)}</Box>
-                            </Paper>
-                        </>
-                    )}
+        <Stack height="100%" spacing={0}>
+            {loading && (
+                <Stack justifyContent="center" alignItems="center" padding={3}>
+                    <CircularProgress />
                 </Stack>
-            </DialogContent>
+            )}
+
+            {error && (
+                <Alert severity="error" onClose={() => setError(null)}>
+                    {error}
+                </Alert>
+            )}
+
+            {sendSuccess && (
+                <Alert severity="success" onClose={() => setSendSuccess(null)}>
+                    {sendSuccess}
+                </Alert>
+            )}
+
+            {message && !loading && (
+                <>
+                    {/* Compact header section */}
+                    <Paper elevation={0} square>
+                        <Stack spacing={1.5} padding={2}>
+                            {renderMessageHeader(message)}
+                            {renderMessageMetadata(message)}
+                        </Stack>
+                        <Divider />
+                    </Paper>
+
+                    {/* Large body section */}
+                    <Paper
+                        elevation={0}
+                        square
+                        style={{ flex: 1, overflow: 'auto' }}
+                    >
+                        <Box padding={3}>{renderMessageBody(parsedBody)}</Box>
+                    </Paper>
+                </>
+            )}
 
             {/* Delete Confirmation Dialog */}
             <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
@@ -358,6 +372,17 @@ export default function MessageViewer({
                     </Button>
                 </DialogActions>
             </Dialog>
-        </Dialog>
+
+            {/* Compose Email Dialog */}
+            <ComposeEmail
+                open={composeOpen}
+                onClose={() => setComposeOpen(false)}
+                to={composeData.to}
+                cc={composeData.cc}
+                subject={composeData.subject}
+                body={composeData.body}
+                accountId={accountId}
+            />
+        </Stack>
     );
 }

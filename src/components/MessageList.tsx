@@ -19,6 +19,15 @@ import IconButton from '@mui/material/IconButton';
 import DeleteIcon from '@mui/icons-material/Delete';
 import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
 import MarkEmailUnreadIcon from '@mui/icons-material/MarkEmailUnread';
+import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
+import CheckBoxIcon from '@mui/icons-material/CheckBox';
+import IndeterminateCheckBoxIcon from '@mui/icons-material/IndeterminateCheckBox';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import ReplyIcon from '@mui/icons-material/Reply';
+import ReplyAllIcon from '@mui/icons-material/ReplyAll';
+import ForwardIcon from '@mui/icons-material/Forward';
+import SendIcon from '@mui/icons-material/Send';
+import CloseIcon from '@mui/icons-material/Close';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -41,7 +50,7 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [selectedMessage, setSelectedMessage] = useState<{ uid: number; id?: string } | null>(
+    const [selectedMessage, setSelectedMessage] = useState<string | null>(
         null
     );
     const [viewerOpen, setViewerOpen] = useState(false);
@@ -51,6 +60,16 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
     const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+    const [messageActions, setMessageActions] = useState<{
+        onReply: () => void;
+        onReplyAll: () => void;
+        onForward: () => void;
+        onDelete: () => void;
+        onSend: () => void;
+        onClose: () => void;
+        isDraft: boolean;
+        sending: boolean;
+    } | null>(null);
 
     useEffect(() => {
         loadMessages();
@@ -61,22 +80,18 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
         if (mailbox.toLowerCase() === 'drafts') {
             // Fetch full message details for draft
             try {
-                if (!message.id) {
-                    setError('Invalid message: missing email ID');
-                    return;
-                }
-                const data = await fetchMessage(accountId, message.id, message.uid);
+                const data = await fetchMessage(accountId, message.id);
                 setDraftMessage(data);
                 setComposeOpen(true);
             } catch (err) {
                 setError('Failed to load draft for editing');
             }
         } else {
-            setSelectedMessage({ uid: message.uid, id: message.id });
+            setSelectedMessage(message.id);
             setViewerOpen(true);
             
             // Mark as read if it's unread
-            if (message.id && isUnread(message.flags)) {
+            if (isUnread(message.flags)) {
                 try {
                     await markAsRead(accountId, message.id);
                     // Update local state
@@ -101,10 +116,6 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
 
     const handleDeleteClick = (message: MessageMetadata, event: Event) => {
         event.stopPropagation();
-        if (!message.id) {
-            setError('Invalid message: missing email ID');
-            return;
-        }
         setMessageToDelete(message.id);
         setDeleteDialogOpen(true);
     };
@@ -141,7 +152,7 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
         if (selectedIds.size === messages.length) {
             setSelectedIds(new Set());
         } else {
-            const allIds = new Set(messages.map((m) => m.id).filter((id): id is string => !!id));
+            const allIds = new Set(messages.map((m) => m.id));
             setSelectedIds(allIds);
         }
     };
@@ -258,54 +269,122 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
     return (
         <Stack height="100%">
             <Paper elevation={0} square>
-                <Box padding={2}>
-                    <Stack direction="row" spacing={2} alignItems="center">
-                        <Typography variant="h6">{mailbox}</Typography>
-                        <Chip label={`${total} messages`} size="small" />
-                    </Stack>
-                </Box>
-                <Divider />
-                {selectedIds.size > 0 && (
-                    <>
-                        <Toolbar sx={{ bgcolor: 'action.selected' }}>
-                            <Checkbox
-                                checked={selectedIds.size === messages.length}
-                                indeterminate={
-                                    selectedIds.size > 0 && selectedIds.size < messages.length
-                                }
-                                onChange={handleSelectAll}
-                            />
-                            <Typography sx={{ flex: '1 1 100%' }} variant="subtitle1">
-                                {selectedIds.size} selected
-                            </Typography>
-                            <IconButton onClick={handleMarkAsRead} title="Mark as read">
-                                <MarkEmailReadIcon />
+                <ListItem
+                    disablePadding
+                >
+                    {viewerOpen && messageActions ? (
+                        <>
+                            <IconButton onClick={messageActions.onClose} title="Back to list">
+                                <CloseIcon />
                             </IconButton>
-                            <IconButton onClick={handleMarkAsUnread} title="Mark as unread">
-                                <MarkEmailUnreadIcon />
-                            </IconButton>
-                            <IconButton onClick={handleBulkDeleteClick} color="error" title="Delete">
+                            {!messageActions.isDraft ? (
+                                <>
+                                    <IconButton onClick={messageActions.onReply} title="Reply">
+                                        <ReplyIcon />
+                                    </IconButton>
+                                    <IconButton onClick={messageActions.onReplyAll} title="Reply All">
+                                        <ReplyAllIcon />
+                                    </IconButton>
+                                    <IconButton onClick={messageActions.onForward} title="Forward">
+                                        <ForwardIcon />
+                                    </IconButton>
+                                </>
+                            ) : (
+                                <Button
+                                    variant="contained"
+                                    startIcon={
+                                        messageActions.sending ? (
+                                            <CircularProgress size={16} color="inherit" />
+                                        ) : (
+                                            <SendIcon />
+                                        )
+                                    }
+                                    onClick={messageActions.onSend}
+                                    disabled={messageActions.sending}
+                                    size="small"
+                                >
+                                    {messageActions.sending ? 'Sending...' : 'Send'}
+                                </Button>
+                            )}
+                            <IconButton onClick={messageActions.onDelete} color="error" title="Delete">
                                 <DeleteIcon />
                             </IconButton>
-                        </Toolbar>
-                        <Divider />
-                    </>
-                )}
+                        </>
+                    ) : (
+                        <>
+                            <Checkbox
+                                icon={<CheckBoxOutlineBlankIcon />}
+                                checkedIcon={<CheckBoxIcon />}
+                                indeterminateIcon={<IndeterminateCheckBoxIcon />}
+                                checked={selectedIds.size === messages.length && messages.length > 0}
+                                indeterminate={selectedIds.size > 0 && selectedIds.size < messages.length}
+                                onChange={handleSelectAll}
+                                title="Select all"
+                            />
+                            {selectedIds.size > 0 ? (
+                                <>
+                                    <IconButton onClick={handleMarkAsRead} title="Mark as read">
+                                        <MarkEmailReadIcon />
+                                    </IconButton>
+                                    <IconButton onClick={handleMarkAsUnread} title="Mark as unread">
+                                        <MarkEmailUnreadIcon />
+                                    </IconButton>
+                                    <IconButton onClick={handleBulkDeleteClick} color="error" title="Delete">
+                                        <DeleteIcon />
+                                    </IconButton>
+                                    <ListItemText
+                                        primary={`${selectedIds.size} selected`}
+                                        primaryTypographyProps={{
+                                            variant: 'subtitle1',
+                                        }}
+                                        sx={{ ml: 2 }}
+                                    />
+                                </>
+                            ) : (
+                                <>
+                                    <IconButton onClick={loadMessages} title="Reload messages">
+                                        <RefreshIcon />
+                                    </IconButton>
+                                    <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
+                                        {total} {total === 1 ? 'message' : 'messages'}
+                                    </Typography>
+                                </>
+                            )}
+                        </>
+                    )}
+                </ListItem>
+                <Divider />
             </Paper>
+            
+            {viewerOpen && selectedMessage ? (
+                <MessageViewer
+                    onClose={handleViewerClose}
+                    onDelete={loadMessages}
+                    mailbox={mailbox}
+                    emailId={selectedMessage}
+                    accountId={accountId}
+                    renderActions={(actions) => {
+                        setMessageActions(actions);
+                        return <></>;
+                    }}
+                />
+            ) : (
             <List style={{ flexGrow: 1, overflow: 'auto' }}>
                 {messages.map((message) => {
                     const displayName = message.from_name || message.from_email || 'Unknown Sender';
                     const formattedDate = formatDate(message.date);
                     const unread = isUnread(message.flags);
                     const flagged = isFlagged(message.flags);
-                    const draft = isDraft(message.flags);
 
                     return (
                         <ListItem
-                            key={message.uid}
+                            key={message.id}
                             disablePadding
                             divider
                             draggable={!!message.id}
+                            sx={{
+                                bgcolor: selectedIds.has(message.id) ? 'action.selected' : 'transparent'
+                            }}
                             onDragStart={(e) => {
                                 if (message.id) {
                                     // If this message is in the selection, drag all selected
@@ -325,14 +404,13 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
                                     <DeleteIcon />
                                 </IconButton>
                             }
-                        >
+                        >   
                             <Checkbox
-                                checked={message.id ? selectedIds.has(message.id) : false}
-                                onChange={() => message.id && handleCheckboxChange(message.id)}
-                                disabled={!message.id}
+                                checked={selectedIds.has(message.id)}
+                                onChange={() => handleCheckboxChange(message.id)}
                             />
                             <ListItemButton
-                                selected={selectedMessage?.uid === message.uid}
+                                selected={selectedMessage === message.id}
                                 onClick={() => handleMessageClick(message)}
                             >
                                 <Stack direction="row" spacing={1} alignItems="center" width="100%">
@@ -355,17 +433,6 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
                 })}
             </List>
 
-            {/* Message Viewer Dialog */}
-            {selectedMessage && (
-                <MessageViewer
-                    open={viewerOpen}
-                    onClose={handleViewerClose}
-                    onDelete={loadMessages}
-                    mailbox={mailbox}
-                    uid={selectedMessage.uid}
-                    emailId={selectedMessage.id}
-                    accountId={accountId}
-                />
             )}
 
             {/* Compose Email for Drafts */}

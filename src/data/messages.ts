@@ -1,4 +1,56 @@
 import { jmapService, EmailData } from './jmapClient';
+import { oauthService } from './authService';
+
+/**
+ * Handle authentication errors and attempt token refresh or redirect to login
+ */
+async function handleAuthError(error: any): Promise<never> {
+    // Check if it's an authentication error
+    if (
+        error.message?.includes('401') ||
+        error.message?.includes('Unauthorized') ||
+        error.message?.includes('authentication')
+    ) {
+        // Try to refresh token
+        const refreshToken = oauthService.getRefreshToken();
+        if (refreshToken) {
+            try {
+                await oauthService.refreshAccessToken(refreshToken);
+                const newAccessToken = oauthService.getAccessToken();
+                if (newAccessToken) {
+                    await jmapService.initialize(newAccessToken);
+                    throw new Error('TOKEN_REFRESHED'); // Special error to signal retry
+                }
+            } catch (refreshError) {
+                console.error('Failed to refresh token:', refreshError);
+            }
+        }
+
+        // If refresh failed or no refresh token, logout and redirect
+        oauthService.logout();
+        jmapService.clear();
+        window.location.href = '/login';
+        throw new Error('Session expired. Please log in again.');
+    }
+
+    throw error;
+}
+
+/**
+ * Wrap async functions to handle auth errors
+ */
+async function withAuthHandling<T>(fn: () => Promise<T>): Promise<T> {
+    try {
+        return await fn();
+    } catch (error) {
+        await handleAuthError(error);
+        // If we get here with TOKEN_REFRESHED, retry once
+        if (error instanceof Error && error.message === 'TOKEN_REFRESHED') {
+            return await fn();
+        }
+        throw error;
+    }
+}
 
 export interface Draft {
     to: string[];
@@ -108,8 +160,7 @@ export async function updateDraft(accountId: string, emailId: string, draft: Dra
 
 // What the rest of the app uses
 export interface MessageMetadata {
-    uid: number; // We'll use a numeric hash of the JMAP ID for compatibility
-    id?: string; // The actual JMAP email ID
+    id: string; // The JMAP email ID
     flags: string[];
     size?: number;
     from_name?: string;
@@ -132,9 +183,6 @@ function parseDate(value: string | null): Date | null {
 
 // Convert JMAP email to our MessageMetadata format
 function mapJmapToMessageMetadata(jmapEmail: any): MessageMetadata {
-    // Create a numeric UID from the JMAP ID for compatibility
-    const uid = hashStringToNumber(jmapEmail.id);
-
     // Extract from/to info
     const from = jmapEmail.from?.[0];
     const to = jmapEmail.to?.[0];
@@ -149,7 +197,6 @@ function mapJmapToMessageMetadata(jmapEmail: any): MessageMetadata {
     }
 
     return {
-        uid,
         id: jmapEmail.id,
         flags,
         from_name: from?.name,
@@ -161,53 +208,49 @@ function mapJmapToMessageMetadata(jmapEmail: any): MessageMetadata {
     };
 }
 
-// Simple hash function to convert string ID to number
-function hashStringToNumber(str: string): number {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        const char = str.charCodeAt(i);
-        hash = (hash << 5) - hash + char;
-        hash = hash & hash; // Convert to 32bit integer
-    }
-    return Math.abs(hash);
-}
-
 export async function fetchMessages(accountId: string, mailbox: string): Promise<Messages> {
-    if (!jmapService.isInitialized()) {
-        throw new Error('JMAP client not initialized. Please log in first.');
-    }
+    return withAuthHandling(async () => {
+        if (!jmapService.isInitialized()) {
+            throw new Error('JMAP client not initialized. Please log in first.');
+        }
 
-    // Get mailbox ID from name
-    const mailboxObj = await getMailboxByName(accountId, mailbox);
-    const mailboxId = mailboxObj?.id;
+        // Get mailbox ID from name
+        const mailboxObj = await getMailboxByName(accountId, mailbox);
+        const mailboxId = mailboxObj?.id;
 
-    const emails = await jmapService.getEmails(accountId, mailboxId, 50);
+        const emails = await jmapService.getEmails(accountId, mailboxId, 50);
 
-    return {
-        messages: emails.map(mapJmapToMessageMetadata),
-        total: emails.length, // JMAP query response has totalCount, but we'd need to modify getEmails
-    };
+        return {
+            messages: emails.map(mapJmapToMessageMetadata),
+            total: emails.length, // JMAP query response has totalCount, but we'd need to modify getEmails
+        };
+    });
 }
 
-export async function fetchMessage(accountId: string, emailId: string, uid: number) {
-    if (!jmapService.isInitialized()) {
-        throw new Error('JMAP client not initialized. Please log in first.');
-    }
+export async function fetchMessage(accountId: string, emailId: string) {
+    return withAuthHandling(async () => {
+        if (!jmapService.isInitialized()) {
+            throw new Error('JMAP client not initialized. Please log in first.');
+        }
 
-    const email = await jmapService.getEmail(accountId, emailId);
+        const email = await jmapService.getEmail(accountId, emailId);
 
     // Convert to expected format
     const from = email.from?.[0];
     const to = email.to?.[0];
 
-    // Get body text
-    let bodyText = '';
+    // Get HTML body
+    let htmlBody = '';
+    if (email.htmlBody && email.htmlBody.length > 0) {
+        const partId = email.htmlBody[0].partId;
+        htmlBody = email.bodyValues?.[partId]?.value || '';
+    }
+
+    // Get text body
+    let textBody = '';
     if (email.textBody && email.textBody.length > 0) {
         const partId = email.textBody[0].partId;
-        bodyText = email.bodyValues?.[partId]?.value || '';
-    } else if (email.htmlBody && email.htmlBody.length > 0) {
-        const partId = email.htmlBody[0].partId;
-        bodyText = email.bodyValues?.[partId]?.value || '';
+        textBody = email.bodyValues?.[partId]?.value || '';
     }
 
     // Format to/cc/bcc as comma-separated strings for draft editing
@@ -216,7 +259,6 @@ export async function fetchMessage(accountId: string, emailId: string, uid: numb
     const bccStr = email.bcc?.map((addr: any) => addr.email).join(', ') || '';
 
     return {
-        uid,
         id: email.id,
         from_name: from?.name,
         from_email: from?.email,
@@ -227,9 +269,11 @@ export async function fetchMessage(accountId: string, emailId: string, uid: numb
         bcc: bccStr,
         subject: email.subject,
         date: parseDate(email.receivedAt),
-        body: bodyText,
+        htmlBody: htmlBody || undefined,
+        textBody: textBody || undefined,
         has_attachments: email.hasAttachment,
     };
+    });
 }
 
 export async function sendMessage(
@@ -271,27 +315,33 @@ export async function sendMessage(
 }
 
 export async function deleteMessage(accountId: string, emailId: string) {
-    if (!jmapService.isInitialized()) {
-        throw new Error('JMAP client not initialized. Please log in first.');
-    }
+    return withAuthHandling(async () => {
+        if (!jmapService.isInitialized()) {
+            throw new Error('JMAP client not initialized. Please log in first.');
+        }
 
-    await jmapService.deleteEmail(accountId, emailId);
+        await jmapService.deleteEmail(accountId, emailId);
+    });
 }
 
 export async function markAsRead(accountId: string, emailIds: string | string[]) {
-    if (!jmapService.isInitialized()) {
-        throw new Error('JMAP client not initialized. Please log in first.');
-    }
+    return withAuthHandling(async () => {
+        if (!jmapService.isInitialized()) {
+            throw new Error('JMAP client not initialized. Please log in first.');
+        }
 
-    await jmapService.markAsRead(accountId, emailIds);
+        await jmapService.markAsRead(accountId, emailIds);
+    });
 }
 
 export async function markAsUnread(accountId: string, emailIds: string | string[]) {
-    if (!jmapService.isInitialized()) {
-        throw new Error('JMAP client not initialized. Please log in first.');
-    }
+    return withAuthHandling(async () => {
+        if (!jmapService.isInitialized()) {
+            throw new Error('JMAP client not initialized. Please log in first.');
+        }
 
-    await jmapService.markAsUnread(accountId, emailIds);
+        await jmapService.markAsUnread(accountId, emailIds);
+    });
 }
 
 export async function moveMessages(
@@ -299,9 +349,11 @@ export async function moveMessages(
     emailIds: string[],
     targetMailboxId: string
 ) {
-    if (!jmapService.isInitialized()) {
-        throw new Error('JMAP client not initialized. Please log in first.');
-    }
+    return withAuthHandling(async () => {
+        if (!jmapService.isInitialized()) {
+            throw new Error('JMAP client not initialized. Please log in first.');
+        }
 
-    await jmapService.moveEmails(accountId, emailIds, targetMailboxId);
+        await jmapService.moveEmails(accountId, emailIds, targetMailboxId);
+    });
 }
