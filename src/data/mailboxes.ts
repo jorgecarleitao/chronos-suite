@@ -54,6 +54,8 @@ interface JmapMailbox {
     role?: string | null;
     sortOrder?: number;
     isSubscribed?: boolean;
+    unreadEmails?: number;
+    totalEmails?: number;
 }
 
 // What the rest of the app uses
@@ -67,6 +69,8 @@ export interface Mailbox {
     accountId?: string;
     accountName?: string;
     parentId?: string | null;
+    unreadEmails?: number;
+    totalEmails?: number;
 }
 
 interface MailboxesResponse {
@@ -93,6 +97,8 @@ function mapJmapToMailbox(
         is_selectable: true, // JMAP mailboxes are generally selectable
         children,
         parentId: jmapMailbox.parentId,
+        unreadEmails: jmapMailbox.unreadEmails,
+        totalEmails: jmapMailbox.totalEmails,
     };
 
     if (accountId) mailbox.accountId = accountId;

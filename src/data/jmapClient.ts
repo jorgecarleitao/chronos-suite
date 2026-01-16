@@ -66,6 +66,7 @@ class JmapService {
             'Mailbox/get',
             {
                 accountId,
+                properties: ['id', 'name', 'parentId', 'role', 'sortOrder', 'isSubscribed', 'totalEmails', 'unreadEmails'],
             },
         ]);
 
@@ -399,6 +400,22 @@ class JmapService {
     async markAsUnread(accountId: string, emailIds: string | string[]) {
         const ids = Array.isArray(emailIds) ? emailIds : [emailIds];
         return this.updateEmailKeywords(accountId, ids, { $seen: false });
+    }
+
+    /**
+     * Mark email(s) as flagged/starred
+     */
+    async markAsFlagged(accountId: string, emailIds: string | string[]) {
+        const ids = Array.isArray(emailIds) ? emailIds : [emailIds];
+        return this.updateEmailKeywords(accountId, ids, { $flagged: true });
+    }
+
+    /**
+     * Mark email(s) as unflagged/unstarred
+     */
+    async markAsUnflagged(accountId: string, emailIds: string | string[]) {
+        const ids = Array.isArray(emailIds) ? emailIds : [emailIds];
+        return this.updateEmailKeywords(accountId, ids, { $flagged: false });
     }
 
     /**

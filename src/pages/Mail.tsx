@@ -66,6 +66,8 @@ interface MailboxNode {
     role?: string;
     id?: string; // JMAP mailbox ID
     parentId?: string | null;
+    unreadEmails?: number;
+    totalEmails?: number;
 }
 
 // Convert backend tree to frontend node structure (if needed for compatibility)
@@ -77,6 +79,8 @@ const convertToNode = (mailbox: Mailbox): MailboxNode => ({
     role: mailbox.role,
     id: mailbox.id,
     parentId: mailbox.parentId,
+    unreadEmails: mailbox.unreadEmails,
+    totalEmails: mailbox.totalEmails,
 });
 
 export default function Mail({ path }: MailProps) {
@@ -285,7 +289,16 @@ export default function Mail({ path }: MailProps) {
                     }}
                 >
                     <ListItemIcon>{getMailboxIcon(node.role, node.name)}</ListItemIcon>
-                    <ListItemText primary={node.displayName} />
+                    <ListItemText 
+                        primary={
+                            node.role === 'inbox' && node.unreadEmails 
+                                ? `${node.displayName} (${node.unreadEmails})`
+                                : node.displayName
+                        }
+                        primaryTypographyProps={{
+                            fontWeight: node.role === 'inbox' ? 'bold' : 'normal',
+                        }}
+                    />
                     {hasChildren && (isExpanded ? <ExpandLess /> : <ExpandMore />)}
                 </ListItemButton>
             </ListItem>

@@ -196,9 +196,11 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
                         totalCount={total}
                         allSelected={operations.selectedIds.size === messages.length}
                         someSelected={operations.selectedIds.size > 0 && operations.selectedIds.size < messages.length}
-                        onSelectAll={operations.selectAll}
+                        onSelectAll={operations.toggleSelectAll}
                         onMarkAsRead={operations.bulkMarkAsRead}
                         onMarkAsUnread={operations.bulkMarkAsUnread}
+                        onMarkAsFlagged={operations.bulkMarkAsFlagged}
+                        onMarkAsUnflagged={operations.bulkMarkAsUnflagged}
                         onDelete={handleBulkDeleteClick}
                         onRefresh={loadMessages}
                     />
@@ -229,6 +231,10 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
                             onSelect={handleMessageClick}
                             onCheckboxChange={operations.toggleSelection}
                             onDelete={handleDeleteClick}
+                            onToggleStar={(messageId, isFlagged, event) => {
+                                event.stopPropagation();
+                                operations.toggleStar(messageId, isFlagged);
+                            }}
                             formatDate={formatDate}
                             isUnread={isUnread}
                             isFlagged={isFlagged}

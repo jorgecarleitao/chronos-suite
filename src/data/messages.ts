@@ -344,6 +344,26 @@ export async function markAsUnread(accountId: string, emailIds: string | string[
     });
 }
 
+export async function markAsFlagged(accountId: string, emailIds: string | string[]) {
+    return withAuthHandling(async () => {
+        if (!jmapService.isInitialized()) {
+            throw new Error('JMAP client not initialized. Please log in first.');
+        }
+
+        await jmapService.markAsFlagged(accountId, emailIds);
+    });
+}
+
+export async function markAsUnflagged(accountId: string, emailIds: string | string[]) {
+    return withAuthHandling(async () => {
+        if (!jmapService.isInitialized()) {
+            throw new Error('JMAP client not initialized. Please log in first.');
+        }
+
+        await jmapService.markAsUnflagged(accountId, emailIds);
+    });
+}
+
 export async function moveMessages(
     accountId: string,
     emailIds: string[],

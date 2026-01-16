@@ -7,6 +7,8 @@ import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import IndeterminateCheckBoxIcon from '@mui/icons-material/IndeterminateCheckBox';
 import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
 import MarkEmailUnreadIcon from '@mui/icons-material/MarkEmailUnread';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RefreshIcon from '@mui/icons-material/Refresh';
 
@@ -18,6 +20,8 @@ interface BulkActionsBarProps {
     onSelectAll: () => void;
     onMarkAsRead: () => void;
     onMarkAsUnread: () => void;
+    onMarkAsFlagged: () => void;
+    onMarkAsUnflagged: () => void;
     onDelete: () => void;
     onRefresh: () => void;
 }
@@ -30,6 +34,8 @@ export default function BulkActionsBar({
     onSelectAll,
     onMarkAsRead,
     onMarkAsUnread,
+    onMarkAsFlagged,
+    onMarkAsUnflagged,
     onDelete,
     onRefresh,
 }: BulkActionsBarProps) {
@@ -51,6 +57,12 @@ export default function BulkActionsBar({
                     </IconButton>
                     <IconButton onClick={onMarkAsUnread} title="Mark as unread">
                         <MarkEmailUnreadIcon />
+                    </IconButton>
+                    <IconButton onClick={onMarkAsFlagged} title="Star">
+                        <StarIcon />
+                    </IconButton>
+                    <IconButton onClick={onMarkAsUnflagged} title="Unstar">
+                        <StarBorderIcon />
                     </IconButton>
                     <IconButton onClick={onDelete} color="error" title="Delete">
                         <DeleteIcon />

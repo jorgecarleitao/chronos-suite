@@ -8,6 +8,7 @@ import Stack from '@mui/material/Stack';
 import MailIcon from '@mui/icons-material/Mail';
 import DraftsIcon from '@mui/icons-material/Drafts';
 import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { MessageMetadata } from '../data/messages';
 
@@ -18,6 +19,7 @@ interface MessageListItemProps {
     onSelect: (message: MessageMetadata) => void;
     onCheckboxChange: (messageId: string) => void;
     onDelete: (message: MessageMetadata, event: Event) => void;
+    onToggleStar: (messageId: string, isFlagged: boolean, event: Event) => void;
     formatDate: (date: Date | null) => string;
     isUnread: (flags: string[]) => boolean;
     isFlagged: (flags: string[]) => boolean;
@@ -30,6 +32,7 @@ export default function MessageListItem({
     onSelect,
     onCheckboxChange,
     onDelete,
+    onToggleStar,
     formatDate,
     isUnread,
     isFlagged,
@@ -55,13 +58,24 @@ export default function MessageListItem({
                 }
             }}
             secondaryAction={
-                <IconButton
-                    edge="end"
-                    aria-label="delete"
-                    onClick={(e) => onDelete(message, e)}
-                >
-                    <DeleteIcon />
-                </IconButton>
+                <Stack direction="row" spacing={0.5}>
+                    <IconButton
+                        edge="end"
+                        aria-label="star"
+                        onClick={(e) => onToggleStar(message.id, flagged, e)}
+                        size="small"
+                    >
+                        {flagged ? <StarIcon color="warning" /> : <StarBorderIcon />}
+                    </IconButton>
+                    <IconButton
+                        edge="end"
+                        aria-label="delete"
+                        onClick={(e) => onDelete(message, e)}
+                        size="small"
+                    >
+                        <DeleteIcon />
+                    </IconButton>
+                </Stack>
             }
         >
             <Checkbox
@@ -69,17 +83,17 @@ export default function MessageListItem({
                 onChange={() => onCheckboxChange(message.id)}
             />
             <ListItemButton selected={isSelected} onClick={() => onSelect(message)}>
-                <Stack direction="row" spacing={1} alignItems="center" width="100%">
+                <Stack direction="row" spacing={1} alignItems="center" width="100%" sx={{ pr: 10 }}>
                     {unread ? <MailIcon color="primary" /> : <DraftsIcon />}
-                    {flagged && <StarIcon color="warning" />}
                     <ListItemText
                         primary={displayName}
                         secondary={message.subject || '(No subject)'}
                         primaryTypographyProps={{
                             fontWeight: unread ? 'bold' : 'normal',
                         }}
+                        sx={{ flex: 1, minWidth: 0 }}
                     />
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
                         {formattedDate}
                     </Typography>
                 </Stack>

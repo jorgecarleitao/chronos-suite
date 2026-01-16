@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'preact/hooks';
-import { MessageMetadata, deleteMessage, markAsRead, markAsUnread } from '../data/messages';
+import { MessageMetadata, deleteMessage, markAsRead, markAsUnread, markAsFlagged, markAsUnflagged } from '../data/messages';
 
 interface UseMessageOperationsProps {
     mailboxId: string;
@@ -11,11 +11,15 @@ export interface MessageOperationsState {
     selectedIds: Set<string>;
     selectAll: () => void;
     clearSelection: () => void;
+    toggleSelectAll: () => void;
     toggleSelection: (messageId: string) => void;
     bulkDelete: () => Promise<void>;
     bulkMarkAsRead: () => Promise<void>;
     bulkMarkAsUnread: () => Promise<void>;
+    bulkMarkAsFlagged: () => Promise<void>;
+    bulkMarkAsUnflagged: () => Promise<void>;
     deleteOne: (messageId: string) => Promise<void>;
+    toggleStar: (messageId: string, isFlagged: boolean) => Promise<void>;
 }
 
 export default function useMessageOperations({
@@ -32,6 +36,14 @@ export default function useMessageOperations({
     const clearSelection = useCallback(() => {
         setSelectedIds(new Set());
     }, []);
+
+    const toggleSelectAll = useCallback(() => {
+        if (selectedIds.size === messages.length && messages.length > 0) {
+            clearSelection();
+        } else {
+            selectAll();
+        }
+    }, [selectedIds.size, messages.length, selectAll, clearSelection]);
 
     const toggleSelection = useCallback((messageId: string) => {
         setSelectedIds((prev) => {
@@ -100,14 +112,63 @@ export default function useMessageOperations({
         [mailboxId, onMessagesChange]
     );
 
+    const bulkMarkAsFlagged = useCallback(async () => {
+        if (selectedIds.size === 0) return;
+
+        try {
+            const markPromises = Array.from(selectedIds).map((id) => markAsFlagged(mailboxId, id));
+            await Promise.all(markPromises);
+            clearSelection();
+            onMessagesChange();
+        } catch (error) {
+            console.error('Failed to star messages:', error);
+            alert('Failed to star messages. Please try again.');
+        }
+    }, [selectedIds, mailboxId, clearSelection, onMessagesChange]);
+
+    const bulkMarkAsUnflagged = useCallback(async () => {
+        if (selectedIds.size === 0) return;
+
+        try {
+            const markPromises = Array.from(selectedIds).map((id) => markAsUnflagged(mailboxId, id));
+            await Promise.all(markPromises);
+            clearSelection();
+            onMessagesChange();
+        } catch (error) {
+            console.error('Failed to unstar messages:', error);
+            alert('Failed to unstar messages. Please try again.');
+        }
+    }, [selectedIds, mailboxId, clearSelection, onMessagesChange]);
+
+    const toggleStar = useCallback(
+        async (messageId: string, isFlagged: boolean) => {
+            try {
+                if (isFlagged) {
+                    await markAsUnflagged(mailboxId, messageId);
+                } else {
+                    await markAsFlagged(mailboxId, messageId);
+                }
+                onMessagesChange();
+            } catch (error) {
+                console.error('Failed to toggle star:', error);
+                alert('Failed to toggle star. Please try again.');
+            }
+        },
+        [mailboxId, onMessagesChange]
+    );
+
     return {
         selectedIds,
         selectAll,
         clearSelection,
+        toggleSelectAll,
         toggleSelection,
         bulkDelete,
         bulkMarkAsRead,
         bulkMarkAsUnread,
+        bulkMarkAsFlagged,
+        bulkMarkAsUnflagged,
         deleteOne,
+        toggleStar,
     };
 }
