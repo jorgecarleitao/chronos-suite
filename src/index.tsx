@@ -24,10 +24,7 @@ const initializeFromStorage = async () => {
     if (accessToken && !oauthService.isTokenExpired()) {
         try {
             await jmapService.initialize(accessToken);
-            console.log('JMAP client initialized from stored token');
         } catch (error) {
-            console.error('Failed to initialize JMAP client from stored token:', error);
-            // Clear invalid tokens
             oauthService.logout();
         }
     }

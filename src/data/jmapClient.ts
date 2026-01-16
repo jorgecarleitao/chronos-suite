@@ -372,7 +372,12 @@ class JmapService {
 
         const update: any = {};
         emailIds.forEach((id) => {
-            update[id] = { keywords };
+            // Use patch format to add/remove specific keywords without affecting others
+            const patches: any = {};
+            Object.entries(keywords).forEach(([keyword, value]) => {
+                patches[`keywords/${keyword}`] = value;
+            });
+            update[id] = patches;
         });
 
         const [response] = await client.request([

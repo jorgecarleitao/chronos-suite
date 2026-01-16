@@ -148,6 +148,12 @@ export default function Mail({ path }: MailProps) {
         }
     };
 
+    const refreshMailboxes = () => {
+        if (accountId) {
+            loadMailboxes(accountId);
+        }
+    };
+
     const handleToggleFolder = (folderName: string) => {
         setExpandedFolders((prev) => {
             const newSet = new Set(prev);
@@ -524,6 +530,7 @@ export default function Mail({ path }: MailProps) {
                             key={`${selectedMailbox}-${refreshTrigger}`}
                             mailbox={selectedMailbox}
                             accountId={accountId}
+                            onMailboxChange={refreshMailboxes}
                         />
                     ) : (
                         <Stack justifyContent="center" alignItems="center" height="100%">

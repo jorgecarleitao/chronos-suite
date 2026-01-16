@@ -24,9 +24,10 @@ import useMessageOperations from '../hooks/useMessageOperations';
 interface MessageListProps {
     mailbox: string;
     accountId: string;
+    onMailboxChange?: () => void;
 }
 
-export default function MessageList({ mailbox, accountId }: MessageListProps) {
+export default function MessageList({ mailbox, accountId, onMailboxChange }: MessageListProps) {
     const [messages, setMessages] = useState<MessageMetadata[]>([]);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -52,7 +53,12 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
     const operations = useMessageOperations({
         mailboxId: accountId,
         messages,
-        onMessagesChange: loadMessages,
+        onMessagesChange: () => {
+            loadMessages();
+            if (onMailboxChange) {
+                onMailboxChange();
+            }
+        },
     });
 
     useEffect(() => {
