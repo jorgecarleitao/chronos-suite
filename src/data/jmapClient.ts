@@ -66,7 +66,16 @@ class JmapService {
             'Mailbox/get',
             {
                 accountId,
-                properties: ['id', 'name', 'parentId', 'role', 'sortOrder', 'isSubscribed', 'totalEmails', 'unreadEmails'],
+                properties: [
+                    'id',
+                    'name',
+                    'parentId',
+                    'role',
+                    'sortOrder',
+                    'isSubscribed',
+                    'totalEmails',
+                    'unreadEmails',
+                ],
             },
         ]);
 
@@ -118,7 +127,7 @@ class JmapService {
                     [mailboxId]: {
                         name: newName,
                     },
-                },
+                } as any,
             },
         ]);
 
@@ -347,7 +356,7 @@ class JmapService {
                             ],
                         },
                     },
-                },
+                } as any,
             },
         ]);
 

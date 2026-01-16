@@ -147,7 +147,9 @@ export default function MessageViewer({
         setComposeMode('reply');
         setComposeData({
             to: message.from_email,
-            subject: message.subject?.startsWith('Re:') ? message.subject : `Re: ${message.subject || ''}`,
+            subject: message.subject?.startsWith('Re:')
+                ? message.subject
+                : `Re: ${message.subject || ''}`,
             body: quotedBody,
         });
         setComposeOpen(true);
@@ -155,7 +157,10 @@ export default function MessageViewer({
 
     const handleReplyAll = () => {
         if (!message) return;
-        const toEmails = message.to.split(',').map((e) => e.trim()).filter((e) => e);
+        const toEmails = message.to
+            .split(',')
+            .map((e) => e.trim())
+            .filter((e) => e);
         const allRecipients = [message.from_email, ...toEmails];
         const uniqueRecipients = Array.from(new Set(allRecipients));
 
@@ -165,7 +170,9 @@ export default function MessageViewer({
         setComposeMode('replyAll');
         setComposeData({
             to: uniqueRecipients.join(', '),
-            subject: message.subject?.startsWith('Re:') ? message.subject : `Re: ${message.subject || ''}`,
+            subject: message.subject?.startsWith('Re:')
+                ? message.subject
+                : `Re: ${message.subject || ''}`,
             body: quotedBody,
         });
         setComposeOpen(true);
@@ -178,7 +185,9 @@ export default function MessageViewer({
 
         setComposeMode('forward');
         setComposeData({
-            subject: message.subject?.startsWith('Fwd:') ? message.subject : `Fwd: ${message.subject || ''}`,
+            subject: message.subject?.startsWith('Fwd:')
+                ? message.subject
+                : `Fwd: ${message.subject || ''}`,
             body: forwardedBody,
         });
         setComposeOpen(true);
@@ -190,8 +199,16 @@ export default function MessageViewer({
         setError(null);
         setSendSuccess(null);
         try {
-            const toList = message.to.split(',').map((e) => e.trim()).filter((e) => e.length > 0);
-            await apiSendMessage(accountId, toList, message.subject || '', message.textBody || message.htmlBody || '');
+            const toList = message.to
+                .split(',')
+                .map((e) => e.trim())
+                .filter((e) => e.length > 0);
+            await apiSendMessage(
+                accountId,
+                toList,
+                message.subject || '',
+                message.textBody || message.htmlBody || ''
+            );
             setSendSuccess('Email sent successfully');
             setTimeout(() => {
                 onClose();

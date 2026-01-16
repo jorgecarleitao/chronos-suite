@@ -128,7 +128,11 @@ export default function MessageBody({ htmlBody, textBody }: MessageBodyProps) {
     if (textBody) {
         return (
             <Paper sx={{ p: 2 }}>
-                <Typography variant="body1" component="pre" sx={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
+                <Typography
+                    variant="body1"
+                    component="pre"
+                    sx={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}
+                >
                     {textBody}
                 </Typography>
             </Paper>

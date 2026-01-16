@@ -1,5 +1,12 @@
 import { useState, useCallback } from 'preact/hooks';
-import { MessageMetadata, deleteMessage, markAsRead, markAsUnread, markAsFlagged, markAsUnflagged } from '../data/messages';
+import {
+    MessageMetadata,
+    deleteMessage,
+    markAsRead,
+    markAsUnread,
+    markAsFlagged,
+    markAsUnflagged,
+} from '../data/messages';
 
 interface UseMessageOperationsProps {
     mailboxId: string;
@@ -61,7 +68,9 @@ export default function useMessageOperations({
         if (selectedIds.size === 0) return;
 
         try {
-            const deletePromises = Array.from(selectedIds).map((id) => deleteMessage(mailboxId, id));
+            const deletePromises = Array.from(selectedIds).map((id) =>
+                deleteMessage(mailboxId, id)
+            );
             await Promise.all(deletePromises);
             clearSelection();
             onMessagesChange();
@@ -130,7 +139,9 @@ export default function useMessageOperations({
         if (selectedIds.size === 0) return;
 
         try {
-            const markPromises = Array.from(selectedIds).map((id) => markAsUnflagged(mailboxId, id));
+            const markPromises = Array.from(selectedIds).map((id) =>
+                markAsUnflagged(mailboxId, id)
+            );
             await Promise.all(markPromises);
             clearSelection();
             onMessagesChange();

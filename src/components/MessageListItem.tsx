@@ -78,10 +78,7 @@ export default function MessageListItem({
                 </Stack>
             }
         >
-            <Checkbox
-                checked={isChecked}
-                onChange={() => onCheckboxChange(message.id)}
-            />
+            <Checkbox checked={isChecked} onChange={() => onCheckboxChange(message.id)} />
             <ListItemButton selected={isSelected} onClick={() => onSelect(message)}>
                 <Stack direction="row" spacing={1} alignItems="center" width="100%" sx={{ pr: 10 }}>
                     {unread ? <MailIcon color="primary" /> : <DraftsIcon />}

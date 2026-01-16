@@ -13,6 +13,7 @@ import Navigation from './components/Navigation';
 import Login from './pages/Login';
 import AuthCallback from './pages/AuthCallback';
 import Mail from './pages/Mail';
+import Contacts from './pages/Contacts';
 import { oauthService } from './data/authService';
 import { jmapService } from './data/jmapClient';
 
@@ -61,7 +62,8 @@ export default function App() {
                         <Login path="/login" />
                         <AuthCallback path="/auth/callback" />
                         <Mail path="/mail" />
-                        <Login path="/" default />
+                        <Contacts path="/contacts" />
+                        <Login path="/" />
                     </Router>
                 </Box>
             </Box>

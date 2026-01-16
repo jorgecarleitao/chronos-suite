@@ -225,9 +225,9 @@ export default function Mail({ path }: MailProps) {
     const handleDrop = async (e: DragEvent, targetMailboxId: string) => {
         e.preventDefault();
         e.stopPropagation();
-        
+
         if (!accountId) return;
-        
+
         try {
             const messageIds = JSON.parse(e.dataTransfer!.getData('messageIds') || '[]');
             if (messageIds.length > 0) {
@@ -295,9 +295,9 @@ export default function Mail({ path }: MailProps) {
                     }}
                 >
                     <ListItemIcon>{getMailboxIcon(node.role, node.name)}</ListItemIcon>
-                    <ListItemText 
+                    <ListItemText
                         primary={
-                            node.role === 'inbox' && node.unreadEmails 
+                            node.role === 'inbox' && node.unreadEmails
                                 ? `${node.displayName} (${node.unreadEmails})`
                                 : node.displayName
                         }
@@ -407,14 +407,24 @@ export default function Mail({ path }: MailProps) {
                     {!accountId ? (
                         <Stack justifyContent="center" padding={3}>
                             <CircularProgress />
-                            <Typography variant="body2" color="text.secondary" textAlign="center" mt={2}>
+                            <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                textAlign="center"
+                                mt={2}
+                            >
                                 Loading account...
                             </Typography>
                         </Stack>
                     ) : loading ? (
                         <Stack justifyContent="center" padding={3}>
                             <CircularProgress />
-                            <Typography variant="body2" color="text.secondary" textAlign="center" mt={2}>
+                            <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                textAlign="center"
+                                mt={2}
+                            >
                                 Loading mailboxes...
                             </Typography>
                         </Stack>

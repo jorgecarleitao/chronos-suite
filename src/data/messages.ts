@@ -235,44 +235,44 @@ export async function fetchMessage(accountId: string, emailId: string) {
 
         const email = await jmapService.getEmail(accountId, emailId);
 
-    // Convert to expected format
-    const from = email.from?.[0];
-    const to = email.to?.[0];
+        // Convert to expected format
+        const from = email.from?.[0];
+        const to = email.to?.[0];
 
-    // Get HTML body
-    let htmlBody = '';
-    if (email.htmlBody && email.htmlBody.length > 0) {
-        const partId = email.htmlBody[0].partId;
-        htmlBody = email.bodyValues?.[partId]?.value || '';
-    }
+        // Get HTML body
+        let htmlBody = '';
+        if (email.htmlBody && email.htmlBody.length > 0) {
+            const partId = email.htmlBody[0].partId;
+            htmlBody = email.bodyValues?.[partId]?.value || '';
+        }
 
-    // Get text body
-    let textBody = '';
-    if (email.textBody && email.textBody.length > 0) {
-        const partId = email.textBody[0].partId;
-        textBody = email.bodyValues?.[partId]?.value || '';
-    }
+        // Get text body
+        let textBody = '';
+        if (email.textBody && email.textBody.length > 0) {
+            const partId = email.textBody[0].partId;
+            textBody = email.bodyValues?.[partId]?.value || '';
+        }
 
-    // Format to/cc/bcc as comma-separated strings for draft editing
-    const toStr = email.to?.map((addr: any) => addr.email).join(', ') || '';
-    const ccStr = email.cc?.map((addr: any) => addr.email).join(', ') || '';
-    const bccStr = email.bcc?.map((addr: any) => addr.email).join(', ') || '';
+        // Format to/cc/bcc as comma-separated strings for draft editing
+        const toStr = email.to?.map((addr: any) => addr.email).join(', ') || '';
+        const ccStr = email.cc?.map((addr: any) => addr.email).join(', ') || '';
+        const bccStr = email.bcc?.map((addr: any) => addr.email).join(', ') || '';
 
-    return {
-        id: email.id,
-        from_name: from?.name,
-        from_email: from?.email,
-        to_name: to?.name,
-        to_email: to?.email,
-        to: toStr,
-        cc: ccStr,
-        bcc: bccStr,
-        subject: email.subject,
-        date: parseDate(email.receivedAt),
-        htmlBody: htmlBody || undefined,
-        textBody: textBody || undefined,
-        has_attachments: email.hasAttachment,
-    };
+        return {
+            id: email.id,
+            from_name: from?.name,
+            from_email: from?.email,
+            to_name: to?.name,
+            to_email: to?.email,
+            to: toStr,
+            cc: ccStr,
+            bcc: bccStr,
+            subject: email.subject,
+            date: parseDate(email.receivedAt),
+            htmlBody: htmlBody || undefined,
+            textBody: textBody || undefined,
+            has_attachments: email.hasAttachment,
+        };
     });
 }
 
@@ -364,11 +364,7 @@ export async function markAsUnflagged(accountId: string, emailIds: string | stri
     });
 }
 
-export async function moveMessages(
-    accountId: string,
-    emailIds: string[],
-    targetMailboxId: string
-) {
+export async function moveMessages(accountId: string, emailIds: string[], targetMailboxId: string) {
     return withAuthHandling(async () => {
         if (!jmapService.isInitialized()) {
             throw new Error('JMAP client not initialized. Please log in first.');

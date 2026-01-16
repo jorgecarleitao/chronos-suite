@@ -201,7 +201,10 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
                         selectedCount={operations.selectedIds.size}
                         totalCount={total}
                         allSelected={operations.selectedIds.size === messages.length}
-                        someSelected={operations.selectedIds.size > 0 && operations.selectedIds.size < messages.length}
+                        someSelected={
+                            operations.selectedIds.size > 0 &&
+                            operations.selectedIds.size < messages.length
+                        }
                         onSelectAll={operations.toggleSelectAll}
                         onMarkAsRead={operations.bulkMarkAsRead}
                         onMarkAsUnread={operations.bulkMarkAsUnread}
@@ -274,7 +277,9 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
             <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
                 <DialogTitle>Delete Message</DialogTitle>
                 <DialogContent>
-                    <DialogContentText>Are you sure you want to delete this message?</DialogContentText>
+                    <DialogContentText>
+                        Are you sure you want to delete this message?
+                    </DialogContentText>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleDeleteCancel}>Cancel</Button>

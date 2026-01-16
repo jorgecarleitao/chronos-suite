@@ -24,6 +24,7 @@ import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/Logout';
+import PersonIcon from '@mui/icons-material/Person';
 
 const drawerWidth = 240;
 
@@ -43,8 +44,23 @@ export default function Navigation({ mode, toggleTheme }: NavigationProps) {
     const languages = Object.keys(i18n.options.resources ?? {});
 
     useEffect(() => {
-        const token = localStorage.getItem('auth_token');
-        setIsAuthenticated(!!token);
+        const checkAuth = () => {
+            const token = localStorage.getItem('access_token');
+            setIsAuthenticated(!!token);
+        };
+
+        checkAuth();
+
+        // Listen for storage changes (e.g., logout in another tab)
+        window.addEventListener('storage', checkAuth);
+
+        // Check auth periodically to catch login/logout
+        const interval = setInterval(checkAuth, 1000);
+
+        return () => {
+            window.removeEventListener('storage', checkAuth);
+            clearInterval(interval);
+        };
     }, []);
 
     const handleDrawerToggle = () => {
@@ -52,14 +68,18 @@ export default function Navigation({ mode, toggleTheme }: NavigationProps) {
     };
 
     const handleLogout = () => {
-        localStorage.removeItem('auth_token');
+        localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
+        localStorage.removeItem('token_expires_at');
         setIsAuthenticated(false);
         route('/login');
     };
 
     const navItems = isAuthenticated
-        ? [{ path: '/mail', label: 'Mail' }]
+        ? [
+              { path: '/mail', label: 'Mail' },
+              { path: '/contacts', label: 'Contacts' },
+          ]
         : [{ path: '/login', label: 'Login' }];
 
     const drawerContent = (
@@ -93,7 +113,7 @@ export default function Navigation({ mode, toggleTheme }: NavigationProps) {
 
     return (
         <>
-            <AppBar component="nav">
+            <AppBar component="nav" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
                 <Toolbar>
                     {isMobile && (
                         <IconButton
@@ -106,20 +126,17 @@ export default function Navigation({ mode, toggleTheme }: NavigationProps) {
                             <MenuIcon />
                         </IconButton>
                     )}
+                    <Typography
+                        variant="h6"
+                        component="a"
+                        href="/"
+                        color="inherit"
+                        style={{ textDecoration: 'none', marginRight: '16px' }}
+                    >
+                        {brandLabel}
+                    </Typography>
                     {!isMobile && (
-                        <Typography
-                            variant="h6"
-                            component="a"
-                            href="/"
-                            flexGrow={1}
-                            color="inherit"
-                            style={{ textDecoration: 'none' }}
-                        >
-                            {brandLabel}
-                        </Typography>
-                    )}
-                    {!isMobile && (
-                        <Stack direction="row" spacing={1}>
+                        <Stack direction="row" spacing={1} sx={{ flexGrow: 1 }}>
                             {navItems.map((item) => (
                                 <Button
                                     key={item.path}
