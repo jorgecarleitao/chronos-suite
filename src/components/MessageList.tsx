@@ -1,44 +1,25 @@
 import { useState, useEffect } from 'preact/hooks';
 import Box from '@mui/material/Box';
 import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import ListItemButton from '@mui/material/ListItemButton';
-import ListItemText from '@mui/material/ListItemText';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
-import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Paper from '@mui/material/Paper';
 import Divider from '@mui/material/Divider';
-import MailIcon from '@mui/icons-material/Mail';
-import DraftsIcon from '@mui/icons-material/Drafts';
-import FlagIcon from '@mui/icons-material/Flag';
-import StarIcon from '@mui/icons-material/Star';
-import IconButton from '@mui/material/IconButton';
-import DeleteIcon from '@mui/icons-material/Delete';
-import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
-import MarkEmailUnreadIcon from '@mui/icons-material/MarkEmailUnread';
-import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
-import CheckBoxIcon from '@mui/icons-material/CheckBox';
-import IndeterminateCheckBoxIcon from '@mui/icons-material/IndeterminateCheckBox';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import ReplyIcon from '@mui/icons-material/Reply';
-import ReplyAllIcon from '@mui/icons-material/ReplyAll';
-import ForwardIcon from '@mui/icons-material/Forward';
-import SendIcon from '@mui/icons-material/Send';
-import CloseIcon from '@mui/icons-material/Close';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
-import Checkbox from '@mui/material/Checkbox';
-import Toolbar from '@mui/material/Toolbar';
 import MessageViewer from './MessageViewer';
 import ComposeEmail from './ComposeEmail';
-import { fetchMessages, fetchMessage, deleteMessage, markAsRead, markAsUnread, MessageMetadata } from '../data/messages';
+import MessageListItem from './MessageListItem';
+import MessageActionsBar from './MessageActionsBar';
+import BulkActionsBar from './BulkActionsBar';
+import { fetchMessages, fetchMessage, MessageMetadata } from '../data/messages';
+import useMessageOperations from '../hooks/useMessageOperations';
 
 interface MessageListProps {
     mailbox: string;
@@ -50,15 +31,12 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [selectedMessage, setSelectedMessage] = useState<string | null>(
-        null
-    );
+    const [selectedMessage, setSelectedMessage] = useState<string | null>(null);
     const [viewerOpen, setViewerOpen] = useState(false);
     const [composeOpen, setComposeOpen] = useState(false);
     const [draftMessage, setDraftMessage] = useState<any | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
-    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
     const [messageActions, setMessageActions] = useState<{
         onReply: () => void;
@@ -71,14 +49,32 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
         sending: boolean;
     } | null>(null);
 
+    const operations = useMessageOperations({
+        mailboxId: accountId,
+        messages,
+        onMessagesChange: loadMessages,
+    });
+
     useEffect(() => {
         loadMessages();
     }, [mailbox]);
 
+    async function loadMessages() {
+        setLoading(true);
+        setError(null);
+        try {
+            const data = await fetchMessages(accountId, mailbox);
+            setMessages(data.messages);
+            setTotal(data.total);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to load messages');
+        } finally {
+            setLoading(false);
+        }
+    }
+
     const handleMessageClick = async (message: MessageMetadata) => {
-        // Find the message in the list
         if (mailbox.toLowerCase() === 'drafts') {
-            // Fetch full message details for draft
             try {
                 const data = await fetchMessage(accountId, message.id);
                 setDraftMessage(data);
@@ -89,23 +85,6 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
         } else {
             setSelectedMessage(message.id);
             setViewerOpen(true);
-            
-            // Mark as read if it's unread
-            if (isUnread(message.flags)) {
-                try {
-                    await markAsRead(accountId, message.id);
-                    // Update local state
-                    setMessages((prev) =>
-                        prev.map((m) =>
-                            m.id === message.id
-                                ? { ...m, flags: [...m.flags.filter(f => f !== 'Unseen'), 'Seen'] }
-                                : m
-                        )
-                    );
-                } catch (err) {
-                    console.error('Failed to mark as read:', err);
-                }
-            }
         }
     };
 
@@ -123,8 +102,7 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
     const handleDeleteConfirm = async () => {
         if (!messageToDelete) return;
         try {
-            await deleteMessage(accountId, messageToDelete);
-            await loadMessages();
+            await operations.deleteOne(messageToDelete);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to delete message');
         } finally {
@@ -138,36 +116,15 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
         setMessageToDelete(null);
     };
 
-    const handleCheckboxChange = (messageId: string) => {
-        const newSelected = new Set(selectedIds);
-        if (newSelected.has(messageId)) {
-            newSelected.delete(messageId);
-        } else {
-            newSelected.add(messageId);
-        }
-        setSelectedIds(newSelected);
-    };
-
-    const handleSelectAll = () => {
-        if (selectedIds.size === messages.length) {
-            setSelectedIds(new Set());
-        } else {
-            const allIds = new Set(messages.map((m) => m.id));
-            setSelectedIds(allIds);
-        }
-    };
-
     const handleBulkDeleteClick = () => {
-        if (selectedIds.size > 0) {
+        if (operations.selectedIds.size > 0) {
             setBulkDeleteDialogOpen(true);
         }
     };
 
     const handleBulkDeleteConfirm = async () => {
         try {
-            await Promise.all(Array.from(selectedIds).map((id) => deleteMessage(accountId, id)));
-            setSelectedIds(new Set());
-            await loadMessages();
+            await operations.bulkDelete();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to delete messages');
         } finally {
@@ -179,55 +136,8 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
         setBulkDeleteDialogOpen(false);
     };
 
-    const handleMarkAsRead = async () => {
-        if (selectedIds.size === 0) return;
-        try {
-            const ids = Array.from(selectedIds);
-            await markAsRead(accountId, ids);
-            setSelectedIds(new Set());
-            await loadMessages();
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to mark messages as read');
-        }
-    };
-
-    const handleMarkAsUnread = async () => {
-        if (selectedIds.size === 0) return;
-        try {
-            const ids = Array.from(selectedIds);
-            await markAsUnread(accountId, ids);
-            setSelectedIds(new Set());
-            await loadMessages();
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to mark messages as unread');
-        }
-    };
-
-    const loadMessages = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const data = await fetchMessages(accountId, mailbox);
-            setMessages(data.messages);
-            setTotal(data.total);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load messages');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const isUnread = (flags: string[]) => {
-        return !flags.some((flag) => flag === 'Seen');
-    };
-
-    const isFlagged = (flags: string[]) => {
-        return flags.some((flag) => flag === 'Flagged');
-    };
-
-    const isDraft = (flags: string[]) => {
-        return flags.some((flag) => flag === 'Draft');
-    };
+    const isUnread = (flags: string[]) => !flags.some((flag) => flag === 'Seen');
+    const isFlagged = (flags: string[]) => flags.some((flag) => flag === 'Flagged');
 
     const now = new Date();
     const formatDate = (date: Date | null) => {
@@ -269,93 +179,33 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
     return (
         <Stack height="100%">
             <Paper elevation={0} square>
-                <ListItem
-                    disablePadding
-                >
-                    {viewerOpen && messageActions ? (
-                        <>
-                            <IconButton onClick={messageActions.onClose} title="Back to list">
-                                <CloseIcon />
-                            </IconButton>
-                            {!messageActions.isDraft ? (
-                                <>
-                                    <IconButton onClick={messageActions.onReply} title="Reply">
-                                        <ReplyIcon />
-                                    </IconButton>
-                                    <IconButton onClick={messageActions.onReplyAll} title="Reply All">
-                                        <ReplyAllIcon />
-                                    </IconButton>
-                                    <IconButton onClick={messageActions.onForward} title="Forward">
-                                        <ForwardIcon />
-                                    </IconButton>
-                                </>
-                            ) : (
-                                <Button
-                                    variant="contained"
-                                    startIcon={
-                                        messageActions.sending ? (
-                                            <CircularProgress size={16} color="inherit" />
-                                        ) : (
-                                            <SendIcon />
-                                        )
-                                    }
-                                    onClick={messageActions.onSend}
-                                    disabled={messageActions.sending}
-                                    size="small"
-                                >
-                                    {messageActions.sending ? 'Sending...' : 'Send'}
-                                </Button>
-                            )}
-                            <IconButton onClick={messageActions.onDelete} color="error" title="Delete">
-                                <DeleteIcon />
-                            </IconButton>
-                        </>
-                    ) : (
-                        <>
-                            <Checkbox
-                                icon={<CheckBoxOutlineBlankIcon />}
-                                checkedIcon={<CheckBoxIcon />}
-                                indeterminateIcon={<IndeterminateCheckBoxIcon />}
-                                checked={selectedIds.size === messages.length && messages.length > 0}
-                                indeterminate={selectedIds.size > 0 && selectedIds.size < messages.length}
-                                onChange={handleSelectAll}
-                                title="Select all"
-                            />
-                            {selectedIds.size > 0 ? (
-                                <>
-                                    <IconButton onClick={handleMarkAsRead} title="Mark as read">
-                                        <MarkEmailReadIcon />
-                                    </IconButton>
-                                    <IconButton onClick={handleMarkAsUnread} title="Mark as unread">
-                                        <MarkEmailUnreadIcon />
-                                    </IconButton>
-                                    <IconButton onClick={handleBulkDeleteClick} color="error" title="Delete">
-                                        <DeleteIcon />
-                                    </IconButton>
-                                    <ListItemText
-                                        primary={`${selectedIds.size} selected`}
-                                        primaryTypographyProps={{
-                                            variant: 'subtitle1',
-                                        }}
-                                        sx={{ ml: 2 }}
-                                    />
-                                </>
-                            ) : (
-                                <>
-                                    <IconButton onClick={loadMessages} title="Reload messages">
-                                        <RefreshIcon />
-                                    </IconButton>
-                                    <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
-                                        {total} {total === 1 ? 'message' : 'messages'}
-                                    </Typography>
-                                </>
-                            )}
-                        </>
-                    )}
-                </ListItem>
+                {viewerOpen && messageActions ? (
+                    <MessageActionsBar
+                        isDraft={messageActions.isDraft}
+                        sending={messageActions.sending}
+                        onReply={messageActions.onReply}
+                        onReplyAll={messageActions.onReplyAll}
+                        onForward={messageActions.onForward}
+                        onSend={messageActions.onSend}
+                        onDelete={messageActions.onDelete}
+                        onClose={messageActions.onClose}
+                    />
+                ) : (
+                    <BulkActionsBar
+                        selectedCount={operations.selectedIds.size}
+                        totalCount={total}
+                        allSelected={operations.selectedIds.size === messages.length}
+                        someSelected={operations.selectedIds.size > 0 && operations.selectedIds.size < messages.length}
+                        onSelectAll={operations.selectAll}
+                        onMarkAsRead={operations.bulkMarkAsRead}
+                        onMarkAsUnread={operations.bulkMarkAsUnread}
+                        onDelete={handleBulkDeleteClick}
+                        onRefresh={loadMessages}
+                    />
+                )}
                 <Divider />
             </Paper>
-            
+
             {viewerOpen && selectedMessage ? (
                 <MessageViewer
                     onClose={handleViewerClose}
@@ -369,70 +219,22 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
                     }}
                 />
             ) : (
-            <List style={{ flexGrow: 1, overflow: 'auto' }}>
-                {messages.map((message) => {
-                    const displayName = message.from_name || message.from_email || 'Unknown Sender';
-                    const formattedDate = formatDate(message.date);
-                    const unread = isUnread(message.flags);
-                    const flagged = isFlagged(message.flags);
-
-                    return (
-                        <ListItem
+                <List style={{ flexGrow: 1, overflow: 'auto' }}>
+                    {messages.map((message) => (
+                        <MessageListItem
                             key={message.id}
-                            disablePadding
-                            divider
-                            draggable={!!message.id}
-                            sx={{
-                                bgcolor: selectedIds.has(message.id) ? 'action.selected' : 'transparent'
-                            }}
-                            onDragStart={(e) => {
-                                if (message.id) {
-                                    // If this message is in the selection, drag all selected
-                                    const dragIds = selectedIds.has(message.id)
-                                        ? Array.from(selectedIds)
-                                        : [message.id];
-                                    e.dataTransfer!.setData('messageIds', JSON.stringify(dragIds));
-                                    e.dataTransfer!.effectAllowed = 'move';
-                                }
-                            }}
-                            secondaryAction={
-                                <IconButton
-                                    edge="end"
-                                    aria-label="delete"
-                                    onClick={(e) => handleDeleteClick(message, e)}
-                                >
-                                    <DeleteIcon />
-                                </IconButton>
-                            }
-                        >   
-                            <Checkbox
-                                checked={selectedIds.has(message.id)}
-                                onChange={() => handleCheckboxChange(message.id)}
-                            />
-                            <ListItemButton
-                                selected={selectedMessage === message.id}
-                                onClick={() => handleMessageClick(message)}
-                            >
-                                <Stack direction="row" spacing={1} alignItems="center" width="100%">
-                                    {unread ? <MailIcon color="primary" /> : <DraftsIcon />}
-                                    {flagged && <StarIcon color="warning" />}
-                                    <ListItemText
-                                        primary={displayName}
-                                        secondary={message.subject || '(No subject)'}
-                                        primaryTypographyProps={{
-                                            fontWeight: unread ? 'bold' : 'normal',
-                                        }}
-                                    />
-                                    <Typography variant="caption" color="text.secondary">
-                                        {formattedDate}
-                                    </Typography>
-                                </Stack>
-                            </ListItemButton>
-                        </ListItem>
-                    );
-                })}
-            </List>
-
+                            message={message}
+                            isSelected={selectedMessage === message.id}
+                            isChecked={operations.selectedIds.has(message.id)}
+                            onSelect={handleMessageClick}
+                            onCheckboxChange={operations.toggleSelection}
+                            onDelete={handleDeleteClick}
+                            formatDate={formatDate}
+                            isUnread={isUnread}
+                            isFlagged={isFlagged}
+                        />
+                    ))}
+                </List>
             )}
 
             {/* Compose Email for Drafts */}
@@ -460,9 +262,7 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
             <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
                 <DialogTitle>Delete Message</DialogTitle>
                 <DialogContent>
-                    <DialogContentText>
-                        Are you sure you want to delete this message?
-                    </DialogContentText>
+                    <DialogContentText>Are you sure you want to delete this message?</DialogContentText>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleDeleteCancel}>Cancel</Button>
@@ -477,7 +277,7 @@ export default function MessageList({ mailbox, accountId }: MessageListProps) {
                 <DialogTitle>Delete Messages</DialogTitle>
                 <DialogContent>
                     <DialogContentText>
-                        Are you sure you want to delete {selectedIds.size} message(s)?
+                        Are you sure you want to delete {operations.selectedIds.size} message(s)?
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>

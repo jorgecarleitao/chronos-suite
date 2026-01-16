@@ -385,26 +385,25 @@ export default function Mail({ path }: MailProps) {
             >
                 <Toolbar />
                 <Box style={{ overflow: 'auto' }}>
-                    <Stack direction="row" alignItems="center" padding={2} spacing={1}>
-                        <Typography variant="h6" sx={{ flex: 1 }}>
-                            Mailboxes
-                        </Typography>
-                        <IconButton
-                            size="small"
-                            onClick={() => {
-                                setSelectedMailboxForAction(null);
-                                setNewMailboxName('');
-                                setCreateDialogOpen(true);
-                            }}
-                            title="Create new mailbox"
-                        >
-                            <AddIcon />
-                        </IconButton>
-                    </Stack>
-                    <Divider />
-                    {loading ? (
+                    {!accountId ? (
                         <Stack justifyContent="center" padding={3}>
                             <CircularProgress />
+                            <Typography variant="body2" color="text.secondary" textAlign="center" mt={2}>
+                                Loading account...
+                            </Typography>
+                        </Stack>
+                    ) : loading ? (
+                        <Stack justifyContent="center" padding={3}>
+                            <CircularProgress />
+                            <Typography variant="body2" color="text.secondary" textAlign="center" mt={2}>
+                                Loading mailboxes...
+                            </Typography>
+                        </Stack>
+                    ) : mailboxes.length === 0 ? (
+                        <Stack justifyContent="center" padding={3}>
+                            <Typography variant="body2" color="text.secondary" textAlign="center">
+                                No mailboxes found
+                            </Typography>
                         </Stack>
                     ) : (
                         <>

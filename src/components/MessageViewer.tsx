@@ -1,27 +1,21 @@
 import { useState, useEffect } from 'preact/hooks';
+import { JSX } from 'preact';
 import Box from '@mui/material/Box';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogActions from '@mui/material/DialogActions';
-import IconButton from '@mui/material/IconButton';
-import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
-import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Paper from '@mui/material/Paper';
 import Divider from '@mui/material/Divider';
-import CloseIcon from '@mui/icons-material/Close';
-import DeleteIcon from '@mui/icons-material/Delete';
-import ReplyIcon from '@mui/icons-material/Reply';
-import ReplyAllIcon from '@mui/icons-material/ReplyAll';
-import ForwardIcon from '@mui/icons-material/Forward';
-import SendIcon from '@mui/icons-material/Send';
 import Button from '@mui/material/Button';
-import DOMPurify from 'dompurify';
 import ComposeEmail from './ComposeEmail';
+import MessageHeader from './MessageHeader';
+import MessageMetadata from './MessageMetadata';
+import MessageBody from './MessageBody';
 import {
     fetchMessage as apiFetchMessage,
     deleteMessage as apiDeleteMessage,
@@ -48,15 +42,18 @@ interface MessageViewerProps {
 
 interface MessageDetail {
     id: string;
-    flags: string[];
-    size?: number;
-    from?: string;
-    to?: string;
-    subject?: string;
-    date?: string;
-    message_id?: string;
-    html_body?: string;
-    text_body?: string;
+    from_name: string;
+    from_email: string;
+    to_name?: string;
+    to_email: string;
+    to: string; // Comma-separated string for drafts
+    cc?: string;
+    bcc?: string;
+    subject: string;
+    date: Date | null;
+    htmlBody?: string;
+    textBody?: string;
+    flags?: string[];
 }
 
 export default function MessageViewer({
@@ -70,7 +67,6 @@ export default function MessageViewer({
     const [message, setMessage] = useState<MessageDetail | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [parsedBody, setParsedBody] = useState<{ html?: string; text?: string } | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [sending, setSending] = useState(false);
     const [sendSuccess, setSendSuccess] = useState<string | null>(null);
@@ -89,43 +85,27 @@ export default function MessageViewer({
         }
     }, [mailbox, emailId]);
 
+    useEffect(() => {
+        if (renderActions && message) {
+            renderActions({
+                onReply: handleReply,
+                onReplyAll: handleReplyAll,
+                onForward: handleForward,
+                onDelete: handleDeleteClick,
+                onSend: handleSendClick,
+                onClose,
+                isDraft: isDraft(),
+                sending,
+            });
+        }
+    }, [message, sending]);
+
     const fetchMessage = async () => {
         setLoading(true);
         setError(null);
         try {
             const data = await apiFetchMessage(accountId, emailId);
-            // Map to MessageDetail format
-            const messageDetail: MessageDetail = {
-                id: data.id,
-                flags: [],
-                from: data.from_email
-                    ? `${data.from_name || ''} <${data.from_email}>`.trim()
-                    : undefined,
-                to: data.to_email ? `${data.to_name || ''} <${data.to_email}>`.trim() : undefined,
-                subject: data.subject || undefined,
-                date: data.date ? data.date.toISOString() : undefined,
-                html_body: data.htmlBody,
-                text_body: data.textBody,
-            };
-            setMessage(messageDetail);
-            setParsedBody({
-                html: messageDetail.html_body ? sanitizeHTML(messageDetail.html_body) : undefined,
-                text: messageDetail.text_body,
-            });
-            
-            // Notify parent to render actions
-            if (renderActions) {
-                renderActions({
-                    onReply: handleReply,
-                    onReplyAll: handleReplyAll,
-                    onForward: handleForward,
-                    onDelete: handleDeleteClick,
-                    onSend: handleSendClick,
-                    onClose,
-                    isDraft: isDraft(),
-                    sending,
-                });
-            }
+            setMessage(data);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to fetch message');
         } finally {
@@ -159,21 +139,14 @@ export default function MessageViewer({
         setDeleteDialogOpen(false);
     };
 
-    const extractEmail = (emailStr?: string): string => {
-        if (!emailStr) return '';
-        const match = emailStr.match(/<(.+)>/);
-        return match ? match[1] : emailStr;
-    };
-
     const handleReply = () => {
         if (!message) return;
-        const replyTo = extractEmail(message.from);
-        const originalBody = parsedBody?.text || parsedBody?.html || '';
-        const quotedBody = `\n\n---\nOn ${message.date || ''}, ${message.from || 'Unknown'} wrote:\n\n${originalBody}`;
-        
+        const originalBody = message.textBody || message.htmlBody || '';
+        const quotedBody = `\n\n---\nOn ${message.date?.toLocaleString() || ''}, ${message.from_name} <${message.from_email}> wrote:\n\n${originalBody}`;
+
         setComposeMode('reply');
         setComposeData({
-            to: replyTo,
+            to: message.from_email,
             subject: message.subject?.startsWith('Re:') ? message.subject : `Re: ${message.subject || ''}`,
             body: quotedBody,
         });
@@ -182,16 +155,16 @@ export default function MessageViewer({
 
     const handleReplyAll = () => {
         if (!message) return;
-        const replyTo = extractEmail(message.from);
-        const originalTo = message.to?.split(',').map((e) => extractEmail(e.trim())).filter((e) => e) || [];
-        const allRecipients = [replyTo, ...originalTo].filter((e, i, arr) => arr.indexOf(e) === i);
-        
-        const originalBody = parsedBody?.text || parsedBody?.html || '';
-        const quotedBody = `\n\n---\nOn ${message.date || ''}, ${message.from || 'Unknown'} wrote:\n\n${originalBody}`;
-        
+        const toEmails = message.to.split(',').map((e) => e.trim()).filter((e) => e);
+        const allRecipients = [message.from_email, ...toEmails];
+        const uniqueRecipients = Array.from(new Set(allRecipients));
+
+        const originalBody = message.textBody || message.htmlBody || '';
+        const quotedBody = `\n\n---\nOn ${message.date?.toLocaleString() || ''}, ${message.from_name} <${message.from_email}> wrote:\n\n${originalBody}`;
+
         setComposeMode('replyAll');
         setComposeData({
-            to: allRecipients.join(', '),
+            to: uniqueRecipients.join(', '),
             subject: message.subject?.startsWith('Re:') ? message.subject : `Re: ${message.subject || ''}`,
             body: quotedBody,
         });
@@ -200,9 +173,9 @@ export default function MessageViewer({
 
     const handleForward = () => {
         if (!message) return;
-        const originalBody = parsedBody?.text || parsedBody?.html || '';
-        const forwardedBody = `\n\n---\nForwarded message from ${message.from || 'Unknown'}:\nSubject: ${message.subject || '(No Subject)'}\nDate: ${message.date || ''}\n\n${originalBody}`;
-        
+        const originalBody = message.textBody || message.htmlBody || '';
+        const forwardedBody = `\n\n---\nForwarded message from ${message.from_name} <${message.from_email}>:\nSubject: ${message.subject || '(No Subject)'}\nDate: ${message.date?.toLocaleString() || ''}\n\n${originalBody}`;
+
         setComposeMode('forward');
         setComposeData({
             subject: message.subject?.startsWith('Fwd:') ? message.subject : `Fwd: ${message.subject || ''}`,
@@ -217,17 +190,8 @@ export default function MessageViewer({
         setError(null);
         setSendSuccess(null);
         try {
-            const toList =
-                message.to
-                    ?.split(',')
-                    .map((e) => e.trim())
-                    .filter((e) => e.length > 0) || [];
-            const data = await apiSendMessage(
-                accountId,
-                toList,
-                message.subject || '',
-                parsedBody?.text || parsedBody?.html || ''
-            );
+            const toList = message.to.split(',').map((e) => e.trim()).filter((e) => e.length > 0);
+            await apiSendMessage(accountId, toList, message.subject || '', message.textBody || message.htmlBody || '');
             setSendSuccess('Email sent successfully');
             setTimeout(() => {
                 onClose();
@@ -240,79 +204,6 @@ export default function MessageViewer({
         } finally {
             setSending(false);
         }
-    };
-
-    const sanitizeHTML = (html: string): string => {
-        // Configure DOMPurify using blacklist approach - forbid dangerous elements
-        return DOMPurify.sanitize(html, {
-            FORBID_TAGS: [
-                'script', 'iframe', 'object', 'embed', 'applet',
-                'base', 'link', 'meta', 'noscript',
-                'form', 'input', 'button', 'textarea', 'select', 'option',
-                'frame', 'frameset',
-            ],
-            FORBID_ATTR: [
-                'onerror', 'onload', 'onclick', 'onmouseover', 'onmouseout',
-                'onmousemove', 'onmouseenter', 'onmouseleave', 'onchange',
-                'onsubmit', 'onfocus', 'onblur', 'onkeydown', 'onkeyup',
-                'onkeypress', 'ondblclick', 'oncontextmenu', 'oninput',
-                'onpaste', 'oncopy', 'oncut', 'ondrag', 'ondrop',
-                'formaction', 'action',
-            ],
-            ALLOW_DATA_ATTR: false,
-            KEEP_CONTENT: true,
-            WHOLE_DOCUMENT: false,
-        });
-    };
-
-    const renderMessageHeader = (message: MessageDetail) => (
-        <Typography variant="h6">
-            {message.subject || '(No Subject)'}
-        </Typography>
-    );
-
-    const renderMessageMetadata = (message: MessageDetail) => (
-        <Stack spacing={0.5}>
-            <Typography variant="body2">
-                <strong>From:</strong> {message.from || 'Unknown'}
-            </Typography>
-            <Typography variant="body2">
-                <strong>To:</strong> {message.to || 'Unknown'}
-            </Typography>
-            <Stack direction="row" spacing={2} alignItems="center">
-                <Typography variant="body2" color="text.secondary">
-                    {message.date ? new Date(message.date).toLocaleString() : 'Unknown'}
-                </Typography>
-                {message.flags && message.flags.length > 0 && (
-                    <Stack direction="row" spacing={0.5}>
-                        {message.flags.map((flag) => (
-                            <Chip key={flag} label={flag} size="small" />
-                        ))}
-                    </Stack>
-                )}
-            </Stack>
-        </Stack>
-    );
-
-    const renderMessageBody = (parsedBody: { html?: string; text?: string } | null) => {
-        if (!parsedBody) {
-            return <Typography>No message body</Typography>;
-        }
-
-        // Prefer HTML if available, otherwise show plain text
-        if (parsedBody.html) {
-            return <div dangerouslySetInnerHTML={{ __html: parsedBody.html }} />;
-        }
-
-        if (parsedBody.text) {
-            return (
-                <Typography component="pre" fontFamily="monospace" whiteSpace="pre-wrap">
-                    {parsedBody.text}
-                </Typography>
-            );
-        }
-
-        return <Typography>Unable to parse message body</Typography>;
     };
 
     return (
@@ -337,27 +228,28 @@ export default function MessageViewer({
 
             {message && !loading && (
                 <>
-                    {/* Compact header section */}
                     <Paper elevation={0} square>
                         <Stack spacing={1.5} padding={2}>
-                            {renderMessageHeader(message)}
-                            {renderMessageMetadata(message)}
+                            <MessageHeader subject={message.subject} />
+                            <MessageMetadata
+                                fromName={message.from_name}
+                                fromEmail={message.from_email}
+                                toName={message.to_name}
+                                toEmail={message.to_email}
+                                date={message.date}
+                            />
                         </Stack>
                         <Divider />
                     </Paper>
 
-                    {/* Large body section */}
-                    <Paper
-                        elevation={0}
-                        square
-                        style={{ flex: 1, overflow: 'auto' }}
-                    >
-                        <Box padding={3}>{renderMessageBody(parsedBody)}</Box>
+                    <Paper elevation={0} square style={{ flex: 1, overflow: 'auto' }}>
+                        <Box padding={3}>
+                            <MessageBody htmlBody={message.htmlBody} textBody={message.textBody} />
+                        </Box>
                     </Paper>
                 </>
             )}
 
-            {/* Delete Confirmation Dialog */}
             <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
                 <DialogTitle>Delete Message</DialogTitle>
                 <DialogContent>
@@ -373,7 +265,6 @@ export default function MessageViewer({
                 </DialogActions>
             </Dialog>
 
-            {/* Compose Email Dialog */}
             <ComposeEmail
                 open={composeOpen}
                 onClose={() => setComposeOpen(false)}
