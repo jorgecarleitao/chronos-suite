@@ -129,6 +129,23 @@ export default function Mail({ path }: MailProps) {
             const data = await fetchMailboxes(accId);
             setMailboxes(data.mailboxes || []);
 
+            // Auto-select inbox mailbox
+            const findInbox = (mailboxList: Mailbox[]): Mailbox | null => {
+                for (const mb of mailboxList) {
+                    if (mb.role === 'inbox') return mb;
+                    if (mb.children.length > 0) {
+                        const found = findInbox(mb.children);
+                        if (found) return found;
+                    }
+                }
+                return null;
+            };
+
+            const inboxMailbox = findInbox(data.mailboxes || []);
+            if (inboxMailbox) {
+                setSelectedMailbox(inboxMailbox.name);
+            }
+
             // Fetch shared mailboxes
             try {
                 const shared = await fetchSharedMailboxes();

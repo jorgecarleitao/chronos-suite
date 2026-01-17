@@ -102,24 +102,49 @@ export async function fetchContacts(accountId: string, addressBookId?: string): 
             },
         ]);
 
-        const contacts = getResponse.list.map((contact: any) => ({
-            id: contact.id,
-            firstName: contact.name?.given,
-            lastName: contact.name?.surname,
-            email: contact.emails?.[0]?.email,
-            company: contact.organizations?.[0]?.name,
-            jobTitle: contact.organizations?.[0]?.jobTitle,
-            phones: contact.phones?.map((p: any) => ({ type: p.type || 'other', value: p.phone })),
-            addresses: contact.addresses?.map((a: any) => ({
-                type: a.type || 'other',
-                street: a.street,
-                city: a.locality,
-                postalCode: a.postcode,
-                country: a.country,
-            })),
-            notes: contact.notes,
-            isFavorite: contact.keywords?.starred || false,
-        }));
+        const contacts = getResponse.list.map((contact: any) => {
+            // Extract name components
+            const nameComponents = contact.name?.components || [];
+            const firstName = nameComponents.find((c: any) => c.kind === 'given')?.value || '';
+            const lastName = nameComponents.find((c: any) => c.kind === 'surname')?.value || '';
+
+            // Extract email - try different possible structures
+            let email = '';
+            if (contact.emails) {
+                // emails can be an object (map) or array
+                if (Array.isArray(contact.emails)) {
+                    email = contact.emails[0]?.email || contact.emails[0]?.address || '';
+                } else {
+                    // emails is an object/map
+                    const emailKeys = Object.keys(contact.emails);
+                    if (emailKeys.length > 0) {
+                        email = contact.emails[emailKeys[0]]?.address || '';
+                    }
+                }
+            }
+
+            return {
+                id: contact.id,
+                firstName,
+                lastName,
+                email,
+                company: contact.organizations?.[0]?.name,
+                jobTitle: contact.organizations?.[0]?.jobTitle,
+                phones: contact.phones?.map((p: any) => ({
+                    type: p.type || 'other',
+                    value: p.phone,
+                })),
+                addresses: contact.addresses?.map((a: any) => ({
+                    type: a.type || 'other',
+                    street: a.street,
+                    city: a.locality,
+                    postalCode: a.postcode,
+                    country: a.country,
+                })),
+                notes: contact.notes,
+                isFavorite: contact.keywords?.starred || false,
+            };
+        });
 
         // Sort client-side by lastName, then firstName
         contacts.sort((a, b) => {
@@ -158,13 +183,20 @@ export async function createContact(
 
         if (contact.firstName || contact.lastName) {
             contactCard.name = {
-                given: contact.firstName,
-                surname: contact.lastName,
+                components: [
+                    { kind: 'given', value: contact.firstName || '' },
+                    { kind: 'surname', value: contact.lastName || '' },
+                ],
             };
         }
 
         if (contact.email) {
-            contactCard.emails = [{ email: contact.email, type: 'work' }];
+            contactCard.emails = {
+                'email-1': {
+                    '@type': 'EmailAddress',
+                    address: contact.email,
+                },
+            };
         }
 
         if (contact.company || contact.jobTitle) {
@@ -234,12 +266,17 @@ export async function updateContact(
         const patches: any = {};
 
         if (updates.firstName !== undefined || updates.lastName !== undefined) {
-            patches['name/given'] = updates.firstName;
-            patches['name/surname'] = updates.lastName;
+            patches['name/components'] = [
+                { kind: 'given', value: updates.firstName || '' },
+                { kind: 'surname', value: updates.lastName || '' },
+            ];
         }
 
         if (updates.email !== undefined) {
-            patches.emails = [{ email: updates.email, type: 'work' }];
+            patches['emails/email-1'] = {
+                '@type': 'EmailAddress',
+                address: updates.email,
+            };
         }
 
         if (updates.company !== undefined || updates.jobTitle !== undefined) {

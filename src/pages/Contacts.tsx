@@ -17,13 +17,17 @@ import Stack from '@mui/material/Stack';
 import IconButton from '@mui/material/IconButton';
 import Fab from '@mui/material/Fab';
 import Alert from '@mui/material/Alert';
+import Button from '@mui/material/Button';
+import TextField from '@mui/material/TextField';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import ContactsIcon from '@mui/icons-material/Contacts';
-import { fetchContacts, deleteContact, updateContact, Contact } from '../data/contacts';
+import CloseIcon from '@mui/icons-material/Close';
+import SaveIcon from '@mui/icons-material/Save';
+import { fetchContacts, deleteContact, updateContact, createContact, Contact } from '../data/contacts';
 import { fetchAddressBooks, AddressBook } from '../data/addressBook';
 import { getPrimaryAccountId } from '../data/accounts';
 
@@ -40,6 +44,19 @@ export default function Contacts({ path }: ContactsProps) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [accountId, setAccountId] = useState<string | null>(null);
+    const [isCreating, setIsCreating] = useState(false);
+    const [editingContact, setEditingContact] = useState<Contact | null>(null);
+    const [originalFormData, setOriginalFormData] = useState<Partial<Contact>>({});
+    const [formData, setFormData] = useState<Partial<Contact>>({
+        firstName: '',
+        lastName: '',
+        email: '',
+        company: '',
+        jobTitle: '',
+        notes: '',
+        phones: [],
+        addresses: [],
+    });
 
     useEffect(() => {
         loadAccount();
@@ -122,6 +139,83 @@ export default function Contacts({ path }: ContactsProps) {
             return `${contact.firstName || ''} ${contact.lastName || ''}`.trim();
         }
         return contact.email || 'Unknown';
+    };
+
+    const handleCreateClick = () => {
+        setIsCreating(true);
+        setEditingContact(null);
+        const emptyForm = {
+            firstName: '',
+            lastName: '',
+            email: '',
+            company: '',
+            jobTitle: '',
+            notes: '',
+            phones: [],
+            addresses: [],
+        };
+        setFormData(emptyForm);
+        setOriginalFormData(emptyForm);
+    };
+
+    const handleEditClick = (contact: Contact) => {
+        setIsCreating(true);
+        setEditingContact(contact);
+        const contactForm = {
+            firstName: contact.firstName || '',
+            lastName: contact.lastName || '',
+            email: contact.email || '',
+            company: contact.company || '',
+            jobTitle: contact.jobTitle || '',
+            notes: contact.notes || '',
+            phones: contact.phones || [],
+            addresses: contact.addresses || [],
+        };
+        setFormData(contactForm);
+        setOriginalFormData(contactForm);
+    };
+
+    const handleCancelCreate = () => {
+        setIsCreating(false);
+        setEditingContact(null);
+    };
+
+    const handleSaveContact = async () => {
+        if (!accountId) return;
+
+        try {
+            setLoading(true);
+            
+            if (editingContact) {
+                // Update existing contact
+                await updateContact(accountId, editingContact.id, formData);
+            } else {
+                // Create new contact
+                const targetAddressBook = addressBooks.find(ab => ab.isDefault) || addressBooks[0];
+                if (!targetAddressBook) {
+                    setError('No address book available. Please create an address book first.');
+                    return;
+                }
+                await createContact(accountId, targetAddressBook.id, formData);
+            }
+            
+            setIsCreating(false);
+            setEditingContact(null);
+            await loadContacts(accountId, selectedAddressBook);
+            setError(null);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : `Failed to ${editingContact ? 'update' : 'create'} contact`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleFormChange = (field: keyof Contact, value: any) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+    };
+
+    const isFieldModified = (field: keyof Contact): boolean => {
+        return formData[field] !== originalFormData[field];
     };
 
     return (
@@ -209,7 +303,93 @@ export default function Contacts({ path }: ContactsProps) {
                         </Alert>
                     )}
 
-                    {loading ? (
+                    {isCreating ? (
+                        <Paper sx={{ p: 3 }}>
+                            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
+                                <Typography variant="h5">{editingContact ? 'Edit Contact' : 'New Contact'}</Typography>
+                                <IconButton onClick={handleCancelCreate}>
+                                    <CloseIcon />
+                                </IconButton>
+                            </Stack>
+
+                            <Stack spacing={3}>
+                                <Stack direction="row" spacing={2}>
+                                    <TextField
+                                        label="First Name"
+                                        value={formData.firstName || ''}
+                                        onChange={(e) => handleFormChange('firstName', (e.target as HTMLInputElement).value)}
+                                        fullWidth
+                                        color={isFieldModified('firstName') ? 'warning' : 'primary'}
+                                        focused={isFieldModified('firstName')}
+                                    />
+                                    <TextField
+                                        label="Last Name"
+                                        value={formData.lastName || ''}
+                                        onChange={(e) => handleFormChange('lastName', (e.target as HTMLInputElement).value)}
+                                        fullWidth
+                                        color={isFieldModified('lastName') ? 'warning' : 'primary'}
+                                        focused={isFieldModified('lastName')}
+                                    />
+                                </Stack>
+
+                                <TextField
+                                    label="Email"
+                                    type="email"
+                                    value={formData.email || ''}
+                                    onChange={(e) => handleFormChange('email', (e.target as HTMLInputElement).value)}
+                                    fullWidth
+                                    color={isFieldModified('email') ? 'warning' : 'primary'}
+                                    focused={isFieldModified('email')}
+                                />
+
+                                <Divider />
+
+                                <Stack direction="row" spacing={2}>
+                                    <TextField
+                                        label="Company"
+                                        value={formData.company || ''}
+                                        onChange={(e) => handleFormChange('company', (e.target as HTMLInputElement).value)}
+                                        fullWidth
+                                        color={isFieldModified('company') ? 'warning' : 'primary'}
+                                        focused={isFieldModified('company')}
+                                    />
+                                    <TextField
+                                        label="Job Title"
+                                        value={formData.jobTitle || ''}
+                                        onChange={(e) => handleFormChange('jobTitle', (e.target as HTMLInputElement).value)}
+                                        fullWidth
+                                        color={isFieldModified('jobTitle') ? 'warning' : 'primary'}
+                                        focused={isFieldModified('jobTitle')}
+                                    />
+                                </Stack>
+
+                                <TextField
+                                    label="Notes"
+                                    value={formData.notes || ''}
+                                    onChange={(e) => handleFormChange('notes', (e.target as HTMLInputElement).value)}
+                                    multiline
+                                    rows={4}
+                                    fullWidth
+                                    color={isFieldModified('notes') ? 'warning' : 'primary'}
+                                    focused={isFieldModified('notes')}
+                                />
+
+                                <Stack direction="row" spacing={2} justifyContent="flex-end">
+                                    <Button onClick={handleCancelCreate}>
+                                        Cancel
+                                    </Button>
+                                    <Button 
+                                        variant="contained" 
+                                        startIcon={<SaveIcon />}
+                                        onClick={handleSaveContact}
+                                        disabled={loading}
+                                    >
+                                        {editingContact ? 'Update' : 'Save'} Contact
+                                    </Button>
+                                </Stack>
+                            </Stack>
+                        </Paper>
+                    ) : loading ? (
                         <Stack justifyContent="center" alignItems="center" minHeight="50vh">
                             <CircularProgress />
                         </Stack>
@@ -245,9 +425,7 @@ export default function Contacts({ path }: ContactsProps) {
                                                 </IconButton>
                                                 <IconButton
                                                     edge="end"
-                                                    onClick={() =>
-                                                        alert('Edit contact - coming soon!')
-                                                    }
+                                                    onClick={() => handleEditClick(contact)}
                                                     size="small"
                                                 >
                                                     <EditIcon />
@@ -269,15 +447,19 @@ export default function Contacts({ path }: ContactsProps) {
                                         <ListItemText
                                             primary={getDisplayName(contact)}
                                             secondary={
-                                                <Stack spacing={0.5}>
-                                                    {contact.email && <span>{contact.email}</span>}
+                                                <>
+                                                    {contact.email && (
+                                                        <Typography variant="body2" component="div">
+                                                            {contact.email}
+                                                        </Typography>
+                                                    )}
                                                     {contact.company && (
-                                                        <span>{contact.company}</span>
+                                                        <Typography variant="body2" component="div" color="text.secondary">
+                                                            {contact.company}
+                                                            {contact.jobTitle && ` • ${contact.jobTitle}`}
+                                                        </Typography>
                                                     )}
-                                                    {contact.jobTitle && (
-                                                        <span>{contact.jobTitle}</span>
-                                                    )}
-                                                </Stack>
+                                                </>
                                             }
                                         />
                                     </ListItem>
@@ -290,7 +472,7 @@ export default function Contacts({ path }: ContactsProps) {
                 <Fab
                     color="primary"
                     aria-label="add contact"
-                    onClick={() => alert('Create contact - coming soon!')}
+                    onClick={handleCreateClick}
                     sx={{ position: 'fixed', bottom: 32, right: 32 }}
                 >
                     <AddIcon />
