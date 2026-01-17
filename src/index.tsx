@@ -14,6 +14,7 @@ import Login from './pages/Login';
 import AuthCallback from './pages/AuthCallback';
 import Mail from './pages/Mail';
 import Contacts from './pages/Contacts';
+import Calendar from './pages/Calendar';
 import { oauthService } from './data/authService';
 import { jmapService } from './data/jmapClient';
 
@@ -63,6 +64,7 @@ export default function App() {
                         <AuthCallback path="/auth/callback" />
                         <Mail path="/mail" />
                         <Contacts path="/contacts" />
+                        <Calendar path="/calendar" />
                         <Login path="/" />
                     </Router>
                 </Box>

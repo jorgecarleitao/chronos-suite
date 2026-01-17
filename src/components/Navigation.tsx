@@ -79,6 +79,7 @@ export default function Navigation({ mode, toggleTheme }: NavigationProps) {
         ? [
               { path: '/mail', label: 'Mail' },
               { path: '/contacts', label: 'Contacts' },
+              { path: '/calendar', label: 'Calendar' },
           ]
         : [{ path: '/login', label: 'Login' }];
 

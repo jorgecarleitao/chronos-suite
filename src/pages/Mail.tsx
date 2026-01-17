@@ -2,7 +2,6 @@ import { useState, useEffect } from 'preact/hooks';
 import { route } from 'preact-router';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
-import Drawer from '@mui/material/Drawer';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
@@ -39,6 +38,7 @@ import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import EditIcon from '@mui/icons-material/Edit';
 
+import Sidebar from '../components/Sidebar';
 import MessageList from '../components/MessageList';
 import ComposeEmail from '../components/ComposeEmail';
 import {
@@ -51,8 +51,7 @@ import {
 } from '../data/mailboxes';
 import { getPrimaryAccountId } from '../data/accounts';
 import { moveMessages } from '../data/messages';
-
-const drawerWidth = 240;
+import { drawerWidth } from '../components/Sidebar';
 
 interface MailProps {
     path: string;
@@ -408,32 +407,20 @@ export default function Mail({ path }: MailProps) {
     return (
         <Box display="flex">
             {/* Mailbox sidebar */}
-            <Drawer
-                variant="permanent"
-                sx={{
-                    width: drawerWidth,
-                    flexShrink: 0,
-                    '& .MuiDrawer-paper': {
-                        width: drawerWidth,
-                        boxSizing: 'border-box',
-                    },
-                }}
-            >
-                <Toolbar />
-                <Box style={{ overflow: 'auto' }}>
-                    {!accountId ? (
-                        <Stack justifyContent="center" padding={3}>
-                            <CircularProgress />
-                            <Typography
-                                variant="body2"
-                                color="text.secondary"
-                                textAlign="center"
-                                mt={2}
-                            >
-                                Loading account...
-                            </Typography>
-                        </Stack>
-                    ) : loading ? (
+            <Sidebar>
+                {!accountId ? (
+                    <Stack justifyContent="center" padding={3}>
+                        <CircularProgress />
+                        <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            textAlign="center"
+                            mt={2}
+                        >
+                            Loading account...
+                        </Typography>
+                    </Stack>
+                ) : loading ? (
                         <Stack justifyContent="center" padding={3}>
                             <CircularProgress />
                             <Typography
@@ -545,8 +532,7 @@ export default function Mail({ path }: MailProps) {
                             )}
                         </>
                     )}
-                </Box>
-            </Drawer>
+            </Sidebar>
 
             {/* Message list area */}
             <Box component="main" flexGrow={1} padding={3}>

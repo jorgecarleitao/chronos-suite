@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'preact/hooks';
 import { route } from 'preact-router';
 import Box from '@mui/material/Box';
-import Drawer from '@mui/material/Drawer';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
@@ -27,11 +26,10 @@ import StarBorderIcon from '@mui/icons-material/StarBorder';
 import ContactsIcon from '@mui/icons-material/Contacts';
 import CloseIcon from '@mui/icons-material/Close';
 import SaveIcon from '@mui/icons-material/Save';
+import Sidebar, { drawerWidth } from '../components/Sidebar';
 import { fetchContacts, deleteContact, updateContact, createContact, Contact } from '../data/contacts';
 import { fetchAddressBooks, AddressBook } from '../data/addressBook';
 import { getPrimaryAccountId } from '../data/accounts';
-
-const drawerWidth = 240;
 
 interface ContactsProps {
     path: string;
@@ -221,28 +219,16 @@ export default function Contacts({ path }: ContactsProps) {
     return (
         <Box display="flex">
             {/* Address books sidebar */}
-            <Drawer
-                variant="permanent"
-                sx={{
-                    width: drawerWidth,
-                    flexShrink: 0,
-                    '& .MuiDrawer-paper': {
-                        width: drawerWidth,
-                        boxSizing: 'border-box',
-                    },
-                }}
-            >
-                <Toolbar />
-                <Box style={{ overflow: 'auto' }}>
-                    {!accountId ? (
-                        <Stack justifyContent="center" padding={3}>
-                            <CircularProgress />
-                        </Stack>
-                    ) : (
-                        <>
-                            <List>
-                                <ListItem disablePadding>
-                                    <ListItemButton
+            <Sidebar>
+                {!accountId ? (
+                    <Stack justifyContent="center" padding={3}>
+                        <CircularProgress />
+                    </Stack>
+                ) : (
+                    <>
+                        <List>
+                            <ListItem disablePadding>
+                                <ListItemButton
                                         selected={selectedAddressBook === undefined}
                                         onClick={() => handleAddressBookClick(undefined)}
                                     >
@@ -283,8 +269,7 @@ export default function Contacts({ path }: ContactsProps) {
                             )}
                         </>
                     )}
-                </Box>
-            </Drawer>
+            </Sidebar>
 
             {/* Contacts list */}
             <Box
