@@ -28,11 +28,13 @@ export default function EventList({
     onClearError,
 }: EventListProps) {
     const getEventsForDate = (date: Date) => {
-        return events.filter(event => {
+        return events.filter((event) => {
             const eventDate = new Date(event.start);
-            return eventDate.getDate() === date.getDate() &&
+            return (
+                eventDate.getDate() === date.getDate() &&
                 eventDate.getMonth() === date.getMonth() &&
-                eventDate.getFullYear() === date.getFullYear();
+                eventDate.getFullYear() === date.getFullYear()
+            );
         });
     };
 
@@ -54,17 +56,27 @@ export default function EventList({
                 </Typography>
             ) : (
                 <Stack spacing={2}>
-                    {selectedDateEvents.map(event => (
+                    {selectedDateEvents.map((event) => (
                         <Paper key={event.id} variant="outlined" sx={{ p: 2 }}>
-                            <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                            <Stack
+                                direction="row"
+                                justifyContent="space-between"
+                                alignItems="flex-start"
+                            >
                                 <Box>
                                     <Typography variant="subtitle1" fontWeight="bold">
                                         {event.title}
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary">
-                                        {event.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        {event.start.toLocaleTimeString([], {
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                        })}
                                         {' - '}
-                                        {event.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        {event.end.toLocaleTimeString([], {
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                        })}
                                     </Typography>
                                     {event.description && (
                                         <Typography variant="body2" mt={1}>
@@ -72,7 +84,15 @@ export default function EventList({
                                         </Typography>
                                     )}
                                     {event.participants && event.participants.length > 0 && (
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1, flexWrap: 'wrap' }}>
+                                        <Box
+                                            sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 1,
+                                                mt: 1,
+                                                flexWrap: 'wrap',
+                                            }}
+                                        >
                                             <PersonIcon fontSize="small" color="action" />
                                             {event.participants.map((participant, idx) => (
                                                 <Chip
@@ -89,7 +109,10 @@ export default function EventList({
                                     <IconButton size="small" onClick={() => onEditEvent(event)}>
                                         <EditIcon fontSize="small" />
                                     </IconButton>
-                                    <IconButton size="small" onClick={() => onDeleteEvent(event.id)}>
+                                    <IconButton
+                                        size="small"
+                                        onClick={() => onDeleteEvent(event.id)}
+                                    >
                                         <DeleteIcon fontSize="small" />
                                     </IconButton>
                                 </Stack>

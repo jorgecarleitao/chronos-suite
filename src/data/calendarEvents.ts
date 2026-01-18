@@ -108,7 +108,7 @@ export async function fetchCalendarEvents(
         const events = getResponse.list.map((event: any) => {
             const startDate = new Date(event.start);
             let endDate = startDate;
-            
+
             // Parse duration to calculate end date
             if (event.duration) {
                 const durationMs = parseDuration(event.duration);
@@ -123,14 +123,17 @@ export async function fetchCalendarEvents(
                         participants.push({
                             email: p.email,
                             name: p.name,
-                            role: Object.keys(p.roles || {})[0] as 'owner' | 'attendee' | 'optional',
+                            role: Object.keys(p.roles || {})[0] as
+                                | 'owner'
+                                | 'attendee'
+                                | 'optional',
                             rsvp: p.expectReply,
                             scheduleStatus: p.scheduleStatus,
                         });
                     }
                 });
             }
-            
+
             return {
                 id: event.id,
                 title: event.title || '(No title)',
@@ -152,15 +155,15 @@ export async function fetchCalendarEvents(
 function parseDuration(duration: string): number {
     const regex = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/;
     const matches = duration.match(regex);
-    
+
     if (!matches) {
         return 3600000; // Default 1 hour
     }
-    
+
     const hours = parseInt(matches[1] || '0', 10);
     const minutes = parseInt(matches[2] || '0', 10);
     const seconds = parseInt(matches[3] || '0', 10);
-    
+
     return (hours * 3600 + minutes * 60 + seconds) * 1000;
 }
 
@@ -170,18 +173,18 @@ function parseDuration(duration: string): number {
 function calculateDuration(start: Date, end: Date): string {
     const diffMs = end.getTime() - start.getTime();
     const diffMinutes = Math.floor(diffMs / 60000);
-    
+
     if (diffMinutes < 60) {
         return `PT${diffMinutes}M`;
     }
-    
+
     const hours = Math.floor(diffMinutes / 60);
     const minutes = diffMinutes % 60;
-    
+
     if (minutes === 0) {
         return `PT${hours}H`;
     }
-    
+
     return `PT${hours}H${minutes}M`;
 }
 
@@ -195,7 +198,7 @@ export async function createCalendarEvent(
 ): Promise<CalendarEvent> {
     return withAuthHandling(async () => {
         console.log('Creating event with participants:', event.participants);
-        
+
         if (!jmapService.isInitialized()) {
             throw new Error('JMAP client not initialized. Please log in first.');
         }
@@ -223,15 +226,15 @@ export async function createCalendarEvent(
             // Get user's identity for replyTo (only when participants are present)
             const [identities] = await client.request(['Identity/get', { accountId }]);
             const defaultIdentity = identities.list[0];
-            
+
             // Add replyTo - required when participants are present
             calendarEvent.replyTo = {
                 imip: `mailto:${defaultIdentity.email}`,
             };
-            
+
             // Add the organizer as a participant with owner role
             calendarEvent.participants = {
-                'organizer': {
+                organizer: {
                     '@type': 'Participant',
                     name: defaultIdentity.name || defaultIdentity.email,
                     email: defaultIdentity.email,
@@ -239,13 +242,13 @@ export async function createCalendarEvent(
                         imip: `mailto:${defaultIdentity.email}`,
                     },
                     roles: {
-                        'owner': true,
+                        owner: true,
                     },
                     participationStatus: 'accepted',
                     expectReply: false,
                 },
             };
-            
+
             // Add other participants as attendees
             event.participants.forEach((participant, index) => {
                 const participantId = `attendee-${index}`;
@@ -294,7 +297,7 @@ export async function createCalendarEvent(
         console.log('Server returned event:', JSON.stringify(getResponse.list[0], null, 2));
 
         const createdEvent = getResponse.list[0];
-        
+
         // Parse participants from the retrieved event
         const retrievedParticipants: Participant[] = [];
         if (createdEvent?.participants) {
@@ -346,7 +349,7 @@ export async function updateCalendarEvent(
 
         if (updates.start !== undefined) {
             patch.start = updates.start.toISOString();
-            
+
             // If start is updated and we have end, recalculate duration
             if (updates.end !== undefined) {
                 patch.duration = calculateDuration(updates.start, updates.end);
@@ -365,15 +368,15 @@ export async function updateCalendarEvent(
             // Get user's identity (only when participants are being updated)
             const [identities] = await client.request(['Identity/get', { accountId }]);
             const defaultIdentity = identities.list[0];
-            
+
             // Add replyTo - required when participants are present
             patch.replyTo = {
                 imip: `mailto:${defaultIdentity.email}`,
             };
-            
+
             // Add the organizer as a participant with owner role
             patch.participants = {
-                'organizer': {
+                organizer: {
                     '@type': 'Participant',
                     name: defaultIdentity.name || defaultIdentity.email,
                     email: defaultIdentity.email,
@@ -381,13 +384,13 @@ export async function updateCalendarEvent(
                         imip: `mailto:${defaultIdentity.email}`,
                     },
                     roles: {
-                        'owner': true,
+                        owner: true,
                     },
                     participationStatus: 'accepted',
                     expectReply: false,
                 },
             };
-            
+
             // Add other participants
             updates.participants.forEach((participant, index) => {
                 const participantId = `attendee-${index}`;
@@ -443,7 +446,9 @@ export async function deleteCalendarEvent(accountId: string, eventId: string): P
 /**
  * Fetch calendars for the account
  */
-export async function fetchCalendars(accountId: string): Promise<Array<{ id: string; name: string }>> {
+export async function fetchCalendars(
+    accountId: string
+): Promise<Array<{ id: string; name: string }>> {
     return withAuthHandling(async () => {
         if (!jmapService.isInitialized()) {
             throw new Error('JMAP client not initialized. Please log in first.');

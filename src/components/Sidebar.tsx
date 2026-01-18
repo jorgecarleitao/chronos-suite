@@ -23,9 +23,7 @@ export default function Sidebar({ children }: SidebarProps) {
             }}
         >
             <Toolbar />
-            <Box sx={{ overflow: 'auto', p: 2 }}>
-                {children}
-            </Box>
+            <Box sx={{ overflow: 'auto', p: 2 }}>{children}</Box>
         </Drawer>
     );
 }

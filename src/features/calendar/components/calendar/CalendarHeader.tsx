@@ -17,8 +17,18 @@ interface CalendarHeaderProps {
 }
 
 const MONTHS = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
 ];
 
 export default function CalendarHeader({
@@ -73,11 +83,7 @@ export default function CalendarHeader({
                         Week
                     </Button>
                 </ButtonGroup>
-                <Button
-                    variant="outlined"
-                    startIcon={<TodayIcon />}
-                    onClick={onToday}
-                >
+                <Button variant="outlined" startIcon={<TodayIcon />} onClick={onToday}>
                     Today
                 </Button>
             </Stack>

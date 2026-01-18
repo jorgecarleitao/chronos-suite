@@ -37,10 +37,7 @@ export default function Calendar({ path }: CalendarProps) {
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [calendars, setCalendars] = useState<Array<{ id: string; name: string }>>([]);
     const [selectedCalendar, setSelectedCalendar] = useState<string | null>(null);
-    const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create');
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
-    const [dialogInitialDate, setDialogInitialDate] = useState<Date>(new Date());
+    const [dialogEvent, setDialogEvent] = useState<CalendarEvent | null | undefined>(undefined);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -129,24 +126,11 @@ export default function Calendar({ path }: CalendarProps) {
     };
 
     const openCreateDialog = () => {
-        setDialogInitialDate(selectedDate);
-        setDialogMode('create');
-        setEditingEvent(null);
-        setIsDialogOpen(true);
+        setDialogEvent(null);
     };
 
     const openEditDialog = (event: CalendarEvent) => {
-        setEditingEvent(event);
-        setDialogMode('edit');
-        setIsDialogOpen(true);
-    };
-
-    const handleDialogSubmit = async (data: CalendarEventFormData) => {
-        if (dialogMode === 'create') {
-            await handleCreateEvent(data);
-        } else {
-            await handleUpdateEvent(data);
-        }
+        setDialogEvent(event);
     };
 
     const handleCreateEvent = async (data: CalendarEventFormData) => {
@@ -155,7 +139,7 @@ export default function Calendar({ path }: CalendarProps) {
         try {
             await createCalendarEvent(accountId, selectedCalendar, data);
 
-            setIsDialogOpen(false);
+            setDialogEvent(undefined);
             await loadEvents(accountId, selectedCalendar);
         } catch (error) {
             console.error('Failed to create event:', error);
@@ -163,14 +147,13 @@ export default function Calendar({ path }: CalendarProps) {
         }
     };
 
-    const handleUpdateEvent = async (data: CalendarEventFormData) => {
-        if (!accountId || !editingEvent) return;
+    const handleUpdateEvent = async (eventId: string, data: CalendarEventFormData) => {
+        if (!accountId) return;
 
         try {
-            await updateCalendarEvent(accountId, editingEvent.id, data);
+            await updateCalendarEvent(accountId, eventId, data);
 
-            setIsDialogOpen(false);
-            setEditingEvent(null);
+            setDialogEvent(undefined);
             if (selectedCalendar) {
                 await loadEvents(accountId, selectedCalendar);
             }
@@ -185,8 +168,7 @@ export default function Calendar({ path }: CalendarProps) {
 
         try {
             await deleteCalendarEvent(accountId, eventId);
-            setIsDialogOpen(false);
-            setEditingEvent(null);
+            setDialogEvent(undefined);
             await loadEvents(accountId, selectedCalendar);
         } catch (error) {
             console.error('Failed to delete event:', error);
@@ -266,15 +248,16 @@ export default function Calendar({ path }: CalendarProps) {
                 </Box>
             </Box>
 
-            <EventDialog
-                open={isDialogOpen}
-                mode={dialogMode}
-                event={editingEvent}
-                initialDate={dialogInitialDate}
-                onClose={() => setIsDialogOpen(false)}
-                onSubmit={handleDialogSubmit}
-                onDelete={editingEvent ? () => handleDeleteEvent(editingEvent.id) : undefined}
-            />
+            {dialogEvent !== undefined && (
+                <EventDialog
+                    event={dialogEvent}
+                    initialDate={selectedDate}
+                    onClose={() => setDialogEvent(undefined)}
+                    onCreate={handleCreateEvent}
+                    onUpdate={handleUpdateEvent}
+                    onDelete={handleDeleteEvent}
+                />
+            )}
         </Box>
     );
 }

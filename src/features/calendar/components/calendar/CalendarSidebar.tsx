@@ -32,12 +32,7 @@ export default function CalendarSidebar({
                 </Stack>
             ) : (
                 <>
-                    <Button
-                        variant="contained"
-                        fullWidth
-                        sx={{ mb: 2 }}
-                        onClick={onCreateEvent}
-                    >
+                    <Button variant="contained" fullWidth sx={{ mb: 2 }} onClick={onCreateEvent}>
                         Create Event
                     </Button>
 
@@ -47,7 +42,7 @@ export default function CalendarSidebar({
                         My Calendars
                     </Typography>
                     <List>
-                        {calendars.map(cal => (
+                        {calendars.map((cal) => (
                             <ListItem key={cal.id} disablePadding>
                                 <ListItemButton
                                     selected={selectedCalendar === cal.id}

@@ -3,6 +3,7 @@ import Typography from '@mui/material/Typography';
 import Tooltip from '@mui/material/Tooltip';
 import PersonIcon from '@mui/icons-material/Person';
 import { CalendarEvent } from '../../../../data/calendarEvents';
+import { isSameDay } from '../../../../utils/dateHelpers';
 
 interface WeekViewProps {
     currentDate: Date;
@@ -37,13 +38,15 @@ export default function WeekView({
     };
 
     const getEventsForTimeSlot = (date: Date, timeSlot: number) => {
-        return events.filter(event => {
+        return events.filter((event) => {
             const eventStart = new Date(event.start);
             const eventEnd = new Date(event.end);
 
-            if (eventStart.getDate() !== date.getDate() ||
+            if (
+                eventStart.getDate() !== date.getDate() ||
                 eventStart.getMonth() !== date.getMonth() ||
-                eventStart.getFullYear() !== date.getFullYear()) {
+                eventStart.getFullYear() !== date.getFullYear()
+            ) {
                 return false;
             }
 
@@ -95,13 +98,13 @@ export default function WeekView({
 
     return (
         <Box sx={{ overflowX: 'auto' }}>
-            <Box sx={{ display: 'grid', gridTemplateColumns: '60px repeat(7, 1fr)', minWidth: 800 }}>
+            <Box
+                sx={{ display: 'grid', gridTemplateColumns: '60px repeat(7, 1fr)', minWidth: 800 }}
+            >
                 {/* Header row with weekdays */}
                 <Box sx={{ borderRight: 1, borderColor: 'divider' }} />
                 {weekDays.map((day, idx) => {
-                    const isToday = day.getDate() === new Date().getDate() &&
-                        day.getMonth() === new Date().getMonth() &&
-                        day.getFullYear() === new Date().getFullYear();
+                    const todayCheck = isSameDay(day, new Date());
                     return (
                         <Box
                             key={idx}
@@ -112,15 +115,13 @@ export default function WeekView({
                                 borderBottom: 1,
                                 borderRight: idx < 6 ? 1 : 0,
                                 borderColor: 'divider',
-                                bgcolor: isToday ? 'action.selected' : 'transparent',
+                                bgcolor: todayCheck ? 'action.selected' : 'transparent',
                             }}
                         >
                             <Typography variant="caption" display="block">
                                 {DAYS[idx]}
                             </Typography>
-                            <Typography variant="h6">
-                                {day.getDate()}
-                            </Typography>
+                            <Typography variant="h6">{day.getDate()}</Typography>
                         </Box>
                     );
                 })}
@@ -169,68 +170,119 @@ export default function WeekView({
                                             onTimeSlotClick(newDate);
                                         }}
                                     >
-                                        {slotEvents.map(event => {
-                                            const participantCount = event.participants?.length || 0;
-                                            const participantNames = event.participants?.map(p => p.name || p.email).join(', ') || '';
+                                        {slotEvents.map((event) => {
+                                            const participantCount =
+                                                event.participants?.length || 0;
+                                            const participantNames =
+                                                event.participants
+                                                    ?.map((p) => p.name || p.email)
+                                                    .join(', ') || '';
                                             const tooltipTitle = (
                                                 <Box>
-                                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                                    <Typography
+                                                        variant="body2"
+                                                        sx={{ fontWeight: 'bold' }}
+                                                    >
                                                         {event.title}
                                                     </Typography>
                                                     <Typography variant="caption" display="block">
-                                                        {event.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {event.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        {event.start.toLocaleTimeString([], {
+                                                            hour: '2-digit',
+                                                            minute: '2-digit',
+                                                        })}{' '}
+                                                        -{' '}
+                                                        {event.end.toLocaleTimeString([], {
+                                                            hour: '2-digit',
+                                                            minute: '2-digit',
+                                                        })}
                                                     </Typography>
                                                     {event.description && (
-                                                        <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+                                                        <Typography
+                                                            variant="caption"
+                                                            display="block"
+                                                            sx={{ mt: 0.5 }}
+                                                        >
                                                             {event.description}
                                                         </Typography>
                                                     )}
                                                     {participantCount > 0 && (
-                                                        <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+                                                        <Typography
+                                                            variant="caption"
+                                                            display="block"
+                                                            sx={{ mt: 0.5 }}
+                                                        >
                                                             👥 {participantNames}
                                                         </Typography>
                                                     )}
                                                 </Box>
                                             );
-                                            
+
                                             return (
-                                            <Tooltip key={event.id} title={tooltipTitle} arrow placement="top">
-                                            <Box
-                                                sx={{
-                                                    ...getEventStyle(event, timeSlot),
-                                                    px: 0.5,
-                                                    bgcolor: 'primary.main',
-                                                    color: 'primary.contrastText',
-                                                    borderRadius: 1,
-                                                    fontSize: '0.75rem',
-                                                    cursor: 'pointer',
-                                                    overflow: 'hidden',
-                                                    '&:hover': {
-                                                        bgcolor: 'primary.dark',
-                                                    },
-                                                }}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    onEventClick(event);
-                                                }}
-                                            >
-                                                <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
-                                                    {event.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </Typography>
-                                                <Typography variant="caption" display="block" noWrap>
-                                                    {event.title}
-                                                </Typography>
-                                                {participantCount > 0 && (
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, mt: 0.25 }}>
-                                                        <PersonIcon sx={{ fontSize: '0.7rem' }} />
-                                                        <Typography variant="caption" sx={{ fontSize: '0.6rem' }}>
-                                                            {participantCount}
+                                                <Tooltip
+                                                    key={event.id}
+                                                    title={tooltipTitle}
+                                                    arrow
+                                                    placement="top"
+                                                >
+                                                    <Box
+                                                        sx={{
+                                                            ...getEventStyle(event, timeSlot),
+                                                            px: 0.5,
+                                                            bgcolor: 'primary.main',
+                                                            color: 'primary.contrastText',
+                                                            borderRadius: 1,
+                                                            fontSize: '0.75rem',
+                                                            cursor: 'pointer',
+                                                            overflow: 'hidden',
+                                                            '&:hover': {
+                                                                bgcolor: 'primary.dark',
+                                                            },
+                                                        }}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onEventClick(event);
+                                                        }}
+                                                    >
+                                                        <Typography
+                                                            variant="caption"
+                                                            sx={{ fontWeight: 'bold' }}
+                                                        >
+                                                            {event.start.toLocaleTimeString([], {
+                                                                hour: '2-digit',
+                                                                minute: '2-digit',
+                                                            })}
                                                         </Typography>
+                                                        <Typography
+                                                            variant="caption"
+                                                            display="block"
+                                                            noWrap
+                                                        >
+                                                            {event.title}
+                                                        </Typography>
+                                                        {participantCount > 0 && (
+                                                            <Box
+                                                                sx={{
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: 0.25,
+                                                                    mt: 0.25,
+                                                                }}
+                                                            >
+                                                                <PersonIcon
+                                                                    sx={{ fontSize: '0.7rem' }}
+                                                                />
+                                                                <Typography
+                                                                    variant="caption"
+                                                                    sx={{ fontSize: '0.6rem' }}
+                                                                >
+                                                                    {participantCount}
+                                                                </Typography>
+                                                            </Box>
+                                                        )}
                                                     </Box>
-                                                )}
-                                            </Box>
-                                            </Tooltip>
-                                        )})}
+                                                </Tooltip>
+                                            );
+                                        })}
                                     </Box>
                                 );
                             })}

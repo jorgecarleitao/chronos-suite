@@ -27,7 +27,13 @@ import ContactsIcon from '@mui/icons-material/Contacts';
 import CloseIcon from '@mui/icons-material/Close';
 import SaveIcon from '@mui/icons-material/Save';
 import Sidebar, { drawerWidth } from '../../components/Sidebar';
-import { fetchContacts, deleteContact, updateContact, createContact, Contact } from '../../data/contacts';
+import {
+    fetchContacts,
+    deleteContact,
+    updateContact,
+    createContact,
+    Contact,
+} from '../../data/contacts';
 import { fetchAddressBooks, AddressBook } from '../../data/addressBook';
 import { getPrimaryAccountId } from '../../data/accounts';
 
@@ -183,33 +189,38 @@ export default function Contacts({ path }: ContactsProps) {
 
         try {
             setLoading(true);
-            
+
             if (editingContact) {
                 // Update existing contact
                 await updateContact(accountId, editingContact.id, formData);
             } else {
                 // Create new contact
-                const targetAddressBook = addressBooks.find(ab => ab.isDefault) || addressBooks[0];
+                const targetAddressBook =
+                    addressBooks.find((ab) => ab.isDefault) || addressBooks[0];
                 if (!targetAddressBook) {
                     setError('No address book available. Please create an address book first.');
                     return;
                 }
                 await createContact(accountId, targetAddressBook.id, formData);
             }
-            
+
             setIsCreating(false);
             setEditingContact(null);
             await loadContacts(accountId, selectedAddressBook);
             setError(null);
         } catch (err) {
-            setError(err instanceof Error ? err.message : `Failed to ${editingContact ? 'update' : 'create'} contact`);
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : `Failed to ${editingContact ? 'update' : 'create'} contact`
+            );
         } finally {
             setLoading(false);
         }
     };
 
     const handleFormChange = (field: keyof Contact, value: any) => {
-        setFormData(prev => ({ ...prev, [field]: value }));
+        setFormData((prev) => ({ ...prev, [field]: value }));
     };
 
     const isFieldModified = (field: keyof Contact): boolean => {
@@ -229,46 +240,44 @@ export default function Contacts({ path }: ContactsProps) {
                         <List>
                             <ListItem disablePadding>
                                 <ListItemButton
-                                        selected={selectedAddressBook === undefined}
-                                        onClick={() => handleAddressBookClick(undefined)}
-                                    >
-                                        <ListItemText
-                                            primary="All Contacts"
-                                            primaryTypographyProps={{ fontWeight: 'bold' }}
-                                        />
-                                    </ListItemButton>
-                                </ListItem>
-                            </List>
-                            {addressBooks.length > 0 && (
-                                <>
-                                    <Divider />
-                                    <Typography
-                                        variant="overline"
-                                        sx={{ px: 2, py: 1, display: 'block' }}
-                                    >
-                                        Address Books
-                                    </Typography>
-                                    <List>
-                                        {addressBooks.map((ab) => (
-                                            <ListItem key={ab.id} disablePadding>
-                                                <ListItemButton
-                                                    selected={selectedAddressBook === ab.id}
-                                                    onClick={() => handleAddressBookClick(ab.id)}
-                                                >
-                                                    <ListItemText
-                                                        primary={ab.name}
-                                                        secondary={
-                                                            ab.isDefault ? 'Default' : undefined
-                                                        }
-                                                    />
-                                                </ListItemButton>
-                                            </ListItem>
-                                        ))}
-                                    </List>
-                                </>
-                            )}
-                        </>
-                    )}
+                                    selected={selectedAddressBook === undefined}
+                                    onClick={() => handleAddressBookClick(undefined)}
+                                >
+                                    <ListItemText
+                                        primary="All Contacts"
+                                        primaryTypographyProps={{ fontWeight: 'bold' }}
+                                    />
+                                </ListItemButton>
+                            </ListItem>
+                        </List>
+                        {addressBooks.length > 0 && (
+                            <>
+                                <Divider />
+                                <Typography
+                                    variant="overline"
+                                    sx={{ px: 2, py: 1, display: 'block' }}
+                                >
+                                    Address Books
+                                </Typography>
+                                <List>
+                                    {addressBooks.map((ab) => (
+                                        <ListItem key={ab.id} disablePadding>
+                                            <ListItemButton
+                                                selected={selectedAddressBook === ab.id}
+                                                onClick={() => handleAddressBookClick(ab.id)}
+                                            >
+                                                <ListItemText
+                                                    primary={ab.name}
+                                                    secondary={ab.isDefault ? 'Default' : undefined}
+                                                />
+                                            </ListItemButton>
+                                        </ListItem>
+                                    ))}
+                                </List>
+                            </>
+                        )}
+                    </>
+                )}
             </Sidebar>
 
             {/* Contacts list */}
@@ -290,8 +299,15 @@ export default function Contacts({ path }: ContactsProps) {
 
                     {isCreating ? (
                         <Paper sx={{ p: 3 }}>
-                            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
-                                <Typography variant="h5">{editingContact ? 'Edit Contact' : 'New Contact'}</Typography>
+                            <Stack
+                                direction="row"
+                                justifyContent="space-between"
+                                alignItems="center"
+                                mb={3}
+                            >
+                                <Typography variant="h5">
+                                    {editingContact ? 'Edit Contact' : 'New Contact'}
+                                </Typography>
                                 <IconButton onClick={handleCancelCreate}>
                                     <CloseIcon />
                                 </IconButton>
@@ -302,7 +318,12 @@ export default function Contacts({ path }: ContactsProps) {
                                     <TextField
                                         label="First Name"
                                         value={formData.firstName || ''}
-                                        onChange={(e) => handleFormChange('firstName', (e.target as HTMLInputElement).value)}
+                                        onChange={(e) =>
+                                            handleFormChange(
+                                                'firstName',
+                                                (e.target as HTMLInputElement).value
+                                            )
+                                        }
                                         fullWidth
                                         color={isFieldModified('firstName') ? 'warning' : 'primary'}
                                         focused={isFieldModified('firstName')}
@@ -310,7 +331,12 @@ export default function Contacts({ path }: ContactsProps) {
                                     <TextField
                                         label="Last Name"
                                         value={formData.lastName || ''}
-                                        onChange={(e) => handleFormChange('lastName', (e.target as HTMLInputElement).value)}
+                                        onChange={(e) =>
+                                            handleFormChange(
+                                                'lastName',
+                                                (e.target as HTMLInputElement).value
+                                            )
+                                        }
                                         fullWidth
                                         color={isFieldModified('lastName') ? 'warning' : 'primary'}
                                         focused={isFieldModified('lastName')}
@@ -321,7 +347,12 @@ export default function Contacts({ path }: ContactsProps) {
                                     label="Email"
                                     type="email"
                                     value={formData.email || ''}
-                                    onChange={(e) => handleFormChange('email', (e.target as HTMLInputElement).value)}
+                                    onChange={(e) =>
+                                        handleFormChange(
+                                            'email',
+                                            (e.target as HTMLInputElement).value
+                                        )
+                                    }
                                     fullWidth
                                     color={isFieldModified('email') ? 'warning' : 'primary'}
                                     focused={isFieldModified('email')}
@@ -333,7 +364,12 @@ export default function Contacts({ path }: ContactsProps) {
                                     <TextField
                                         label="Company"
                                         value={formData.company || ''}
-                                        onChange={(e) => handleFormChange('company', (e.target as HTMLInputElement).value)}
+                                        onChange={(e) =>
+                                            handleFormChange(
+                                                'company',
+                                                (e.target as HTMLInputElement).value
+                                            )
+                                        }
                                         fullWidth
                                         color={isFieldModified('company') ? 'warning' : 'primary'}
                                         focused={isFieldModified('company')}
@@ -341,7 +377,12 @@ export default function Contacts({ path }: ContactsProps) {
                                     <TextField
                                         label="Job Title"
                                         value={formData.jobTitle || ''}
-                                        onChange={(e) => handleFormChange('jobTitle', (e.target as HTMLInputElement).value)}
+                                        onChange={(e) =>
+                                            handleFormChange(
+                                                'jobTitle',
+                                                (e.target as HTMLInputElement).value
+                                            )
+                                        }
                                         fullWidth
                                         color={isFieldModified('jobTitle') ? 'warning' : 'primary'}
                                         focused={isFieldModified('jobTitle')}
@@ -351,7 +392,12 @@ export default function Contacts({ path }: ContactsProps) {
                                 <TextField
                                     label="Notes"
                                     value={formData.notes || ''}
-                                    onChange={(e) => handleFormChange('notes', (e.target as HTMLInputElement).value)}
+                                    onChange={(e) =>
+                                        handleFormChange(
+                                            'notes',
+                                            (e.target as HTMLInputElement).value
+                                        )
+                                    }
                                     multiline
                                     rows={4}
                                     fullWidth
@@ -360,11 +406,9 @@ export default function Contacts({ path }: ContactsProps) {
                                 />
 
                                 <Stack direction="row" spacing={2} justifyContent="flex-end">
-                                    <Button onClick={handleCancelCreate}>
-                                        Cancel
-                                    </Button>
-                                    <Button 
-                                        variant="contained" 
+                                    <Button onClick={handleCancelCreate}>Cancel</Button>
+                                    <Button
+                                        variant="contained"
                                         startIcon={<SaveIcon />}
                                         onClick={handleSaveContact}
                                         disabled={loading}
@@ -439,9 +483,14 @@ export default function Contacts({ path }: ContactsProps) {
                                                         </Typography>
                                                     )}
                                                     {contact.company && (
-                                                        <Typography variant="body2" component="div" color="text.secondary">
+                                                        <Typography
+                                                            variant="body2"
+                                                            component="div"
+                                                            color="text.secondary"
+                                                        >
                                                             {contact.company}
-                                                            {contact.jobTitle && ` • ${contact.jobTitle}`}
+                                                            {contact.jobTitle &&
+                                                                ` • ${contact.jobTitle}`}
                                                         </Typography>
                                                     )}
                                                 </>

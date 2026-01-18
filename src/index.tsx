@@ -56,11 +56,7 @@ export default function App() {
     };
 
     const LoadingFallback = () => (
-        <Stack
-            justifyContent="center"
-            alignItems="center"
-            minHeight="100vh"
-        >
+        <Stack justifyContent="center" alignItems="center" minHeight="100vh">
             <CircularProgress size={60} />
         </Stack>
     );

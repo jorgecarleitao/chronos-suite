@@ -59,7 +59,9 @@ export default function MessageListItem({
         try {
             const accountId = await getPrimaryAccountId();
             const contacts = await fetchContacts(accountId);
-            const matchingContact = contacts.find(c => c.email?.toLowerCase() === message.from_email?.toLowerCase());
+            const matchingContact = contacts.find(
+                (c) => c.email?.toLowerCase() === message.from_email?.toLowerCase()
+            );
             setContact(matchingContact || null);
         } catch (err) {
             console.error('Failed to load contacts:', err);
@@ -82,10 +84,12 @@ export default function MessageListItem({
             contact.company && `Company: ${contact.company}`,
             contact.jobTitle && `Title: ${contact.jobTitle}`,
             contact.email && `Email: ${contact.email}`,
-        ].filter(Boolean).join('\n');
+        ]
+            .filter(Boolean)
+            .join('\n');
 
         return (
-            <Tooltip 
+            <Tooltip
                 title={
                     <Box sx={{ whiteSpace: 'pre-line' }}>
                         {contactInfo || 'Contact in address book'}
@@ -99,8 +103,8 @@ export default function MessageListItem({
                     size="small"
                     color="primary"
                     variant="outlined"
-                    sx={{ 
-                        borderRadius: 2, 
+                    sx={{
+                        borderRadius: 2,
                         maxWidth: '100%',
                         height: 24,
                     }}

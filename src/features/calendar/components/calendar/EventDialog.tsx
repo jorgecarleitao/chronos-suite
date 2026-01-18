@@ -17,24 +17,23 @@ import { CalendarEvent, Participant } from '../../../../data/calendarEvents';
 import { CalendarEventFormData } from '../../types';
 
 interface EventDialogProps {
-    open: boolean;
-    mode: 'create' | 'edit';
     event: CalendarEvent | null;
     initialDate: Date;
     onClose: () => void;
-    onSubmit: (data: CalendarEventFormData) => void;
-    onDelete?: () => void;
+    onCreate: (data: CalendarEventFormData) => void;
+    onUpdate: (eventId: string, data: CalendarEventFormData) => void;
+    onDelete: (eventId: string) => void;
 }
 
 export default function EventDialog({
-    open,
-    mode,
     event,
     initialDate,
     onClose,
-    onSubmit,
+    onCreate,
+    onUpdate,
     onDelete,
 }: EventDialogProps) {
+    const mode = event ? 'edit' : 'create';
     const [participantEmail, setParticipantEmail] = useState('');
     const [participantName, setParticipantName] = useState('');
     const [formData, setFormData] = useState({
@@ -47,36 +46,34 @@ export default function EventDialog({
         participants: [] as Participant[],
     });
 
-    // Initialize form data when dialog opens
+    // Initialize form data when dialog mounts
     useEffect(() => {
-        if (open) {
-            if (mode === 'edit' && event) {
-                setFormData({
-                    title: event.title,
-                    startDate: event.start.toISOString().split('T')[0],
-                    startTime: event.start.toTimeString().slice(0, 5),
-                    endDate: event.end.toISOString().split('T')[0],
-                    endTime: event.end.toTimeString().slice(0, 5),
-                    description: event.description || '',
-                    participants: event.participants || [],
-                });
-            } else {
-                const dateStr = initialDate.toISOString().split('T')[0];
-                const startHour = initialDate.getHours();
-                const startTime = `${String(startHour).padStart(2, '0')}:00`;
-                const endTime = `${String(startHour + 1).padStart(2, '0')}:00`;
-                setFormData({
-                    title: '',
-                    startDate: dateStr,
-                    startTime: startTime,
-                    endDate: dateStr,
-                    endTime: endTime,
-                    description: '',
-                    participants: [],
-                });
-            }
+        if (mode === 'edit' && event) {
+            setFormData({
+                title: event.title,
+                startDate: event.start.toISOString().split('T')[0],
+                startTime: event.start.toTimeString().slice(0, 5),
+                endDate: event.end.toISOString().split('T')[0],
+                endTime: event.end.toTimeString().slice(0, 5),
+                description: event.description || '',
+                participants: event.participants || [],
+            });
+        } else if (mode === 'create') {
+            const dateStr = initialDate.toISOString().split('T')[0];
+            const startHour = initialDate.getHours();
+            const startTime = `${String(startHour).padStart(2, '0')}:00`;
+            const endTime = `${String(startHour + 1).padStart(2, '0')}:00`;
+            setFormData({
+                title: '',
+                startDate: dateStr,
+                startTime: startTime,
+                endDate: dateStr,
+                endTime: endTime,
+                description: '',
+                participants: [],
+            });
         }
-    }, [open, mode, event, initialDate]);
+    }, []);
 
     const handleAddParticipant = () => {
         if (!participantEmail.trim()) return;
@@ -108,18 +105,24 @@ export default function EventDialog({
     const handleSubmit = () => {
         const start = new Date(`${formData.startDate}T${formData.startTime}`);
         const end = new Date(`${formData.endDate}T${formData.endTime}`);
-        
-        onSubmit({
+
+        const data = {
             title: formData.title,
             start,
             end,
             description: formData.description,
             participants: formData.participants,
-        });
+        };
+
+        if (mode === 'edit' && event) {
+            onUpdate(event.id, data);
+        } else {
+            onCreate(data);
+        }
     };
 
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+        <Dialog open={true} onClose={onClose} maxWidth="sm" fullWidth>
             <DialogTitle>{mode === 'create' ? 'Create Event' : 'Edit Event'}</DialogTitle>
             <DialogContent>
                 <Stack spacing={2} sx={{ mt: 1 }}>
@@ -127,7 +130,12 @@ export default function EventDialog({
                         label="Title"
                         fullWidth
                         value={formData.title}
-                        onChange={(e) => setFormData({ ...formData, title: (e.target as HTMLInputElement).value })}
+                        onChange={(e) =>
+                            setFormData({
+                                ...formData,
+                                title: (e.target as HTMLInputElement).value,
+                            })
+                        }
                     />
                     <Stack direction="row" spacing={2}>
                         <TextField
@@ -136,7 +144,12 @@ export default function EventDialog({
                             fullWidth
                             InputLabelProps={{ shrink: true }}
                             value={formData.startDate}
-                            onChange={(e) => setFormData({ ...formData, startDate: (e.target as HTMLInputElement).value })}
+                            onChange={(e) =>
+                                setFormData({
+                                    ...formData,
+                                    startDate: (e.target as HTMLInputElement).value,
+                                })
+                            }
                         />
                         <TextField
                             label="Start Time"
@@ -144,7 +157,12 @@ export default function EventDialog({
                             fullWidth
                             InputLabelProps={{ shrink: true }}
                             value={formData.startTime}
-                            onChange={(e) => setFormData({ ...formData, startTime: (e.target as HTMLInputElement).value })}
+                            onChange={(e) =>
+                                setFormData({
+                                    ...formData,
+                                    startTime: (e.target as HTMLInputElement).value,
+                                })
+                            }
                         />
                     </Stack>
                     <Stack direction="row" spacing={2}>
@@ -154,7 +172,12 @@ export default function EventDialog({
                             fullWidth
                             InputLabelProps={{ shrink: true }}
                             value={formData.endDate}
-                            onChange={(e) => setFormData({ ...formData, endDate: (e.target as HTMLInputElement).value })}
+                            onChange={(e) =>
+                                setFormData({
+                                    ...formData,
+                                    endDate: (e.target as HTMLInputElement).value,
+                                })
+                            }
                         />
                         <TextField
                             label="End Time"
@@ -162,7 +185,12 @@ export default function EventDialog({
                             fullWidth
                             InputLabelProps={{ shrink: true }}
                             value={formData.endTime}
-                            onChange={(e) => setFormData({ ...formData, endTime: (e.target as HTMLInputElement).value })}
+                            onChange={(e) =>
+                                setFormData({
+                                    ...formData,
+                                    endTime: (e.target as HTMLInputElement).value,
+                                })
+                            }
                         />
                     </Stack>
                     <TextField
@@ -171,16 +199,25 @@ export default function EventDialog({
                         multiline
                         rows={3}
                         value={formData.description}
-                        onChange={(e) => setFormData({ ...formData, description: (e.target as HTMLInputElement).value })}
+                        onChange={(e) =>
+                            setFormData({
+                                ...formData,
+                                description: (e.target as HTMLInputElement).value,
+                            })
+                        }
                     />
 
                     {/* Participants Section */}
                     <Box>
-                        <Typography variant="subtitle2" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography
+                            variant="subtitle2"
+                            gutterBottom
+                            sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                        >
                             <PersonAddIcon fontSize="small" />
                             Invite Participants
                         </Typography>
-                        
+
                         {/* Display existing participants */}
                         {formData.participants.length > 0 && (
                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
@@ -205,7 +242,9 @@ export default function EventDialog({
                                 type="email"
                                 placeholder="attendee@example.com"
                                 value={participantEmail}
-                                onChange={(e) => setParticipantEmail((e.target as HTMLInputElement).value)}
+                                onChange={(e) =>
+                                    setParticipantEmail((e.target as HTMLInputElement).value)
+                                }
                                 onKeyPress={(e) => {
                                     if (e.key === 'Enter') {
                                         e.preventDefault();
@@ -219,7 +258,9 @@ export default function EventDialog({
                                 label="Name (optional)"
                                 placeholder="John Doe"
                                 value={participantName}
-                                onChange={(e) => setParticipantName((e.target as HTMLInputElement).value)}
+                                onChange={(e) =>
+                                    setParticipantName((e.target as HTMLInputElement).value)
+                                }
                                 onKeyPress={(e) => {
                                     if (e.key === 'Enter') {
                                         e.preventDefault();
@@ -237,18 +278,23 @@ export default function EventDialog({
                                 <AddIcon />
                             </IconButton>
                         </Stack>
-                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                        <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ mt: 0.5, display: 'block' }}
+                        >
                             Participants will receive email invitations with calendar event details
                         </Typography>
                     </Box>
                 </Stack>
             </DialogContent>
             <DialogActions>
-                {mode === 'edit' && onDelete && (
-                    <Button 
-                        onClick={onDelete} 
-                        color="error" 
+                {mode === 'edit' && event && (
+                    <Button
+                        onClick={() => onDelete(event.id)}
+                        color="error"
                         startIcon={<DeleteIcon />}
+                        sx={{ mr: 'auto' }}
                     >
                         Delete
                     </Button>

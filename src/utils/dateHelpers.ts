@@ -1,8 +1,18 @@
 export const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export const MONTHS = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
 ];
 
 export function getDaysInMonth(date: Date): number {
@@ -34,16 +44,12 @@ export function getWeekDays(startDate: Date): Date[] {
     return days;
 }
 
-export function isToday(date: Date, compareDate: Date): boolean {
-    return date.getDate() === compareDate.getDate() &&
-        date.getMonth() === compareDate.getMonth() &&
-        date.getFullYear() === compareDate.getFullYear();
-}
-
 export function isSameDay(date1: Date, date2: Date): boolean {
-    return date1.getDate() === date2.getDate() &&
+    return (
+        date1.getDate() === date2.getDate() &&
         date1.getMonth() === date2.getMonth() &&
-        date1.getFullYear() === date2.getFullYear();
+        date1.getFullYear() === date2.getFullYear()
+    );
 }
 
 export function formatTimeSlot(timeSlot: number): string {

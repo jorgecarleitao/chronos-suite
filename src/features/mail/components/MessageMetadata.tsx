@@ -35,7 +35,9 @@ export default function MessageMetadata({
         try {
             const accountId = await getPrimaryAccountId();
             const contacts = await fetchContacts(accountId);
-            const matchingContact = contacts.find(c => c.email?.toLowerCase() === fromEmail.toLowerCase());
+            const matchingContact = contacts.find(
+                (c) => c.email?.toLowerCase() === fromEmail.toLowerCase()
+            );
             setContact(matchingContact || null);
         } catch (err) {
             console.error('Failed to load contacts:', err);
@@ -60,10 +62,12 @@ export default function MessageMetadata({
                 contact.company && `Company: ${contact.company}`,
                 contact.jobTitle && `Title: ${contact.jobTitle}`,
                 contact.email && `Email: ${contact.email}`,
-            ].filter(Boolean).join('\n');
+            ]
+                .filter(Boolean)
+                .join('\n');
 
             return (
-                <Tooltip 
+                <Tooltip
                     title={
                         <Box sx={{ whiteSpace: 'pre-line' }}>
                             {contactInfo || 'Contact in address book'}
