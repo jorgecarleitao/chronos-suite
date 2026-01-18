@@ -1,39 +1,52 @@
 import { useState, useEffect } from 'preact/hooks';
 import { route } from 'preact-router';
 import Box from '@mui/material/Box';
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import ListItemButton from '@mui/material/ListItemButton';
-import ListItemText from '@mui/material/ListItemText';
 import Toolbar from '@mui/material/Toolbar';
-import Typography from '@mui/material/Typography';
-import Divider from '@mui/material/Divider';
 import Paper from '@mui/material/Paper';
 import CircularProgress from '@mui/material/CircularProgress';
 import Stack from '@mui/material/Stack';
-import IconButton from '@mui/material/IconButton';
-import Button from '@mui/material/Button';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import TodayIcon from '@mui/icons-material/Today';
-import Sidebar from '../components/Sidebar';
 import { getPrimaryAccountId } from '../data/accounts';
+import {
+    fetchCalendarEvents,
+    createCalendarEvent,
+    updateCalendarEvent,
+    deleteCalendarEvent,
+    fetchCalendars,
+    CalendarEvent,
+} from '../data/calendarEvents';
+import CalendarHeader from '../components/calendar/CalendarHeader';
+import MonthView from '../components/calendar/MonthView';
+import WeekView from '../components/calendar/WeekView';
+import EventList from '../components/calendar/EventList';
+import EventDialog from '../components/calendar/EventDialog';
+import CalendarSidebar from '../components/calendar/CalendarSidebar';
+import { getWeekStart } from '../utils/dateHelpers';
 
 interface CalendarProps {
     path: string;
 }
-
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTHS = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-];
 
 export default function Calendar({ path }: CalendarProps) {
     const [loading, setLoading] = useState(true);
     const [accountId, setAccountId] = useState<string | null>(null);
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
+    const [view, setView] = useState<'month' | 'week'>('month');
+    const [events, setEvents] = useState<CalendarEvent[]>([]);
+    const [calendars, setCalendars] = useState<Array<{ id: string; name: string }>>([]);
+    const [selectedCalendar, setSelectedCalendar] = useState<string | null>(null);
+    const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create');
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const [formData, setFormData] = useState({
+        title: '',
+        startDate: '',
+        startTime: '',
+        endDate: '',
+        endTime: '',
+        description: '',
+    });
 
     useEffect(() => {
         loadAccount();
@@ -43,6 +56,7 @@ export default function Calendar({ path }: CalendarProps) {
         try {
             const id = await getPrimaryAccountId();
             setAccountId(id);
+            await loadCalendars(id);
         } catch (error) {
             console.error('Failed to load account:', error);
             if (error instanceof Error && error.message.includes('not initialized')) {
@@ -53,17 +67,37 @@ export default function Calendar({ path }: CalendarProps) {
         }
     };
 
-    const getDaysInMonth = (date: Date) => {
-        const year = date.getFullYear();
-        const month = date.getMonth();
-        return new Date(year, month + 1, 0).getDate();
+    const loadCalendars = async (accId: string) => {
+        try {
+            const cals = await fetchCalendars(accId);
+            setCalendars(cals);
+            if (cals.length > 0) {
+                setSelectedCalendar(cals[0].id);
+                await loadEvents(accId, cals[0].id);
+            }
+        } catch (error) {
+            console.error('Failed to load calendars:', error);
+            setError('Failed to load calendars');
+        }
     };
 
-    const getFirstDayOfMonth = (date: Date) => {
-        const year = date.getFullYear();
-        const month = date.getMonth();
-        return new Date(year, month, 1).getDay();
+    const loadEvents = async (accId: string, calId: string) => {
+        try {
+            const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+            const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+            const evts = await fetchCalendarEvents(accId, calId, startOfMonth, endOfMonth);
+            setEvents(evts);
+        } catch (error) {
+            console.error('Failed to load events:', error);
+            setError('Failed to load events');
+        }
     };
+
+    useEffect(() => {
+        if (accountId && selectedCalendar) {
+            loadEvents(accountId, selectedCalendar);
+        }
+    }, [currentDate, selectedCalendar]);
 
     const previousMonth = () => {
         setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
@@ -73,115 +107,144 @@ export default function Calendar({ path }: CalendarProps) {
         setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
     };
 
+    const previousWeek = () => {
+        const newDate = new Date(currentDate);
+        newDate.setDate(currentDate.getDate() - 7);
+        setCurrentDate(newDate);
+    };
+
+    const nextWeek = () => {
+        const newDate = new Date(currentDate);
+        newDate.setDate(currentDate.getDate() + 7);
+        setCurrentDate(newDate);
+    };
+
     const goToToday = () => {
         const today = new Date();
         setCurrentDate(today);
         setSelectedDate(today);
     };
 
-    const isToday = (day: number) => {
-        const today = new Date();
-        return day === today.getDate() &&
-            currentDate.getMonth() === today.getMonth() &&
-            currentDate.getFullYear() === today.getFullYear();
+    const handlePrevious = () => {
+        view === 'month' ? previousMonth() : previousWeek();
     };
 
-    const isSelected = (day: number) => {
-        return day === selectedDate.getDate() &&
-            currentDate.getMonth() === selectedDate.getMonth() &&
-            currentDate.getFullYear() === selectedDate.getFullYear();
+    const handleNext = () => {
+        view === 'month' ? nextMonth() : nextWeek();
     };
 
-    const renderCalendar = () => {
-        const daysInMonth = getDaysInMonth(currentDate);
-        const firstDay = getFirstDayOfMonth(currentDate);
-        const days = [];
+    const openCreateDialog = () => {
+        const dateStr = selectedDate.toISOString().split('T')[0];
+        const startHour = selectedDate.getHours();
+        const startTime = `${String(startHour).padStart(2, '0')}:00`;
+        const endTime = `${String(startHour + 1).padStart(2, '0')}:00`;
+        setFormData({
+            title: '',
+            startDate: dateStr,
+            startTime: startTime,
+            endDate: dateStr,
+            endTime: endTime,
+            description: '',
+        });
+        setDialogMode('create');
+        setIsDialogOpen(true);
+    };
 
-        // Empty cells for days before the first day of the month
-        for (let i = 0; i < firstDay; i++) {
-            days.push(
-                <Box
-                    key={`empty-${i}`}
-                    sx={{
-                        aspectRatio: '1',
-                        p: 1,
-                    }}
-                />
-            );
+    const openEditDialog = (event: CalendarEvent) => {
+        setEditingEvent(event);
+        setFormData({
+            title: event.title,
+            startDate: event.start.toISOString().split('T')[0],
+            startTime: event.start.toTimeString().slice(0, 5),
+            endDate: event.end.toISOString().split('T')[0],
+            endTime: event.end.toTimeString().slice(0, 5),
+            description: event.description || '',
+        });
+        setDialogMode('edit');
+        setIsDialogOpen(true);
+    };
+
+    const handleDialogSubmit = async () => {
+        if (dialogMode === 'create') {
+            await handleCreateEvent();
+        } else {
+            await handleUpdateEvent();
         }
+    };
 
-        // Days of the month
-        for (let day = 1; day <= daysInMonth; day++) {
-            const today = isToday(day);
-            const selected = isSelected(day);
+    const handleCreateEvent = async () => {
+        if (!accountId || !selectedCalendar) return;
 
-            days.push(
-                <Box
-                    key={day}
-                    onClick={() => setSelectedDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day))}
-                    sx={{
-                        aspectRatio: '1',
-                        p: 1,
-                        cursor: 'pointer',
-                        borderRadius: 1,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'flex-start',
-                        bgcolor: selected ? 'primary.main' : today ? 'action.hover' : 'transparent',
-                        color: selected ? 'primary.contrastText' : 'inherit',
-                        '&:hover': {
-                            bgcolor: selected ? 'primary.dark' : 'action.hover',
-                        },
-                    }}
-                >
-                    <Typography
-                        variant="body2"
-                        fontWeight={today ? 'bold' : 'normal'}
-                    >
-                        {day}
-                    </Typography>
-                </Box>
-            );
+        try {
+            const start = new Date(`${formData.startDate}T${formData.startTime}`);
+            const end = new Date(`${formData.endDate}T${formData.endTime}`);
+
+            await createCalendarEvent(accountId, selectedCalendar, {
+                title: formData.title,
+                start,
+                end,
+                description: formData.description,
+            });
+
+            setIsDialogOpen(false);
+            await loadEvents(accountId, selectedCalendar);
+        } catch (error) {
+            console.error('Failed to create event:', error);
+            setError('Failed to create event');
         }
+    };
 
-        return days;
+    const handleUpdateEvent = async () => {
+        if (!accountId || !editingEvent) return;
+
+        try {
+            const start = new Date(`${formData.startDate}T${formData.startTime}`);
+            const end = new Date(`${formData.endDate}T${formData.endTime}`);
+
+            await updateCalendarEvent(accountId, editingEvent.id, {
+                title: formData.title,
+                start,
+                end,
+                description: formData.description,
+            });
+
+            setIsDialogOpen(false);
+            setEditingEvent(null);
+            if (selectedCalendar) {
+                await loadEvents(accountId, selectedCalendar);
+            }
+        } catch (error) {
+            console.error('Failed to update event:', error);
+            setError('Failed to update event');
+        }
+    };
+
+    const handleDeleteEvent = async (eventId: string) => {
+        if (!accountId || !selectedCalendar) return;
+
+        try {
+            await deleteCalendarEvent(accountId, eventId);
+            await loadEvents(accountId, selectedCalendar);
+        } catch (error) {
+            console.error('Failed to delete event:', error);
+            setError('Failed to delete event');
+        }
+    };
+
+    const handleTimeSlotClick = (date: Date) => {
+        setSelectedDate(date);
+        openCreateDialog();
     };
 
     return (
         <Box display="flex">
-            {/* Calendar sidebar */}
-            <Sidebar>
-                {!accountId ? (
-                    <Stack justifyContent="center" padding={3}>
-                        <CircularProgress />
-                    </Stack>
-                ) : (
-                    <>
-                        <Button
-                            variant="contained"
-                            fullWidth
-                            sx={{ mb: 2 }}
-                            onClick={() => alert('Create event - coming soon!')}
-                        >
-                            Create Event
-                        </Button>
-
-                        <Divider sx={{ my: 2 }} />
-
-                        <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                            My Calendars
-                        </Typography>
-                        <List>
-                            <ListItem disablePadding>
-                                <ListItemButton selected>
-                                    <ListItemText primary="Personal" />
-                                </ListItemButton>
-                            </ListItem>
-                        </List>
-                    </>
-                )}
-            </Sidebar>
+            <CalendarSidebar
+                loading={!accountId}
+                calendars={calendars}
+                selectedCalendar={selectedCalendar}
+                onCalendarSelect={setSelectedCalendar}
+                onCreateEvent={openCreateDialog}
+            />
 
             {/* Main calendar view */}
             <Box
@@ -201,62 +264,54 @@ export default function Calendar({ path }: CalendarProps) {
                     ) : (
                         <>
                             <Paper sx={{ p: 3, mb: 3 }}>
-                                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
-                                    <Stack direction="row" spacing={2} alignItems="center">
-                                        <IconButton onClick={previousMonth}>
-                                            <ChevronLeftIcon />
-                                        </IconButton>
-                                        <Typography variant="h5">
-                                            {MONTHS[currentDate.getMonth()]} {currentDate.getFullYear()}
-                                        </Typography>
-                                        <IconButton onClick={nextMonth}>
-                                            <ChevronRightIcon />
-                                        </IconButton>
-                                    </Stack>
-                                    <Button
-                                        variant="outlined"
-                                        startIcon={<TodayIcon />}
-                                        onClick={goToToday}
-                                    >
-                                        Today
-                                    </Button>
-                                </Stack>
+                                <CalendarHeader
+                                    view={view}
+                                    currentDate={currentDate}
+                                    onViewChange={setView}
+                                    onPrevious={handlePrevious}
+                                    onNext={handleNext}
+                                    onToday={goToToday}
+                                />
 
-                                <Box
-                                    display="grid"
-                                    gridTemplateColumns="repeat(7, 1fr)"
-                                    gap={1}
-                                >
-                                    {DAYS.map(day => (
-                                        <Box
-                                            key={day}
-                                            sx={{
-                                                p: 1,
-                                                textAlign: 'center',
-                                                fontWeight: 'bold',
-                                                borderBottom: 1,
-                                                borderColor: 'divider',
-                                            }}
-                                        >
-                                            {day}
-                                        </Box>
-                                    ))}
-                                    {renderCalendar()}
-                                </Box>
+                                {view === 'month' ? (
+                                    <MonthView
+                                        currentDate={currentDate}
+                                        selectedDate={selectedDate}
+                                        events={events}
+                                        onDateSelect={setSelectedDate}
+                                    />
+                                ) : (
+                                    <WeekView
+                                        currentDate={currentDate}
+                                        events={events}
+                                        onTimeSlotClick={handleTimeSlotClick}
+                                        onEventClick={openEditDialog}
+                                    />
+                                )}
                             </Paper>
 
-                            <Paper sx={{ p: 3 }}>
-                                <Typography variant="h6" mb={2}>
-                                    Events on {selectedDate.toLocaleDateString()}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    No events scheduled
-                                </Typography>
-                            </Paper>
+                            <EventList
+                                selectedDate={selectedDate}
+                                events={events}
+                                error={error}
+                                onEditEvent={openEditDialog}
+                                onDeleteEvent={handleDeleteEvent}
+                                onClearError={() => setError(null)}
+                            />
                         </>
                     )}
                 </Box>
             </Box>
+
+            <EventDialog
+                open={isDialogOpen}
+                mode={dialogMode}
+                event={editingEvent}
+                formData={formData}
+                onClose={() => setIsDialogOpen(false)}
+                onSubmit={handleDialogSubmit}
+                onFormChange={setFormData}
+            />
         </Box>
     );
 }
