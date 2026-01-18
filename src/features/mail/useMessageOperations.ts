@@ -6,7 +6,7 @@ import {
     markAsUnread,
     markAsFlagged,
     markAsUnflagged,
-} from '../data/messages';
+} from '../../data/messages';
 
 interface UseMessageOperationsProps {
     mailboxId: string;

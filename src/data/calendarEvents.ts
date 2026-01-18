@@ -39,6 +39,14 @@ async function withAuthHandling<T>(fn: () => Promise<T>): Promise<T> {
     }
 }
 
+export interface Participant {
+    email: string;
+    name?: string;
+    role?: 'owner' | 'attendee' | 'optional';
+    rsvp?: boolean;
+    scheduleStatus?: 'needs-action' | 'accepted' | 'declined' | 'tentative';
+}
+
 export interface CalendarEvent {
     id: string;
     title: string;
@@ -46,6 +54,7 @@ export interface CalendarEvent {
     end: Date;
     calendarId?: string;
     description?: string;
+    participants?: Participant[];
 }
 
 /**
@@ -105,6 +114,22 @@ export async function fetchCalendarEvents(
                 const durationMs = parseDuration(event.duration);
                 endDate = new Date(startDate.getTime() + durationMs);
             }
+
+            // Parse participants
+            const participants: Participant[] = [];
+            if (event.participants) {
+                Object.values(event.participants).forEach((p: any) => {
+                    if (p.email) {
+                        participants.push({
+                            email: p.email,
+                            name: p.name,
+                            role: Object.keys(p.roles || {})[0] as 'owner' | 'attendee' | 'optional',
+                            rsvp: p.expectReply,
+                            scheduleStatus: p.scheduleStatus,
+                        });
+                    }
+                });
+            }
             
             return {
                 id: event.id,
@@ -113,6 +138,7 @@ export async function fetchCalendarEvents(
                 end: endDate,
                 calendarId: Object.keys(event.calendarIds || {})[0],
                 description: event.description,
+                participants: participants.length > 0 ? participants : undefined,
             };
         });
 
@@ -168,6 +194,8 @@ export async function createCalendarEvent(
     event: Partial<CalendarEvent>
 ): Promise<CalendarEvent> {
     return withAuthHandling(async () => {
+        console.log('Creating event with participants:', event.participants);
+        
         if (!jmapService.isInitialized()) {
             throw new Error('JMAP client not initialized. Please log in first.');
         }
@@ -190,6 +218,55 @@ export async function createCalendarEvent(
             calendarEvent.description = event.description;
         }
 
+        // Add participants if provided
+        if (event.participants && event.participants.length > 0) {
+            // Get user's identity for replyTo (only when participants are present)
+            const [identities] = await client.request(['Identity/get', { accountId }]);
+            const defaultIdentity = identities.list[0];
+            
+            // Add replyTo - required when participants are present
+            calendarEvent.replyTo = {
+                imip: `mailto:${defaultIdentity.email}`,
+            };
+            
+            // Add the organizer as a participant with owner role
+            calendarEvent.participants = {
+                'organizer': {
+                    '@type': 'Participant',
+                    name: defaultIdentity.name || defaultIdentity.email,
+                    email: defaultIdentity.email,
+                    sendTo: {
+                        imip: `mailto:${defaultIdentity.email}`,
+                    },
+                    roles: {
+                        'owner': true,
+                    },
+                    participationStatus: 'accepted',
+                    expectReply: false,
+                },
+            };
+            
+            // Add other participants as attendees
+            event.participants.forEach((participant, index) => {
+                const participantId = `attendee-${index}`;
+                calendarEvent.participants[participantId] = {
+                    '@type': 'Participant',
+                    name: participant.name || participant.email,
+                    email: participant.email,
+                    sendTo: {
+                        imip: `mailto:${participant.email}`,
+                    },
+                    roles: {
+                        [participant.role || 'attendee']: true,
+                    },
+                    participationStatus: 'needs-action',
+                    expectReply: participant.rsvp !== false,
+                };
+            });
+        }
+
+        console.log('Final calendarEvent being sent:', JSON.stringify(calendarEvent, null, 2));
+
         const [response] = await client.request([
             'CalendarEvent/set' as any,
             {
@@ -205,13 +282,43 @@ export async function createCalendarEvent(
             throw new Error('Failed to create event');
         }
 
+        // Fetch the created event to verify what was actually stored
+        const [getResponse] = await client.request([
+            'CalendarEvent/get' as any,
+            {
+                accountId,
+                ids: [createdId],
+            },
+        ]);
+
+        console.log('Server returned event:', JSON.stringify(getResponse.list[0], null, 2));
+
+        const createdEvent = getResponse.list[0];
+        
+        // Parse participants from the retrieved event
+        const retrievedParticipants: Participant[] = [];
+        if (createdEvent?.participants) {
+            Object.values(createdEvent.participants).forEach((p: any) => {
+                if (p.email) {
+                    retrievedParticipants.push({
+                        email: p.email,
+                        name: p.name,
+                        role: Object.keys(p.roles || {})[0] as 'owner' | 'attendee' | 'optional',
+                        rsvp: p.expectReply,
+                        scheduleStatus: p.scheduleStatus,
+                    });
+                }
+            });
+        }
+
         return {
             id: createdId,
-            title: event.title || '',
+            title: createdEvent?.title || event.title || '',
             start: event.start!,
             end: endDate,
             calendarId,
-            description: event.description,
+            description: createdEvent?.description || event.description,
+            participants: retrievedParticipants.length > 0 ? retrievedParticipants : undefined,
         };
     });
 }
@@ -251,6 +358,53 @@ export async function updateCalendarEvent(
 
         if (updates.description !== undefined) {
             patch.description = updates.description;
+        }
+
+        // Update participants if provided
+        if (updates.participants !== undefined) {
+            // Get user's identity (only when participants are being updated)
+            const [identities] = await client.request(['Identity/get', { accountId }]);
+            const defaultIdentity = identities.list[0];
+            
+            // Add replyTo - required when participants are present
+            patch.replyTo = {
+                imip: `mailto:${defaultIdentity.email}`,
+            };
+            
+            // Add the organizer as a participant with owner role
+            patch.participants = {
+                'organizer': {
+                    '@type': 'Participant',
+                    name: defaultIdentity.name || defaultIdentity.email,
+                    email: defaultIdentity.email,
+                    sendTo: {
+                        imip: `mailto:${defaultIdentity.email}`,
+                    },
+                    roles: {
+                        'owner': true,
+                    },
+                    participationStatus: 'accepted',
+                    expectReply: false,
+                },
+            };
+            
+            // Add other participants
+            updates.participants.forEach((participant, index) => {
+                const participantId = `attendee-${index}`;
+                patch.participants[participantId] = {
+                    '@type': 'Participant',
+                    name: participant.name || participant.email,
+                    email: participant.email,
+                    sendTo: {
+                        imip: `mailto:${participant.email}`,
+                    },
+                    roles: {
+                        [participant.role || 'attendee']: true,
+                    },
+                    participationStatus: participant.scheduleStatus || 'needs-action',
+                    expectReply: participant.rsvp !== false,
+                };
+            });
         }
 
         await client.request([

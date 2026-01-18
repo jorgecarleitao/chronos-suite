@@ -1,6 +1,8 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import { CalendarEvent } from '../../data/calendarEvents';
+import Tooltip from '@mui/material/Tooltip';
+import PersonIcon from '@mui/icons-material/Person';
+import { CalendarEvent } from '../../../../data/calendarEvents';
 
 interface WeekViewProps {
     currentDate: Date;
@@ -167,9 +169,33 @@ export default function WeekView({
                                             onTimeSlotClick(newDate);
                                         }}
                                     >
-                                        {slotEvents.map(event => (
+                                        {slotEvents.map(event => {
+                                            const participantCount = event.participants?.length || 0;
+                                            const participantNames = event.participants?.map(p => p.name || p.email).join(', ') || '';
+                                            const tooltipTitle = (
+                                                <Box>
+                                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                                        {event.title}
+                                                    </Typography>
+                                                    <Typography variant="caption" display="block">
+                                                        {event.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {event.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </Typography>
+                                                    {event.description && (
+                                                        <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+                                                            {event.description}
+                                                        </Typography>
+                                                    )}
+                                                    {participantCount > 0 && (
+                                                        <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+                                                            👥 {participantNames}
+                                                        </Typography>
+                                                    )}
+                                                </Box>
+                                            );
+                                            
+                                            return (
+                                            <Tooltip key={event.id} title={tooltipTitle} arrow placement="top">
                                             <Box
-                                                key={event.id}
                                                 sx={{
                                                     ...getEventStyle(event, timeSlot),
                                                     px: 0.5,
@@ -194,8 +220,17 @@ export default function WeekView({
                                                 <Typography variant="caption" display="block" noWrap>
                                                     {event.title}
                                                 </Typography>
+                                                {participantCount > 0 && (
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, mt: 0.25 }}>
+                                                        <PersonIcon sx={{ fontSize: '0.7rem' }} />
+                                                        <Typography variant="caption" sx={{ fontSize: '0.6rem' }}>
+                                                            {participantCount}
+                                                        </Typography>
+                                                    </Box>
+                                                )}
                                             </Box>
-                                        ))}
+                                            </Tooltip>
+                                        )})}
                                     </Box>
                                 );
                             })}

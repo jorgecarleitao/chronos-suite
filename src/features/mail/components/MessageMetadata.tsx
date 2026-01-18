@@ -6,8 +6,8 @@ import Chip from '@mui/material/Chip';
 import Tooltip from '@mui/material/Tooltip';
 import Box from '@mui/material/Box';
 import PersonIcon from '@mui/icons-material/Person';
-import { fetchContacts, Contact } from '../data/contacts';
-import { getPrimaryAccountId } from '../data/accounts';
+import { fetchContacts, Contact } from '../../../data/contacts';
+import { getPrimaryAccountId } from '../../../data/accounts';
 
 interface MessageMetadataProps {
     fromName: string;

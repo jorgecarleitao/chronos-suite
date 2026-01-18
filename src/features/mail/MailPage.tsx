@@ -38,9 +38,9 @@ import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import EditIcon from '@mui/icons-material/Edit';
 
-import Sidebar from '../components/Sidebar';
-import MessageList from '../components/MessageList';
-import ComposeEmail from '../components/ComposeEmail';
+import Sidebar from '../../components/Sidebar';
+import MessageList from './components/MessageList';
+import ComposeEmail from './components/ComposeEmail';
 import {
     fetchMailboxes,
     fetchSharedMailboxes,
@@ -48,10 +48,10 @@ import {
     renameMailbox,
     deleteMailbox,
     Mailbox,
-} from '../data/mailboxes';
-import { getPrimaryAccountId } from '../data/accounts';
-import { moveMessages } from '../data/messages';
-import { drawerWidth } from '../components/Sidebar';
+} from '../../data/mailboxes';
+import { getPrimaryAccountId } from '../../data/accounts';
+import { moveMessages } from '../../data/messages';
+import { drawerWidth } from '../../components/Sidebar';
 
 interface MailProps {
     path: string;

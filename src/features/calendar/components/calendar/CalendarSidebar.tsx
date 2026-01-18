@@ -7,7 +7,7 @@ import ListItemText from '@mui/material/ListItemText';
 import Typography from '@mui/material/Typography';
 import Stack from '@mui/material/Stack';
 import CircularProgress from '@mui/material/CircularProgress';
-import Sidebar from '../Sidebar';
+import Sidebar from '../../../../components/Sidebar';
 
 interface CalendarSidebarProps {
     loading: boolean;

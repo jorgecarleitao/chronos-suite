@@ -26,10 +26,10 @@ import StarBorderIcon from '@mui/icons-material/StarBorder';
 import ContactsIcon from '@mui/icons-material/Contacts';
 import CloseIcon from '@mui/icons-material/Close';
 import SaveIcon from '@mui/icons-material/Save';
-import Sidebar, { drawerWidth } from '../components/Sidebar';
-import { fetchContacts, deleteContact, updateContact, createContact, Contact } from '../data/contacts';
-import { fetchAddressBooks, AddressBook } from '../data/addressBook';
-import { getPrimaryAccountId } from '../data/accounts';
+import Sidebar, { drawerWidth } from '../../components/Sidebar';
+import { fetchContacts, deleteContact, updateContact, createContact, Contact } from '../../data/contacts';
+import { fetchAddressBooks, AddressBook } from '../../data/addressBook';
+import { getPrimaryAccountId } from '../../data/accounts';
 
 interface ContactsProps {
     path: string;

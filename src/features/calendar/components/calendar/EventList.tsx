@@ -4,9 +4,11 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import Alert from '@mui/material/Alert';
+import Chip from '@mui/material/Chip';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { CalendarEvent } from '../../data/calendarEvents';
+import PersonIcon from '@mui/icons-material/Person';
+import { CalendarEvent } from '../../../../data/calendarEvents';
 
 interface EventListProps {
     selectedDate: Date;
@@ -68,6 +70,19 @@ export default function EventList({
                                         <Typography variant="body2" mt={1}>
                                             {event.description}
                                         </Typography>
+                                    )}
+                                    {event.participants && event.participants.length > 0 && (
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1, flexWrap: 'wrap' }}>
+                                            <PersonIcon fontSize="small" color="action" />
+                                            {event.participants.map((participant, idx) => (
+                                                <Chip
+                                                    key={idx}
+                                                    label={participant.name || participant.email}
+                                                    size="small"
+                                                    variant="outlined"
+                                                />
+                                            ))}
+                                        </Box>
                                     )}
                                 </Box>
                                 <Stack direction="row" spacing={1}>

@@ -18,7 +18,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import MDEditor from '@uiw/react-md-editor';
 import rehypeSanitize from 'rehype-sanitize';
 import { marked } from 'marked';
-import { sendMessage, createDraft, updateDraft } from '../data/messages';
+import { sendMessage, createDraft, updateDraft } from '../../../data/messages';
 
 const drawerWidth = 600;
 

@@ -15,9 +15,9 @@ import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PersonIcon from '@mui/icons-material/Person';
-import { MessageMetadata } from '../data/messages';
-import { fetchContacts, Contact } from '../data/contacts';
-import { getPrimaryAccountId } from '../data/accounts';
+import { MessageMetadata } from '../../../data/messages';
+import { fetchContacts, Contact } from '../../../data/contacts';
+import { getPrimaryAccountId } from '../../../data/accounts';
 
 interface MessageListItemProps {
     message: MessageMetadata;

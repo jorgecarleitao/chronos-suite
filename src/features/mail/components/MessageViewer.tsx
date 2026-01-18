@@ -20,7 +20,7 @@ import {
     fetchMessage as apiFetchMessage,
     deleteMessage as apiDeleteMessage,
     sendMessage as apiSendMessage,
-} from '../data/messages';
+} from '../../../data/messages';
 
 interface MessageViewerProps {
     onClose: () => void;

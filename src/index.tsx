@@ -1,5 +1,5 @@
 import { render } from 'preact';
-import { useMemo, useState } from 'preact/hooks';
+import { useMemo, useState, Suspense } from 'preact/compat';
 import { useTranslation } from 'react-i18next';
 import Router from 'preact-router';
 
@@ -8,13 +8,15 @@ import Box from '@mui/material/Box';
 import { ThemeProvider } from '@emotion/react';
 import CssBaseline from '@mui/material/CssBaseline';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import CircularProgress from '@mui/material/CircularProgress';
+import Stack from '@mui/material/Stack';
 
 import Navigation from './components/Navigation';
 import Login from './pages/Login';
 import AuthCallback from './pages/AuthCallback';
-import Mail from './pages/Mail';
-import Contacts from './pages/Contacts';
-import Calendar from './pages/Calendar';
+import { MailPage } from './features/mail';
+import { ContactsPage } from './features/contacts';
+import { CalendarPage } from './features/calendar';
 import { oauthService } from './data/authService';
 import { jmapService } from './data/jmapClient';
 
@@ -53,20 +55,32 @@ export default function App() {
         setMode(theme.palette.mode === 'dark' ? 'light' : 'dark');
     };
 
+    const LoadingFallback = () => (
+        <Stack
+            justifyContent="center"
+            alignItems="center"
+            minHeight="100vh"
+        >
+            <CircularProgress size={60} />
+        </Stack>
+    );
+
     return (
         <ThemeProvider theme={theme}>
             <CssBaseline enableColorScheme />
             <Box>
                 <Navigation mode={mode} toggleTheme={toggleTheme} />
                 <Box component="main">
-                    <Router>
-                        <Login path="/login" />
-                        <AuthCallback path="/auth/callback" />
-                        <Mail path="/mail" />
-                        <Contacts path="/contacts" />
-                        <Calendar path="/calendar" />
-                        <Login path="/" />
-                    </Router>
+                    <Suspense fallback={<LoadingFallback />}>
+                        <Router>
+                            <Login path="/login" />
+                            <AuthCallback path="/auth/callback" />
+                            <MailPage path="/mail" />
+                            <ContactsPage path="/contacts" />
+                            <CalendarPage path="/calendar" />
+                            <Login path="/" />
+                        </Router>
+                    </Suspense>
                 </Box>
             </Box>
         </ThemeProvider>

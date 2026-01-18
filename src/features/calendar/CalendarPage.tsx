@@ -5,7 +5,7 @@ import Toolbar from '@mui/material/Toolbar';
 import Paper from '@mui/material/Paper';
 import CircularProgress from '@mui/material/CircularProgress';
 import Stack from '@mui/material/Stack';
-import { getPrimaryAccountId } from '../data/accounts';
+import { getPrimaryAccountId } from '../../data/accounts';
 import {
     fetchCalendarEvents,
     createCalendarEvent,
@@ -13,14 +13,16 @@ import {
     deleteCalendarEvent,
     fetchCalendars,
     CalendarEvent,
-} from '../data/calendarEvents';
-import CalendarHeader from '../components/calendar/CalendarHeader';
-import MonthView from '../components/calendar/MonthView';
-import WeekView from '../components/calendar/WeekView';
-import EventList from '../components/calendar/EventList';
-import EventDialog from '../components/calendar/EventDialog';
-import CalendarSidebar from '../components/calendar/CalendarSidebar';
-import { getWeekStart } from '../utils/dateHelpers';
+    Participant,
+} from '../../data/calendarEvents';
+import { CalendarEventFormData } from './types';
+import CalendarHeader from './components/calendar/CalendarHeader';
+import MonthView from './components/calendar/MonthView';
+import WeekView from './components/calendar/WeekView';
+import EventList from './components/calendar/EventList';
+import EventDialog from './components/calendar/EventDialog';
+import CalendarSidebar from './components/calendar/CalendarSidebar';
+import { getWeekStart } from '../../utils/dateHelpers';
 
 interface CalendarProps {
     path: string;
@@ -38,15 +40,8 @@ export default function Calendar({ path }: CalendarProps) {
     const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+    const [dialogInitialDate, setDialogInitialDate] = useState<Date>(new Date());
     const [error, setError] = useState<string | null>(null);
-    const [formData, setFormData] = useState({
-        title: '',
-        startDate: '',
-        startTime: '',
-        endDate: '',
-        endTime: '',
-        description: '',
-    });
 
     useEffect(() => {
         loadAccount();
@@ -134,57 +129,31 @@ export default function Calendar({ path }: CalendarProps) {
     };
 
     const openCreateDialog = () => {
-        const dateStr = selectedDate.toISOString().split('T')[0];
-        const startHour = selectedDate.getHours();
-        const startTime = `${String(startHour).padStart(2, '0')}:00`;
-        const endTime = `${String(startHour + 1).padStart(2, '0')}:00`;
-        setFormData({
-            title: '',
-            startDate: dateStr,
-            startTime: startTime,
-            endDate: dateStr,
-            endTime: endTime,
-            description: '',
-        });
+        setDialogInitialDate(selectedDate);
         setDialogMode('create');
+        setEditingEvent(null);
         setIsDialogOpen(true);
     };
 
     const openEditDialog = (event: CalendarEvent) => {
         setEditingEvent(event);
-        setFormData({
-            title: event.title,
-            startDate: event.start.toISOString().split('T')[0],
-            startTime: event.start.toTimeString().slice(0, 5),
-            endDate: event.end.toISOString().split('T')[0],
-            endTime: event.end.toTimeString().slice(0, 5),
-            description: event.description || '',
-        });
         setDialogMode('edit');
         setIsDialogOpen(true);
     };
 
-    const handleDialogSubmit = async () => {
+    const handleDialogSubmit = async (data: CalendarEventFormData) => {
         if (dialogMode === 'create') {
-            await handleCreateEvent();
+            await handleCreateEvent(data);
         } else {
-            await handleUpdateEvent();
+            await handleUpdateEvent(data);
         }
     };
 
-    const handleCreateEvent = async () => {
+    const handleCreateEvent = async (data: CalendarEventFormData) => {
         if (!accountId || !selectedCalendar) return;
 
         try {
-            const start = new Date(`${formData.startDate}T${formData.startTime}`);
-            const end = new Date(`${formData.endDate}T${formData.endTime}`);
-
-            await createCalendarEvent(accountId, selectedCalendar, {
-                title: formData.title,
-                start,
-                end,
-                description: formData.description,
-            });
+            await createCalendarEvent(accountId, selectedCalendar, data);
 
             setIsDialogOpen(false);
             await loadEvents(accountId, selectedCalendar);
@@ -194,19 +163,11 @@ export default function Calendar({ path }: CalendarProps) {
         }
     };
 
-    const handleUpdateEvent = async () => {
+    const handleUpdateEvent = async (data: CalendarEventFormData) => {
         if (!accountId || !editingEvent) return;
 
         try {
-            const start = new Date(`${formData.startDate}T${formData.startTime}`);
-            const end = new Date(`${formData.endDate}T${formData.endTime}`);
-
-            await updateCalendarEvent(accountId, editingEvent.id, {
-                title: formData.title,
-                start,
-                end,
-                description: formData.description,
-            });
+            await updateCalendarEvent(accountId, editingEvent.id, data);
 
             setIsDialogOpen(false);
             setEditingEvent(null);
@@ -224,6 +185,8 @@ export default function Calendar({ path }: CalendarProps) {
 
         try {
             await deleteCalendarEvent(accountId, eventId);
+            setIsDialogOpen(false);
+            setEditingEvent(null);
             await loadEvents(accountId, selectedCalendar);
         } catch (error) {
             console.error('Failed to delete event:', error);
@@ -307,10 +270,10 @@ export default function Calendar({ path }: CalendarProps) {
                 open={isDialogOpen}
                 mode={dialogMode}
                 event={editingEvent}
-                formData={formData}
+                initialDate={dialogInitialDate}
                 onClose={() => setIsDialogOpen(false)}
                 onSubmit={handleDialogSubmit}
-                onFormChange={setFormData}
+                onDelete={editingEvent ? () => handleDeleteEvent(editingEvent.id) : undefined}
             />
         </Box>
     );

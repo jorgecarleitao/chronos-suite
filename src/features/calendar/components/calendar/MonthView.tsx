@@ -1,6 +1,6 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import { CalendarEvent } from '../../data/calendarEvents';
+import { CalendarEvent } from '../../../../data/calendarEvents';
 
 interface MonthViewProps {
     currentDate: Date;
