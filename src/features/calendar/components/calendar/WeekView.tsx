@@ -37,42 +37,75 @@ export default function WeekView({
         return days;
     };
 
+    // Get events that should be rendered starting in this time slot for this day
     const getEventsForTimeSlot = (date: Date, timeSlot: number) => {
         return events.filter((event) => {
             const eventStart = new Date(event.start);
             const eventEnd = new Date(event.end);
 
-            if (
-                eventStart.getDate() !== date.getDate() ||
-                eventStart.getMonth() !== date.getMonth() ||
-                eventStart.getFullYear() !== date.getFullYear()
-            ) {
+            // Calculate the time slot's date-time boundaries
+            const slotStartTime = new Date(date);
+            slotStartTime.setHours(Math.floor(timeSlot / 2), (timeSlot % 2) * 30, 0, 0);
+
+            const slotEndTime = new Date(date);
+            slotEndTime.setHours(Math.floor((timeSlot + 1) / 2), ((timeSlot + 1) % 2) * 30, 0, 0);
+
+            // Only render the event in the first slot where it appears for this day
+            const dayStart = new Date(date);
+            dayStart.setHours(0, 0, 0, 0);
+
+            const dayEnd = new Date(date);
+            dayEnd.setHours(23, 59, 59, 999);
+
+            // Event must overlap with this time slot
+            if (!(eventStart < slotEndTime && eventEnd > slotStartTime)) {
                 return false;
             }
 
-            const slotStart = timeSlot * 0.5;
-            const slotEnd = (timeSlot + 1) * 0.5;
-            const eventStartHour = eventStart.getHours() + eventStart.getMinutes() / 60;
-            const eventEndHour = eventEnd.getHours() + eventEnd.getMinutes() / 60;
+            // Find the effective start time for this day (either event start or day start)
+            const effectiveStart = eventStart > dayStart ? eventStart : dayStart;
 
-            return eventStartHour < slotEnd && eventEndHour > slotStart;
+            // Calculate which time slot the effective start falls into
+            const startHour = effectiveStart.getHours();
+            const startMinute = effectiveStart.getMinutes();
+            const firstSlotForDay = startHour * 2 + (startMinute >= 30 ? 1 : 0);
+
+            // Only render in the first slot
+            return timeSlot === firstSlotForDay;
         });
     };
 
-    const getEventStyle = (event: CalendarEvent, timeSlot: number) => {
+    const getEventStyle = (event: CalendarEvent, date: Date, timeSlot: number) => {
         const eventStart = new Date(event.start);
         const eventEnd = new Date(event.end);
 
-        const startMinutes = eventStart.getHours() * 60 + eventStart.getMinutes();
-        const endMinutes = eventEnd.getHours() * 60 + eventEnd.getMinutes();
-        const slotStartMinutes = timeSlot * 30;
-        const slotEndMinutes = (timeSlot + 1) * 30;
+        // Calculate day boundaries
+        const dayStart = new Date(date);
+        dayStart.setHours(0, 0, 0, 0);
 
-        const displayStartMinutes = Math.max(startMinutes, slotStartMinutes);
-        const displayEndMinutes = Math.min(endMinutes, slotEndMinutes);
+        const dayEnd = new Date(date);
+        dayEnd.setDate(dayEnd.getDate() + 1);
+        dayEnd.setHours(0, 0, 0, 0);
 
-        const topPercent = ((displayStartMinutes - slotStartMinutes) / 30) * 100;
-        const heightPercent = ((displayEndMinutes - displayStartMinutes) / 30) * 100;
+        // Calculate slot boundaries
+        const slotStartTime = new Date(date);
+        slotStartTime.setHours(Math.floor(timeSlot / 2), (timeSlot % 2) * 30, 0, 0);
+
+        // Determine the visible portion of the event for this day
+        const displayStart = eventStart > dayStart ? eventStart : dayStart;
+        const displayEnd = eventEnd < dayEnd ? eventEnd : dayEnd;
+
+        // Calculate position from the start of the current time slot
+        const displayStartOffset = displayStart.getTime() - slotStartTime.getTime();
+        const displayDuration = displayEnd.getTime() - displayStart.getTime();
+
+        const slotDurationMs = 30 * 60 * 1000; // 30 minutes in milliseconds
+
+        // Top position as percentage within the current slot
+        const topPercent = (displayStartOffset / slotDurationMs) * 100;
+
+        // Height as percentage - if event spans multiple slots, this will be > 100%
+        const heightPercent = (displayDuration / slotDurationMs) * 100;
 
         return {
             position: 'absolute' as const,
@@ -80,6 +113,7 @@ export default function WeekView({
             height: `${heightPercent}%`,
             left: 0,
             right: 0,
+            zIndex: 10,
         };
     };
 
@@ -171,6 +205,20 @@ export default function WeekView({
                                         }}
                                     >
                                         {slotEvents.map((event) => {
+                                            const eventStart = new Date(event.start);
+                                            const eventEnd = new Date(event.end);
+
+                                            // Calculate day boundaries for visual indicators
+                                            const dayStart = new Date(day);
+                                            dayStart.setHours(0, 0, 0, 0);
+
+                                            const dayEnd = new Date(day);
+                                            dayEnd.setDate(dayEnd.getDate() + 1);
+                                            dayEnd.setHours(0, 0, 0, 0);
+
+                                            const continuesFromBefore = eventStart < dayStart;
+                                            const continuesAfter = eventEnd >= dayEnd;
+
                                             const participantCount =
                                                 event.participants?.length || 0;
                                             const participantNames =
@@ -226,11 +274,21 @@ export default function WeekView({
                                                 >
                                                     <Box
                                                         sx={{
-                                                            ...getEventStyle(event, timeSlot),
+                                                            ...getEventStyle(event, day, timeSlot),
                                                             px: 0.5,
                                                             bgcolor: 'primary.main',
                                                             color: 'primary.contrastText',
-                                                            borderRadius: 1,
+                                                            borderTopLeftRadius: continuesFromBefore
+                                                                ? 0
+                                                                : 1,
+                                                            borderTopRightRadius:
+                                                                continuesFromBefore ? 0 : 1,
+                                                            borderBottomLeftRadius: continuesAfter
+                                                                ? 0
+                                                                : 1,
+                                                            borderBottomRightRadius: continuesAfter
+                                                                ? 0
+                                                                : 1,
                                                             fontSize: '0.75rem',
                                                             cursor: 'pointer',
                                                             overflow: 'hidden',
@@ -245,17 +303,9 @@ export default function WeekView({
                                                     >
                                                         <Typography
                                                             variant="caption"
-                                                            sx={{ fontWeight: 'bold' }}
-                                                        >
-                                                            {event.start.toLocaleTimeString([], {
-                                                                hour: '2-digit',
-                                                                minute: '2-digit',
-                                                            })}
-                                                        </Typography>
-                                                        <Typography
-                                                            variant="caption"
                                                             display="block"
                                                             noWrap
+                                                            sx={{ fontWeight: 'bold' }}
                                                         >
                                                             {event.title}
                                                         </Typography>
