@@ -16,11 +16,15 @@ import ComposeEmail from './ComposeEmail';
 import MessageHeader from './MessageHeader';
 import MessageMetadata from './MessageMetadata';
 import MessageBody from './MessageBody';
+import CalendarInvite from './CalendarInvite';
+import { findICSAttachment, parseICS, type Invite, type Attachment } from '../../../utils/calendarInviteParser';
+import { jmapService } from '../../../data/jmapClient';
 import {
     fetchMessage as apiFetchMessage,
     deleteMessage as apiDeleteMessage,
     sendMessage as apiSendMessage,
 } from '../../../data/messages';
+import { fetchCalendars } from '../../../data/calendarEvents';
 
 interface MessageViewerProps {
     onClose: () => void;
@@ -54,6 +58,7 @@ interface MessageDetail {
     htmlBody?: string;
     textBody?: string;
     flags?: string[];
+    attachments?: any[];
 }
 
 export default function MessageViewer({
@@ -71,19 +76,58 @@ export default function MessageViewer({
     const [sending, setSending] = useState(false);
     const [sendSuccess, setSendSuccess] = useState<string | null>(null);
     const [composeOpen, setComposeOpen] = useState(false);
-    const [composeMode, setComposeMode] = useState<'reply' | 'replyAll' | 'forward'>('reply');
     const [composeData, setComposeData] = useState<{
         to?: string;
         cc?: string;
         subject?: string;
         body?: string;
     }>({});
+    const [parsedInvite, setParsedInvite] = useState<Invite | null>(null);
+    const [calendarId, setCalendarId] = useState<string | null>(null);
 
     useEffect(() => {
         if (emailId) {
             fetchMessage();
         }
     }, [mailbox, emailId]);
+
+    // Fetch default calendar
+    useEffect(() => {
+        (async () => {
+            try {
+                const calendars = await fetchCalendars(accountId);
+                if (calendars.length > 0) {
+                    setCalendarId(calendars[0].id);
+                }
+            } catch (err) {
+                console.error('Failed to fetch calendars:', err);
+            }
+        })();
+    }, [accountId]);
+
+    // Download and parse ICS attachment when message loads
+    useEffect(() => {
+        if (!message || !message.attachments) return;
+
+        const attachment = findICSAttachment(message.attachments as Attachment[]);
+        if (!attachment) {
+            setParsedInvite(null);
+            return;
+        }
+
+        // Download and parse the ICS attachment
+        (async () => {
+            try {
+                const response = await jmapService.downloadBlob(accountId, attachment.blobId, attachment.type);
+                const icsContent = await response.text();
+                const parsed = parseICS(icsContent);
+                setParsedInvite(parsed);
+            } catch (err) {
+                console.error('Failed to parse calendar invite:', err);
+                setParsedInvite(null);
+            }
+        })();
+    }, [message, accountId]);
 
     useEffect(() => {
         if (renderActions && message) {
@@ -144,7 +188,6 @@ export default function MessageViewer({
         const originalBody = message.textBody || message.htmlBody || '';
         const quotedBody = `\n\n---\nOn ${message.date?.toLocaleString() || ''}, ${message.from_name} <${message.from_email}> wrote:\n\n${originalBody}`;
 
-        setComposeMode('reply');
         setComposeData({
             to: message.from_email,
             subject: message.subject?.startsWith('Re:')
@@ -167,7 +210,6 @@ export default function MessageViewer({
         const originalBody = message.textBody || message.htmlBody || '';
         const quotedBody = `\n\n---\nOn ${message.date?.toLocaleString() || ''}, ${message.from_name} <${message.from_email}> wrote:\n\n${originalBody}`;
 
-        setComposeMode('replyAll');
         setComposeData({
             to: uniqueRecipients.join(', '),
             subject: message.subject?.startsWith('Re:')
@@ -183,7 +225,6 @@ export default function MessageViewer({
         const originalBody = message.textBody || message.htmlBody || '';
         const forwardedBody = `\n\n---\nForwarded message from ${message.from_name} <${message.from_email}>:\nSubject: ${message.subject || '(No Subject)'}\nDate: ${message.date?.toLocaleString() || ''}\n\n${originalBody}`;
 
-        setComposeMode('forward');
         setComposeData({
             subject: message.subject?.startsWith('Fwd:')
                 ? message.subject
@@ -261,6 +302,16 @@ export default function MessageViewer({
 
                     <Paper elevation={0} square style={{ flex: 1, overflow: 'auto' }}>
                         <Box padding={3}>
+                            {parsedInvite && calendarId && (
+                                <CalendarInvite
+                                    invite={parsedInvite}
+                                    accountId={accountId}
+                                    calendarId={calendarId}
+                                    onResponse={(status) => {
+                                        setSendSuccess(`Event ${status} and added to calendar`);
+                                    }}
+                                />
+                            )}
                             <MessageBody htmlBody={message.htmlBody} textBody={message.textBody} />
                         </Box>
                     </Paper>

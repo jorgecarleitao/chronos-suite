@@ -219,6 +219,38 @@ export default function WeekView({
                                             const continuesFromBefore = eventStart < dayStart;
                                             const continuesAfter = eventEnd >= dayEnd;
 
+                                            // Determine visual style based on participation status
+                                            const status = event.userParticipationStatus;
+                                            const getEventColor = () => {
+                                                if (!status || status === 'accepted') {
+                                                    return 'primary.main'; // Filled for accepted or no status
+                                                }
+                                                if (status === 'tentative') {
+                                                    return 'warning.light'; // Light for tentative
+                                                }
+                                                if (status === 'declined') {
+                                                    return 'grey.400'; // Grey for declined
+                                                }
+                                                return 'info.light'; // Light blue for needs-action
+                                            };
+
+                                            const getEventBorder = () => {
+                                                if (status === 'tentative') {
+                                                    return '2px dashed';
+                                                }
+                                                return 'none';
+                                            };
+
+                                            const getEventOpacity = () => {
+                                                if (status === 'declined') {
+                                                    return 0.5;
+                                                }
+                                                if (status === 'tentative') {
+                                                    return 0.8;
+                                                }
+                                                return 1;
+                                            };
+
                                             const participantCount =
                                                 event.participants?.length || 0;
                                             const participantNames =
@@ -276,8 +308,11 @@ export default function WeekView({
                                                         sx={{
                                                             ...getEventStyle(event, day, timeSlot),
                                                             px: 0.5,
-                                                            bgcolor: 'primary.main',
+                                                            bgcolor: getEventColor(),
                                                             color: 'primary.contrastText',
+                                                            opacity: getEventOpacity(),
+                                                            border: getEventBorder(),
+                                                            borderColor: status === 'tentative' ? 'warning.main' : undefined,
                                                             borderTopLeftRadius: continuesFromBefore
                                                                 ? 0
                                                                 : 1,

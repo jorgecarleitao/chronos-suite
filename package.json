@@ -21,6 +21,7 @@
 		"dompurify": "^3.3.1",
 		"i18next": "^25.3.2",
 		"i18next-browser-languagedetector": "^8.2.0",
+		"ical.js": "^2.2.1",
 		"jmap-jam": "^0.13.1",
 		"js-yaml": "^4.1.0",
 		"locale-code": "^2.0.2",

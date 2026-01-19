@@ -1,56 +1,5 @@
 import { jmapService, EmailData } from './jmapClient';
-import { oauthService } from './authService';
-
-/**
- * Handle authentication errors and attempt token refresh or redirect to login
- */
-async function handleAuthError(error: any): Promise<never> {
-    // Check if it's an authentication error
-    if (
-        error.message?.includes('401') ||
-        error.message?.includes('Unauthorized') ||
-        error.message?.includes('authentication')
-    ) {
-        // Try to refresh token
-        const refreshToken = oauthService.getRefreshToken();
-        if (refreshToken) {
-            try {
-                await oauthService.refreshAccessToken(refreshToken);
-                const newAccessToken = oauthService.getAccessToken();
-                if (newAccessToken) {
-                    await jmapService.initialize(newAccessToken);
-                    throw new Error('TOKEN_REFRESHED'); // Special error to signal retry
-                }
-            } catch (refreshError) {
-                console.error('Failed to refresh token:', refreshError);
-            }
-        }
-
-        // If refresh failed or no refresh token, logout and redirect
-        oauthService.logout();
-        jmapService.clear();
-        window.location.href = '/login';
-        throw new Error('Session expired. Please log in again.');
-    }
-
-    throw error;
-}
-
-/**
- * Wrap async functions to handle auth errors
- */
-async function withAuthHandling<T>(fn: () => Promise<T>): Promise<T> {
-    try {
-        return await fn();
-    } catch (error) {
-        await handleAuthError(error);
-        // If we get here with TOKEN_REFRESHED, retry once
-        if (error instanceof Error && error.message === 'TOKEN_REFRESHED') {
-            return await fn();
-        }
-        throw error;
-    }
-}
+import { withAuthHandling } from '../utils/authHandling';
 
 export interface Draft {
     to: string[];
@@ -272,6 +221,7 @@ export async function fetchMessage(accountId: string, emailId: string) {
             htmlBody: htmlBody || undefined,
             textBody: textBody || undefined,
             has_attachments: email.hasAttachment,
+            attachments: email.attachments,
         };
     });
 }

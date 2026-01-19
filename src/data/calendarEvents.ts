@@ -1,61 +1,10 @@
 import { jmapService } from './jmapClient';
-import { oauthService } from './authService';
+import { Invite } from '../utils/calendarInviteParser';
+import { withAuthHandling } from '../utils/authHandling';
+import { parseJmapParticipants, createJmapParticipant, createJmapOrganizer } from '../utils/participantUtils';
+import type { Participant, CalendarEvent } from '../types/calendar';
 
-/**
- * Handle authentication errors
- */
-async function handleAuthError(error: any): Promise<never> {
-    if (
-        error.message?.includes('401') ||
-        error.message?.includes('Unauthorized') ||
-        error.message?.includes('authentication')
-    ) {
-        const refreshToken = oauthService.getRefreshToken();
-        if (refreshToken) {
-            try {
-                await oauthService.refreshAccessToken(refreshToken);
-                const newAccessToken = oauthService.getAccessToken();
-                if (newAccessToken) {
-                    await jmapService.initialize(newAccessToken);
-                    throw new Error('TOKEN_REFRESHED');
-                }
-            } catch (refreshError) {
-                console.error('Failed to refresh token:', refreshError);
-            }
-        }
-    }
-    throw error;
-}
-
-async function withAuthHandling<T>(fn: () => Promise<T>): Promise<T> {
-    try {
-        return await fn();
-    } catch (error) {
-        await handleAuthError(error);
-        if (error instanceof Error && error.message === 'TOKEN_REFRESHED') {
-            return await fn();
-        }
-        throw error;
-    }
-}
-
-export interface Participant {
-    email: string;
-    name?: string;
-    role?: 'owner' | 'attendee' | 'optional';
-    rsvp?: boolean;
-    scheduleStatus?: 'needs-action' | 'accepted' | 'declined' | 'tentative';
-}
-
-export interface CalendarEvent {
-    id: string;
-    title: string;
-    start: Date;
-    end: Date;
-    calendarId?: string;
-    description?: string;
-    participants?: Participant[];
-}
+export type { Participant, CalendarEvent } from '../types/calendar';
 
 /**
  * Fetch calendar events within a date range
@@ -72,6 +21,10 @@ export async function fetchCalendarEvents(
         }
 
         const client = jmapService.getClient();
+
+        // Get user's identity to determine their email
+        const [identities] = await client.request(['Identity/get', { accountId }]);
+        const userEmail = identities.list[0]?.email;
 
         // Build filter
         const filter: any = {};
@@ -116,23 +69,10 @@ export async function fetchCalendarEvents(
             }
 
             // Parse participants
-            const participants: Participant[] = [];
-            if (event.participants) {
-                Object.values(event.participants).forEach((p: any) => {
-                    if (p.email) {
-                        participants.push({
-                            email: p.email,
-                            name: p.name,
-                            role: Object.keys(p.roles || {})[0] as
-                                | 'owner'
-                                | 'attendee'
-                                | 'optional',
-                            rsvp: p.expectReply,
-                            scheduleStatus: p.scheduleStatus,
-                        });
-                    }
-                });
-            }
+            const { participants, userParticipationStatus } = parseJmapParticipants(
+                event.participants,
+                userEmail
+            );
 
             return {
                 id: event.id,
@@ -142,6 +82,7 @@ export async function fetchCalendarEvents(
                 calendarId: Object.keys(event.calendarIds || {})[0],
                 description: event.description,
                 participants: participants.length > 0 ? participants : undefined,
+                userParticipationStatus,
             };
         });
 
@@ -197,8 +138,6 @@ export async function createCalendarEvent(
     event: Partial<CalendarEvent>
 ): Promise<CalendarEvent> {
     return withAuthHandling(async () => {
-        console.log('Creating event with participants:', event.participants);
-
         if (!jmapService.isInitialized()) {
             throw new Error('JMAP client not initialized. Please log in first.');
         }
@@ -234,41 +173,21 @@ export async function createCalendarEvent(
 
             // Add the organizer as a participant with owner role
             calendarEvent.participants = {
-                organizer: {
-                    '@type': 'Participant',
-                    name: defaultIdentity.name || defaultIdentity.email,
-                    email: defaultIdentity.email,
-                    sendTo: {
-                        imip: `mailto:${defaultIdentity.email}`,
-                    },
-                    roles: {
-                        owner: true,
-                    },
-                    participationStatus: 'accepted',
-                    expectReply: false,
-                },
+                organizer: createJmapOrganizer(
+                    defaultIdentity.email,
+                    defaultIdentity.name || defaultIdentity.email
+                ),
             };
 
             // Add other participants as attendees
             event.participants.forEach((participant, index) => {
                 const participantId = `attendee-${index}`;
-                calendarEvent.participants[participantId] = {
-                    '@type': 'Participant',
-                    name: participant.name || participant.email,
-                    email: participant.email,
-                    sendTo: {
-                        imip: `mailto:${participant.email}`,
-                    },
-                    roles: {
-                        [participant.role || 'attendee']: true,
-                    },
-                    participationStatus: 'needs-action',
-                    expectReply: participant.rsvp !== false,
-                };
+                calendarEvent.participants[participantId] = createJmapParticipant(
+                    participant,
+                    participantId
+                );
             });
         }
-
-        console.log('Final calendarEvent being sent:', JSON.stringify(calendarEvent, null, 2));
 
         const [response] = await client.request([
             'CalendarEvent/set' as any,
@@ -294,25 +213,12 @@ export async function createCalendarEvent(
             },
         ]);
 
-        console.log('Server returned event:', JSON.stringify(getResponse.list[0], null, 2));
-
         const createdEvent = getResponse.list[0];
 
         // Parse participants from the retrieved event
-        const retrievedParticipants: Participant[] = [];
-        if (createdEvent?.participants) {
-            Object.values(createdEvent.participants).forEach((p: any) => {
-                if (p.email) {
-                    retrievedParticipants.push({
-                        email: p.email,
-                        name: p.name,
-                        role: Object.keys(p.roles || {})[0] as 'owner' | 'attendee' | 'optional',
-                        rsvp: p.expectReply,
-                        scheduleStatus: p.scheduleStatus,
-                    });
-                }
-            });
-        }
+        const { participants: retrievedParticipants } = parseJmapParticipants(
+            createdEvent?.participants
+        );
 
         return {
             id: createdId,
@@ -376,37 +282,19 @@ export async function updateCalendarEvent(
 
             // Add the organizer as a participant with owner role
             patch.participants = {
-                organizer: {
-                    '@type': 'Participant',
-                    name: defaultIdentity.name || defaultIdentity.email,
-                    email: defaultIdentity.email,
-                    sendTo: {
-                        imip: `mailto:${defaultIdentity.email}`,
-                    },
-                    roles: {
-                        owner: true,
-                    },
-                    participationStatus: 'accepted',
-                    expectReply: false,
-                },
+                organizer: createJmapOrganizer(
+                    defaultIdentity.email,
+                    defaultIdentity.name || defaultIdentity.email
+                ),
             };
 
             // Add other participants
             updates.participants.forEach((participant, index) => {
                 const participantId = `attendee-${index}`;
-                patch.participants[participantId] = {
-                    '@type': 'Participant',
-                    name: participant.name || participant.email,
-                    email: participant.email,
-                    sendTo: {
-                        imip: `mailto:${participant.email}`,
-                    },
-                    roles: {
-                        [participant.role || 'attendee']: true,
-                    },
-                    participationStatus: participant.scheduleStatus || 'needs-action',
-                    expectReply: participant.rsvp !== false,
-                };
+                patch.participants[participantId] = createJmapParticipant(
+                    participant,
+                    participantId
+                );
             });
         }
 
@@ -467,5 +355,239 @@ export async function fetchCalendars(
             id: calendar.id,
             name: calendar.name || 'Unnamed Calendar',
         }));
+    });
+}
+
+/**
+ * Respond to a calendar invitation (accept/decline/tentative)
+ */
+export async function respondToCalendarInvite(
+    accountId: string,
+    eventId: string,
+    status: 'accepted' | 'declined' | 'tentative'
+): Promise<void> {
+    return withAuthHandling(async () => {
+        if (!jmapService.isInitialized()) {
+            throw new Error('JMAP client not initialized. Please log in first.');
+        }
+
+        const client = jmapService.getClient();
+
+        // Get user's identity to find their participant entry
+        const [identities] = await client.request(['Identity/get', { accountId }]);
+        const defaultIdentity = identities.list[0];
+        const userEmail = defaultIdentity.email;
+
+        // Get the event to find the user's participant ID
+        const [getResponse] = await client.request([
+            'CalendarEvent/get' as any,
+            {
+                accountId,
+                ids: [eventId],
+            },
+        ]);
+
+        if (!getResponse.list || getResponse.list.length === 0) {
+            throw new Error('Event not found');
+        }
+
+        const event = getResponse.list[0];
+
+        // Find the participant entry for the current user
+        let userParticipantId: string | null = null;
+        if (event.participants) {
+            for (const [participantId, participant] of Object.entries(event.participants as Record<string, any>)) {
+                if (participant.email === userEmail) {
+                    userParticipantId = participantId;
+                    break;
+                }
+            }
+        }
+
+        if (!userParticipantId) {
+            throw new Error('You are not a participant in this event');
+        }
+
+        // Update the participant's status
+        const patch: any = {
+            [`participants/${userParticipantId}/participationStatus`]: status,
+        };
+
+        await client.request([
+            'CalendarEvent/set' as any,
+            {
+                accountId,
+                update: {
+                    [eventId]: patch,
+                },
+                sendSchedulingMessages: true, // Automatically send iTIP reply to organizer
+            },
+        ]);
+    });
+}
+
+/**
+ * Check if an event already exists in the calendar by UID
+ */
+export async function checkEventExists(
+    accountId: string,
+    calendarId: string,
+    invite: Invite
+): Promise<CalendarEvent | null> {
+    return withAuthHandling(async () => {
+        if (!jmapService.isInitialized()) {
+            throw new Error('JMAP client not initialized. Please log in first.');
+        }
+
+        // If no UID, cannot check for duplicates
+        if (!invite.eventId) {
+            return null;
+        }
+
+        const client = jmapService.getClient();
+
+        // Query for events with matching UID
+        const [queryResponse] = await client.request([
+            'CalendarEvent/query' as any,
+            {
+                accountId,
+                filter: {
+                    inCalendar: calendarId,
+                    uid: invite.eventId,
+                },
+            },
+        ]);
+
+        if (!queryResponse.ids || queryResponse.ids.length === 0) {
+            return null;
+        }
+
+        // Event with same UID exists - fetch details
+        const [getResponse] = await client.request([
+            'CalendarEvent/get' as any,
+            {
+                accountId,
+                ids: [queryResponse.ids[0]],
+            },
+        ]);
+
+        if (!getResponse.list || getResponse.list.length === 0) {
+            return null;
+        }
+
+        const event = getResponse.list[0];
+        const startDate = new Date(event.start);
+        let endDate = startDate;
+
+        if (event.duration) {
+            const durationMs = parseDuration(event.duration);
+            endDate = new Date(startDate.getTime() + durationMs);
+        }
+
+        return {
+            id: event.id,
+            title: event.title || '(No title)',
+            start: startDate,
+            end: endDate,
+            calendarId,
+        };
+    });
+}
+
+/**
+ * Import a calendar invite from an email into the user's calendar
+ */
+export async function importCalendarInvite(
+    accountId: string,
+    calendarId: string,
+    invite: Invite,
+    status: 'accepted' | 'declined' | 'tentative' = 'accepted'
+): Promise<CalendarEvent> {
+    return withAuthHandling(async () => {
+        if (!jmapService.isInitialized()) {
+            throw new Error('JMAP client not initialized. Please log in first.');
+        }
+
+        // Check if event already exists in calendar
+        const existingEvent = await checkEventExists(accountId, calendarId, invite);
+        if (existingEvent) {
+            throw new Error('This event has already been added to your calendar');
+        }
+
+        const client = jmapService.getClient();
+        const duration = calculateDuration(invite.start, invite.end);
+
+        // Get user's identity
+        const [identities] = await client.request(['Identity/get', { accountId }]);
+        const defaultIdentity = identities.list[0];
+
+        const calendarEvent: any = {
+            '@type': 'Event',
+            calendarIds: { [calendarId]: true },
+            title: invite.title,
+            start: invite.start.toISOString(),
+            duration: duration,
+        };
+
+        // Set UID from the invite to maintain connection with the ICS event
+        if (invite.eventId) {
+            calendarEvent.uid = invite.eventId;
+        }
+
+        if (invite.description) {
+            calendarEvent.description = invite.description;
+        }
+
+        if (invite.location) {
+            calendarEvent.locations = {
+                location1: {
+                    '@type': 'Location',
+                    name: invite.location,
+                },
+            };
+        }
+
+        // Add participants
+        const attendeeParticipant: Participant = {
+            email: defaultIdentity.email,
+            name: defaultIdentity.name || defaultIdentity.email,
+            role: 'attendee',
+            rsvp: false,
+            scheduleStatus: status,
+        };
+
+        calendarEvent.participants = {
+            attendee: createJmapParticipant(attendeeParticipant, 'attendee'),
+        };
+
+        if (invite.organizer) {
+            calendarEvent.participants.organizer = createJmapOrganizer(invite.organizer);
+        }
+
+        const [response] = await client.request([
+            'CalendarEvent/set' as any,
+            {
+                accountId,
+                create: {
+                    'new-event': calendarEvent,
+                },
+                sendSchedulingMessages: true, // Automatically send iTIP reply to organizer
+            },
+        ]);
+
+        const createdId = response.created?.['new-event']?.id;
+        if (!createdId) {
+            throw new Error('Failed to create event');
+        }
+
+        return {
+            id: createdId,
+            title: invite.title,
+            start: invite.start,
+            end: invite.end,
+            calendarId,
+            description: invite.description,
+            userParticipationStatus: status,
+        };
     });
 }

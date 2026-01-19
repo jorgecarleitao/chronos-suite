@@ -522,6 +522,20 @@ class JmapService {
     }
 
     /**
+     * Download blob content (for attachments)
+     */
+    async downloadBlob(accountId: string, blobId: string, mimeType?: string): Promise<Response> {
+        const client = this.getClient();
+
+        return await client.downloadBlob({
+            accountId,
+            blobId,
+            mimeType: mimeType || 'application/octet-stream',
+            fileName: 'attachment'
+        });
+    }
+
+    /**
      * Clear the client (on logout)
      */
     clear(): void {
