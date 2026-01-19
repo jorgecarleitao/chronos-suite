@@ -14,7 +14,6 @@ import Paper from '@mui/material/Paper';
 import CircularProgress from '@mui/material/CircularProgress';
 import Stack from '@mui/material/Stack';
 import IconButton from '@mui/material/IconButton';
-import Fab from '@mui/material/Fab';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
@@ -237,6 +236,18 @@ export default function Contacts({ path }: ContactsProps) {
                     </Stack>
                 ) : (
                     <>
+                        <Button
+                            variant="contained"
+                            fullWidth
+                            sx={{ mb: 2 }}
+                            onClick={handleCreateClick}
+                            startIcon={<AddIcon />}
+                        >
+                            Create Contact
+                        </Button>
+
+                        <Divider sx={{ my: 2 }} />
+
                         <List>
                             <ListItem disablePadding>
                                 <ListItemButton
@@ -502,15 +513,6 @@ export default function Contacts({ path }: ContactsProps) {
                         </Paper>
                     )}
                 </Box>
-
-                <Fab
-                    color="primary"
-                    aria-label="add contact"
-                    onClick={handleCreateClick}
-                    sx={{ position: 'fixed', bottom: 32, right: 32 }}
-                >
-                    <AddIcon />
-                </Fab>
             </Box>
         </Box>
     );

@@ -202,9 +202,7 @@ export async function createCalendarEvent(
             // Add other participants as attendees
             event.participants.forEach((participant, index) => {
                 const participantId = `attendee-${index}`;
-                calendarEvent.participants[participantId] = createJmapParticipant(
-                    participant
-                );
+                calendarEvent.participants[participantId] = createJmapParticipant(participant);
             });
         }
 
@@ -325,9 +323,7 @@ export async function updateCalendarEvent(
             // Add other participants
             updates.participants.forEach((participant, index) => {
                 const participantId = `attendee-${index}`;
-                patch.participants[participantId] = createJmapParticipant(
-                    participant
-                );
+                patch.participants[participantId] = createJmapParticipant(participant);
             });
         }
 
@@ -429,7 +425,9 @@ export async function respondToCalendarInvite(
         // Find the participant entry for the current user
         let userParticipantId: string | null = null;
         if (event.participants) {
-            for (const [participantId, participant] of Object.entries(event.participants as Record<string, any>)) {
+            for (const [participantId, participant] of Object.entries(
+                event.participants as Record<string, any>
+            )) {
                 if (participant.email === userEmail) {
                     userParticipantId = participantId;
                     break;

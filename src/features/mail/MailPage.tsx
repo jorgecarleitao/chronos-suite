@@ -13,7 +13,6 @@ import Divider from '@mui/material/Divider';
 import Paper from '@mui/material/Paper';
 import CircularProgress from '@mui/material/CircularProgress';
 import Collapse from '@mui/material/Collapse';
-import Fab from '@mui/material/Fab';
 
 import IconButton from '@mui/material/IconButton';
 import Menu from '@mui/material/Menu';
@@ -420,102 +419,142 @@ export default function Mail({ path }: MailProps) {
                             Loading account...
                         </Typography>
                     </Stack>
-                ) : loading ? (
-                    <Stack justifyContent="center" padding={3}>
-                        <CircularProgress />
-                        <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            textAlign="center"
-                            mt={2}
-                        >
-                            Loading mailboxes...
-                        </Typography>
-                    </Stack>
-                ) : mailboxes.length === 0 ? (
-                    <Stack justifyContent="center" padding={3}>
-                        <Typography variant="body2" color="text.secondary" textAlign="center">
-                            No mailboxes found
-                        </Typography>
-                    </Stack>
                 ) : (
                     <>
-                        <List>{mailboxTree.map((node) => renderMailboxNode(node))}</List>
+                        <Button
+                            variant="contained"
+                            fullWidth
+                            sx={{ mb: 2 }}
+                            onClick={() => setComposeOpen(true)}
+                            startIcon={<EditIcon />}
+                        >
+                            Compose Email
+                        </Button>
 
-                        {sharedMailboxes.length > 0 && (
-                            <>
-                                <Divider />
-                                <Typography variant="subtitle2" padding={2} color="text.secondary">
-                                    Shared Mailboxes
+                        <Divider sx={{ my: 2 }} />
+
+                        {loading ? (
+                            <Stack justifyContent="center" padding={3}>
+                                <CircularProgress />
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                    textAlign="center"
+                                    mt={2}
+                                >
+                                    Loading mailboxes...
                                 </Typography>
-                                <List>
-                                    {/* Group by account */}
-                                    {Object.entries(
-                                        sharedMailboxes.reduce(
-                                            (acc, mailbox) => {
-                                                const accountId = mailbox.accountId!;
-                                                if (!acc[accountId]) {
-                                                    acc[accountId] = {
-                                                        accountName: mailbox.accountName!,
-                                                        mailboxes: [],
-                                                    };
-                                                }
-                                                acc[accountId].mailboxes.push(mailbox);
-                                                return acc;
-                                            },
-                                            {} as Record<
-                                                string,
-                                                { accountName: string; mailboxes: Mailbox[] }
-                                            >
-                                        )
-                                    ).map(
-                                        ([
-                                            accountId,
-                                            { accountName, mailboxes: accountMailboxes },
-                                        ]) => {
-                                            const accountKey = `shared-${accountId}`;
-                                            const isAccountExpanded =
-                                                expandedFolders.has(accountKey);
+                            </Stack>
+                        ) : mailboxes.length === 0 ? (
+                            <Stack justifyContent="center" padding={3}>
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                    textAlign="center"
+                                >
+                                    No mailboxes found
+                                </Typography>
+                            </Stack>
+                        ) : (
+                            <>
+                                <List>{mailboxTree.map((node) => renderMailboxNode(node))}</List>
 
-                                            return (
-                                                <>
-                                                    <ListItem key={accountKey} disablePadding>
-                                                        <ListItemButton
-                                                            onClick={() =>
-                                                                handleToggleFolder(accountKey)
-                                                            }
-                                                        >
-                                                            <ListItemIcon>
-                                                                <FolderSharedIcon />
-                                                            </ListItemIcon>
-                                                            <ListItemText primary={accountName} />
-                                                            {isAccountExpanded ? (
-                                                                <ExpandLess />
-                                                            ) : (
-                                                                <ExpandMore />
-                                                            )}
-                                                        </ListItemButton>
-                                                    </ListItem>
-                                                    {isAccountExpanded && (
-                                                        <Collapse
-                                                            in={isAccountExpanded}
-                                                            timeout="auto"
-                                                            unmountOnExit
-                                                        >
-                                                            <List component="div" disablePadding>
-                                                                {accountMailboxes
-                                                                    .map(convertToNode)
-                                                                    .map((node) =>
-                                                                        renderMailboxNode(node, 1)
+                                {sharedMailboxes.length > 0 && (
+                                    <>
+                                        <Divider />
+                                        <Typography
+                                            variant="subtitle2"
+                                            padding={2}
+                                            color="text.secondary"
+                                        >
+                                            Shared Mailboxes
+                                        </Typography>
+                                        <List>
+                                            {/* Group by account */}
+                                            {Object.entries(
+                                                sharedMailboxes.reduce(
+                                                    (acc, mailbox) => {
+                                                        const accountId = mailbox.accountId!;
+                                                        if (!acc[accountId]) {
+                                                            acc[accountId] = {
+                                                                accountName: mailbox.accountName!,
+                                                                mailboxes: [],
+                                                            };
+                                                        }
+                                                        acc[accountId].mailboxes.push(mailbox);
+                                                        return acc;
+                                                    },
+                                                    {} as Record<
+                                                        string,
+                                                        {
+                                                            accountName: string;
+                                                            mailboxes: Mailbox[];
+                                                        }
+                                                    >
+                                                )
+                                            ).map(
+                                                ([
+                                                    accountId,
+                                                    { accountName, mailboxes: accountMailboxes },
+                                                ]) => {
+                                                    const accountKey = `shared-${accountId}`;
+                                                    const isAccountExpanded =
+                                                        expandedFolders.has(accountKey);
+
+                                                    return (
+                                                        <>
+                                                            <ListItem
+                                                                key={accountKey}
+                                                                disablePadding
+                                                            >
+                                                                <ListItemButton
+                                                                    onClick={() =>
+                                                                        handleToggleFolder(
+                                                                            accountKey
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <ListItemIcon>
+                                                                        <FolderSharedIcon />
+                                                                    </ListItemIcon>
+                                                                    <ListItemText
+                                                                        primary={accountName}
+                                                                    />
+                                                                    {isAccountExpanded ? (
+                                                                        <ExpandLess />
+                                                                    ) : (
+                                                                        <ExpandMore />
                                                                     )}
-                                                            </List>
-                                                        </Collapse>
-                                                    )}
-                                                </>
-                                            );
-                                        }
-                                    )}
-                                </List>
+                                                                </ListItemButton>
+                                                            </ListItem>
+                                                            {isAccountExpanded && (
+                                                                <Collapse
+                                                                    in={isAccountExpanded}
+                                                                    timeout="auto"
+                                                                    unmountOnExit
+                                                                >
+                                                                    <List
+                                                                        component="div"
+                                                                        disablePadding
+                                                                    >
+                                                                        {accountMailboxes
+                                                                            .map(convertToNode)
+                                                                            .map((node) =>
+                                                                                renderMailboxNode(
+                                                                                    node,
+                                                                                    1
+                                                                                )
+                                                                            )}
+                                                                    </List>
+                                                                </Collapse>
+                                                            )}
+                                                        </>
+                                                    );
+                                                }
+                                            )}
+                                        </List>
+                                    </>
+                                )}
                             </>
                         )}
                     </>
@@ -543,20 +582,6 @@ export default function Mail({ path }: MailProps) {
                         </Stack>
                     )}
                 </Paper>
-
-                {/* Floating compose button */}
-                <Fab
-                    color="primary"
-                    aria-label="compose"
-                    onClick={() => setComposeOpen(true)}
-                    style={{
-                        position: 'fixed',
-                        bottom: 32,
-                        right: 32,
-                    }}
-                >
-                    <EditIcon />
-                </Fab>
             </Box>
 
             {/* Compose email drawer */}

@@ -26,10 +26,10 @@ export interface Invite {
 export function findICSAttachment(attachments?: Attachment[]): Attachment | null {
     if (!attachments) return null;
 
-    return attachments.find(att =>
-        att.type === 'text/calendar' ||
-        att.type === 'application/ics'
-    ) || null;
+    return (
+        attachments.find((att) => att.type === 'text/calendar' || att.type === 'application/ics') ||
+        null
+    );
 }
 
 /**

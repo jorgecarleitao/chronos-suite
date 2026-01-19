@@ -17,8 +17,7 @@ import SaveIcon from '@mui/icons-material/Save';
 
 import MDEditor from '@uiw/react-md-editor';
 import rehypeSanitize from 'rehype-sanitize';
-import { marked } from 'marked';
-import { sendMessage, createDraft, updateDraft } from '../../../data/messages';
+import { createDraft, updateDraft, prepareAndSendMessage } from '../../../data/messages';
 
 const drawerWidth = 600;
 
@@ -74,16 +73,11 @@ export default function ComposeEmail({
         setError(null);
         setSuccess(null);
         try {
-            let htmlBody = marked.parse(body);
-            if (htmlBody instanceof Promise) {
-                htmlBody = await htmlBody;
-            }
-            const data = await sendMessage(accountId, parseEmailList(to), subject, htmlBody, {
+            const data = await prepareAndSendMessage(accountId, parseEmailList(to), subject, body, {
                 cc: showCc && cc ? parseEmailList(cc) : undefined,
                 bcc: showBcc && bcc ? parseEmailList(bcc) : undefined,
-                isHtml: true,
             });
-            setSuccess(data?.message || 'Email sent successfully');
+            setSuccess('Email sent successfully');
             setTimeout(() => {
                 handleClear();
                 onClose();

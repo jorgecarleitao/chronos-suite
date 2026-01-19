@@ -53,12 +53,7 @@ export default function CalendarInvite({
         setError(null);
 
         try {
-            await importCalendarInvite(
-                accountId,
-                calendarId,
-                invite,
-                status
-            );
+            await importCalendarInvite(accountId, calendarId, invite, status);
             setResponseStatus(status);
             if (onResponse) {
                 onResponse(status);
@@ -124,8 +119,21 @@ export default function CalendarInvite({
             }}
         >
             <Stack spacing={1}>
-                <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, flex: 1 }}>
+                <Stack
+                    direction="row"
+                    spacing={1}
+                    alignItems="center"
+                    justifyContent="space-between"
+                >
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.5,
+                            minWidth: 0,
+                            flex: 1,
+                        }}
+                    >
                         <EventIcon fontSize="small" color="primary" />
                         <Typography variant="subtitle2" component="div" noWrap>
                             {invite.title}
@@ -167,7 +175,8 @@ export default function CalendarInvite({
 
                 <Stack direction="row" spacing={2} flexWrap="wrap">
                     <Typography variant="caption" color="text.secondary">
-                        {formatDate(invite.start)} • {formatTime(invite.start)} - {formatTime(invite.end)}
+                        {formatDate(invite.start)} • {formatTime(invite.start)} -{' '}
+                        {formatTime(invite.end)}
                     </Typography>
                     {invite.location && (
                         <Typography variant="caption" color="text.secondary" noWrap>

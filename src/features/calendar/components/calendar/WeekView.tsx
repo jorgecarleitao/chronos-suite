@@ -154,8 +154,7 @@ interface EventTooltipContentProps {
 
 function EventTooltipContent({ event }: EventTooltipContentProps) {
     const participantCount = event.participants?.length || 0;
-    const participantNames =
-        event.participants?.map((p) => p.name || p.email).join(', ') || '';
+    const participantNames = event.participants?.map((p) => p.name || p.email).join(', ') || '';
 
     return (
         <Box>
@@ -309,7 +308,10 @@ export default function WeekView({
                                                             color: 'primary.contrastText',
                                                             opacity: getEventOpacity(status),
                                                             border: getEventBorder(status),
-                                                            borderColor: status === 'tentative' ? 'warning.main' : undefined,
+                                                            borderColor:
+                                                                status === 'tentative'
+                                                                    ? 'warning.main'
+                                                                    : undefined,
                                                             borderTopLeftRadius: continuesFromBefore
                                                                 ? 0
                                                                 : 1,

@@ -17,12 +17,16 @@ import MessageHeader from './MessageHeader';
 import MessageMetadata from './MessageMetadata';
 import MessageBody from './MessageBody';
 import CalendarInvite from './CalendarInvite';
-import { findICSAttachment, parseICS, type Invite, type Attachment } from '../../../utils/calendarInviteParser';
+import {
+    findICSAttachment,
+    parseICS,
+    type Invite,
+    type Attachment,
+} from '../../../utils/calendarInviteParser';
 import { jmapService } from '../../../data/jmapClient';
 import {
     fetchMessage as apiFetchMessage,
     deleteMessage as apiDeleteMessage,
-    sendMessage as apiSendMessage,
 } from '../../../data/messages';
 import { fetchCalendars } from '../../../data/calendarEvents';
 
@@ -73,9 +77,8 @@ export default function MessageViewer({
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [sending, setSending] = useState(false);
-    const [sendSuccess, setSendSuccess] = useState<string | null>(null);
     const [composeOpen, setComposeOpen] = useState(false);
+    const [success, setSuccess] = useState<string | null>(null);
     const [composeData, setComposeData] = useState<{
         to?: string;
         cc?: string;
@@ -118,7 +121,11 @@ export default function MessageViewer({
         // Download and parse the ICS attachment
         (async () => {
             try {
-                const response = await jmapService.downloadBlob(accountId, attachment.blobId, attachment.type);
+                const response = await jmapService.downloadBlob(
+                    accountId,
+                    attachment.blobId,
+                    attachment.type
+                );
                 const icsContent = await response.text();
                 const parsed = parseICS(icsContent);
                 setParsedInvite(parsed);
@@ -139,10 +146,10 @@ export default function MessageViewer({
                 onSend: handleSendClick,
                 onClose,
                 isDraft: isDraft(),
-                sending,
+                sending: false,
             });
         }
-    }, [message, sending]);
+    }, [message]);
 
     const fetchMessage = async () => {
         setLoading(true);
@@ -234,34 +241,16 @@ export default function MessageViewer({
         setComposeOpen(true);
     };
 
-    const handleSendClick = async () => {
+    const handleSendClick = () => {
         if (!message) return;
-        setSending(true);
-        setError(null);
-        setSendSuccess(null);
-        try {
-            const toList = message.to
-                .split(',')
-                .map((e) => e.trim())
-                .filter((e) => e.length > 0);
-            await apiSendMessage(
-                accountId,
-                toList,
-                message.subject || '',
-                message.textBody || message.htmlBody || ''
-            );
-            setSendSuccess('Email sent successfully');
-            setTimeout(() => {
-                onClose();
-                if (onDelete) {
-                    onDelete();
-                }
-            }, 1500);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to send email');
-        } finally {
-            setSending(false);
-        }
+        // For drafts, open the compose editor to allow editing before sending
+        setComposeData({
+            to: message.to,
+            cc: message.cc,
+            subject: message.subject || '',
+            body: message.textBody || message.htmlBody || '',
+        });
+        setComposeOpen(true);
     };
 
     return (
@@ -278,9 +267,9 @@ export default function MessageViewer({
                 </Alert>
             )}
 
-            {sendSuccess && (
-                <Alert severity="success" onClose={() => setSendSuccess(null)}>
-                    {sendSuccess}
+            {success && (
+                <Alert severity="success" onClose={() => setSuccess(null)}>
+                    {success}
                 </Alert>
             )}
 
@@ -308,7 +297,7 @@ export default function MessageViewer({
                                     accountId={accountId}
                                     calendarId={calendarId}
                                     onResponse={(status) => {
-                                        setSendSuccess(`Event ${status} and added to calendar`);
+                                        setSuccess(`Event ${status} and added to calendar`);
                                     }}
                                 />
                             )}
@@ -340,6 +329,7 @@ export default function MessageViewer({
                 cc={composeData.cc}
                 subject={composeData.subject}
                 body={composeData.body}
+                draftEmailId={isDraft() ? emailId : undefined}
                 accountId={accountId}
             />
         </Stack>

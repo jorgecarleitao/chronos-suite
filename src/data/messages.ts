@@ -1,5 +1,6 @@
 import { jmapService, EmailData } from './jmapClient';
 import { withAuthHandling } from '../utils/authHandling';
+import { marked } from 'marked';
 
 export interface Draft {
     to: string[];
@@ -226,6 +227,33 @@ export async function fetchMessage(accountId: string, emailId: string) {
     });
 }
 
+/**
+ * Prepare and send a message from a draft body (markdown)
+ * Converts markdown to HTML and uses markdown as plain text
+ */
+export async function prepareAndSendMessage(
+    accountId: string,
+    to: string[],
+    subject: string,
+    markdownBody: string,
+    options?: {
+        cc?: string[];
+        bcc?: string[];
+    }
+) {
+    // Convert markdown to HTML
+    let htmlBody = marked.parse(markdownBody);
+    if (htmlBody instanceof Promise) {
+        htmlBody = await htmlBody;
+    }
+
+    return sendMessage(accountId, to, subject, htmlBody, {
+        ...options,
+        isHtml: true,
+        plainText: markdownBody,
+    });
+}
+
 export async function sendMessage(
     accountId: string,
     to: string[],
@@ -235,6 +263,7 @@ export async function sendMessage(
         cc?: string[];
         bcc?: string[];
         isHtml?: boolean;
+        plainText?: string;
     }
 ) {
     if (!jmapService.isInitialized()) {
@@ -254,9 +283,11 @@ export async function sendMessage(
         emailData.bcc = options.bcc.map((email) => ({ email }));
     }
 
-    // Set body as HTML or text
+    // Set both HTML and plain text body for better compatibility
     if (options?.isHtml) {
         emailData.bodyHtml = body;
+        // Use provided plain text or strip HTML tags as fallback
+        emailData.bodyText = options.plainText || body.replace(/<[^>]*>/g, '').trim();
     } else {
         emailData.bodyText = body;
     }

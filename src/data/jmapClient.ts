@@ -531,7 +531,7 @@ class JmapService {
             accountId,
             blobId,
             mimeType: mimeType || 'application/octet-stream',
-            fileName: 'attachment'
+            fileName: 'attachment',
         });
     }
 
