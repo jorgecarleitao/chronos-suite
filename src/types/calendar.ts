@@ -11,7 +11,7 @@ export interface Participant {
     name?: string;
     role?: ParticipantRole;
     rsvp?: boolean;
-    scheduleStatus?: ParticipationStatus;
+    participationStatus?: ParticipationStatus;
 }
 
 export interface CalendarEvent {
@@ -33,7 +33,8 @@ export interface JmapParticipant {
     '@type': 'Participant';
     email: string;
     name?: string;
-    sendTo: { imip: string };
+    scheduleAgent?: 'server' | 'client' | 'none';
+    scheduleId?: string;
     roles: Record<string, boolean>;
     participationStatus: ParticipationStatus;
     expectReply: boolean;

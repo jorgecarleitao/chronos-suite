@@ -1,7 +1,7 @@
 import { jmapService } from './jmapClient';
 import { Invite } from '../utils/calendarInviteParser';
 import { withAuthHandling } from '../utils/authHandling';
-import { parseJmapParticipants, createJmapParticipant, createJmapOrganizer } from '../utils/participantUtils';
+import { parseJmapParticipants, createJmapParticipant } from '../utils/participantUtils';
 import type { Participant, CalendarEvent } from '../types/calendar';
 
 export type { Participant, CalendarEvent } from '../types/calendar';
@@ -182,21 +182,21 @@ export async function createCalendarEvent(
 
         // Add participants if provided
         if (event.participants && event.participants.length > 0) {
-            // Get user's identity for replyTo (only when participants are present)
+            // Get user's identity to add as attendee
             const [identities] = await client.request(['Identity/get', { accountId }]);
             const defaultIdentity = identities.list[0];
 
-            // Add replyTo - required when participants are present
-            calendarEvent.replyTo = {
-                imip: `mailto:${defaultIdentity.email}`,
-            };
-
-            // Add the organizer as a participant with owner role
+            // Add self as attendee (server will handle owner/organizer role and replyTo)
             calendarEvent.participants = {
-                organizer: createJmapOrganizer(
-                    defaultIdentity.email,
-                    defaultIdentity.name || defaultIdentity.email
-                ),
+                self: {
+                    '@type': 'Participant',
+                    email: defaultIdentity.email,
+                    name: defaultIdentity.name,
+                    scheduleId: `mailto:${defaultIdentity.email}`,
+                    roles: { attendee: true },
+                    participationStatus: 'accepted',
+                    expectReply: false,
+                },
             };
 
             // Add other participants as attendees
@@ -288,23 +288,38 @@ export async function updateCalendarEvent(
             patch.description = updates.description;
         }
 
+        // Update location if provided
+        if (updates.location !== undefined) {
+            if (updates.location) {
+                patch.locations = {
+                    location1: {
+                        '@type': 'Location',
+                        name: updates.location,
+                    },
+                };
+            } else {
+                // Clear location if empty string
+                patch.locations = null;
+            }
+        }
+
         // Update participants if provided
         if (updates.participants !== undefined) {
-            // Get user's identity (only when participants are being updated)
+            // Get user's identity to add as attendee
             const [identities] = await client.request(['Identity/get', { accountId }]);
             const defaultIdentity = identities.list[0];
 
-            // Add replyTo - required when participants are present
-            patch.replyTo = {
-                imip: `mailto:${defaultIdentity.email}`,
-            };
-
-            // Add the organizer as a participant with owner role
+            // Add self as attendee (server will handle owner/organizer role and replyTo)
             patch.participants = {
-                organizer: createJmapOrganizer(
-                    defaultIdentity.email,
-                    defaultIdentity.name || defaultIdentity.email
-                ),
+                self: {
+                    '@type': 'Participant',
+                    email: defaultIdentity.email,
+                    name: defaultIdentity.name,
+                    scheduleId: `mailto:${defaultIdentity.email}`,
+                    roles: { attendee: true },
+                    participationStatus: 'accepted',
+                    expectReply: false,
+                },
             };
 
             // Add other participants
@@ -571,7 +586,7 @@ export async function importCalendarInvite(
             name: defaultIdentity.name || defaultIdentity.email,
             role: 'attendee',
             rsvp: false,
-            scheduleStatus: status,
+            participationStatus: status,
         };
 
         calendarEvent.participants = {
@@ -579,7 +594,14 @@ export async function importCalendarInvite(
         };
 
         if (invite.organizer) {
-            calendarEvent.participants.organizer = createJmapOrganizer(invite.organizer);
+            calendarEvent.participants.organizer = {
+                '@type': 'Participant',
+                email: invite.organizer,
+                scheduleId: `mailto:${invite.organizer}`,
+                roles: { attendee: true },
+                participationStatus: 'accepted',
+                expectReply: false,
+            };
         }
 
         const [response] = await client.request([

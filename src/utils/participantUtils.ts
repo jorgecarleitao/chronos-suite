@@ -2,6 +2,7 @@ import { Participant, ParticipantRole, JmapParticipant } from '../types/calendar
 
 /**
  * Parse a JMAP participant object into our application Participant type
+ * Uses JSCalendar-bis format
  */
 export function parseJmapParticipant(
     p: any,
@@ -10,55 +11,41 @@ export function parseJmapParticipant(
     participant: Participant;
     isCurrentUser: boolean;
 } {
+    // Extract email from scheduleId (JSCalendar-bis format: "mailto:user@example.com")
+    let email = p.email;
+    if (!email && p.scheduleId) {
+        email = p.scheduleId.replace(/^mailto:/i, '');
+    }
+
     const participant: Participant = {
-        email: p.email,
+        email,
         name: p.name,
         role: (Object.keys(p.roles || {})[0] as ParticipantRole) || 'attendee',
         rsvp: p.expectReply,
-        scheduleStatus: p.participationStatus || p.scheduleStatus,
+        participationStatus: p.participationStatus,
     };
 
     return {
         participant,
-        isCurrentUser: userEmail ? p.email === userEmail : false,
+        isCurrentUser: userEmail ? email === userEmail : false,
     };
 }
 
 /**
  * Create a JMAP participant object from our application Participant type
+ * Uses minimal participant for better interoperability - server fills scheduleAgent
  */
 export function createJmapParticipant(participant: Participant): JmapParticipant {
     return {
         '@type': 'Participant',
-        name: participant.name || participant.email,
         email: participant.email,
-        sendTo: {
-            imip: `mailto:${participant.email}`,
-        },
+        name: participant.name,
+        scheduleId: `mailto:${participant.email}`,
         roles: {
-            [participant.role || 'attendee']: true,
+            attendee: true,
         },
-        participationStatus: participant.scheduleStatus || 'needs-action',
+        participationStatus: participant.participationStatus || 'needs-action',
         expectReply: participant.rsvp !== false,
-    };
-}
-
-/**
- * Create a JMAP organizer participant object
- */
-export function createJmapOrganizer(email: string, name?: string): JmapParticipant {
-    return {
-        '@type': 'Participant',
-        name: name || email,
-        email,
-        sendTo: {
-            imip: `mailto:${email}`,
-        },
-        roles: {
-            owner: true,
-        },
-        participationStatus: 'accepted',
-        expectReply: false,
     };
 }
 
@@ -77,8 +64,9 @@ export function parseJmapParticipants(
 
     if (eventParticipants) {
         Object.values(eventParticipants).forEach((p: any) => {
-            if (p.email) {
-                const { participant, isCurrentUser } = parseJmapParticipant(p, userEmail);
+            const { participant, isCurrentUser } = parseJmapParticipant(p, userEmail);
+            // Only add participants with valid email addresses
+            if (participant.email) {
                 participants.push(participant);
 
                 if (isCurrentUser) {
