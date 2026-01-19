@@ -43,6 +43,7 @@ export default function EventDialog({
         endDate: '',
         endTime: '',
         description: '',
+        location: '',
         participants: [] as Participant[],
     });
 
@@ -56,6 +57,7 @@ export default function EventDialog({
                 endDate: event.end.toISOString().split('T')[0],
                 endTime: event.end.toTimeString().slice(0, 5),
                 description: event.description || '',
+                location: event.location || '',
                 participants: event.participants || [],
             });
         } else if (mode === 'create') {
@@ -70,6 +72,7 @@ export default function EventDialog({
                 endDate: dateStr,
                 endTime: endTime,
                 description: '',
+                location: '',
                 participants: [],
             });
         }
@@ -111,6 +114,7 @@ export default function EventDialog({
             start,
             end,
             description: formData.description,
+            location: formData.location,
             participants: formData.participants,
         };
 
@@ -203,6 +207,18 @@ export default function EventDialog({
                             setFormData({
                                 ...formData,
                                 description: (e.target as HTMLInputElement).value,
+                            })
+                        }
+                    />
+                    <TextField
+                        label="Location"
+                        fullWidth
+                        placeholder="Enter event location"
+                        value={formData.location}
+                        onChange={(e) =>
+                            setFormData({
+                                ...formData,
+                                location: (e.target as HTMLInputElement).value,
                             })
                         }
                     />

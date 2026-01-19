@@ -37,12 +37,12 @@ const getEventsForTimeSlot = (date: Date, timeSlot: number, events: CalendarEven
         const eventStart = new Date(event.start);
         const eventEnd = new Date(event.end);
 
-        // Calculate the time slot's date-time boundaries
+        // Calculate the time slot's date-time boundaries (timeSlot is now the hour 0-23)
         const slotStartTime = new Date(date);
-        slotStartTime.setHours(Math.floor(timeSlot / 2), (timeSlot % 2) * 30, 0, 0);
+        slotStartTime.setHours(timeSlot, 0, 0, 0);
 
         const slotEndTime = new Date(date);
-        slotEndTime.setHours(Math.floor((timeSlot + 1) / 2), ((timeSlot + 1) % 2) * 30, 0, 0);
+        slotEndTime.setHours(timeSlot + 1, 0, 0, 0);
 
         // Only render the event in the first slot where it appears for this day
         const dayStart = new Date(date);
@@ -59,10 +59,9 @@ const getEventsForTimeSlot = (date: Date, timeSlot: number, events: CalendarEven
         // Find the effective start time for this day (either event start or day start)
         const effectiveStart = eventStart > dayStart ? eventStart : dayStart;
 
-        // Calculate which time slot the effective start falls into
+        // Calculate which time slot the effective start falls into (now just the hour)
         const startHour = effectiveStart.getHours();
-        const startMinute = effectiveStart.getMinutes();
-        const firstSlotForDay = startHour * 2 + (startMinute >= 30 ? 1 : 0);
+        const firstSlotForDay = startHour;
 
         // Only render in the first slot
         return timeSlot === firstSlotForDay;
@@ -81,9 +80,9 @@ const getEventStyle = (event: CalendarEvent, date: Date, timeSlot: number) => {
     dayEnd.setDate(dayEnd.getDate() + 1);
     dayEnd.setHours(0, 0, 0, 0);
 
-    // Calculate slot boundaries
+    // Calculate slot boundaries (timeSlot is now the hour 0-23)
     const slotStartTime = new Date(date);
-    slotStartTime.setHours(Math.floor(timeSlot / 2), (timeSlot % 2) * 30, 0, 0);
+    slotStartTime.setHours(timeSlot, 0, 0, 0);
 
     // Determine the visible portion of the event for this day
     const displayStart = eventStart > dayStart ? eventStart : dayStart;
@@ -93,7 +92,7 @@ const getEventStyle = (event: CalendarEvent, date: Date, timeSlot: number) => {
     const displayStartOffset = displayStart.getTime() - slotStartTime.getTime();
     const displayDuration = displayEnd.getTime() - displayStart.getTime();
 
-    const slotDurationMs = 30 * 60 * 1000; // 30 minutes in milliseconds
+    const slotDurationMs = 60 * 60 * 1000; // 60 minutes in milliseconds
 
     // Top position as percentage within the current slot
     const topPercent = (displayStartOffset / slotDurationMs) * 100;
@@ -112,14 +111,11 @@ const getEventStyle = (event: CalendarEvent, date: Date, timeSlot: number) => {
 };
 
 const formatTimeSlot = (timeSlot: number) => {
-    const hour = Math.floor(timeSlot / 2);
-    const minutes = (timeSlot % 2) * 30;
-    const minuteStr = minutes === 0 ? '00' : '30';
-
-    if (hour === 0) return `12:${minuteStr} AM`;
-    if (hour < 12) return `${hour}:${minuteStr} AM`;
-    if (hour === 12) return `12:${minuteStr} PM`;
-    return `${hour - 12}:${minuteStr} PM`;
+    // timeSlot is now just the hour (0-23)
+    if (timeSlot === 0) return `12:00 AM`;
+    if (timeSlot < 12) return `${timeSlot}:00 AM`;
+    if (timeSlot === 12) return `12:00 PM`;
+    return `${timeSlot - 12}:00 PM`;
 };
 
 const getEventColor = (status: string | undefined) => {
@@ -182,6 +178,11 @@ function EventTooltipContent({ event }: EventTooltipContentProps) {
                     {event.description}
                 </Typography>
             )}
+            {event.location && (
+                <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+                    📍 {event.location}
+                </Typography>
+            )}
             {participantCount > 0 && (
                 <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
                     👥 {participantNames}
@@ -229,10 +230,10 @@ export default function WeekView({
                     );
                 })}
 
-                {/* Time slots - 48 half-hour slots */}
-                {Array.from({ length: 48 }, (_, timeSlot) => {
-                    const hour = Math.floor(timeSlot / 2);
-                    const minutes = (timeSlot % 2) * 30;
+                {/* Time slots - 24 hour slots */}
+                {Array.from({ length: 24 }, (_, timeSlot) => {
+                    const hour = timeSlot;
+                    const minutes = 0;
                     return (
                         <Box key={`row-${timeSlot}`} sx={{ display: 'contents' }}>
                             {/* Time label */}

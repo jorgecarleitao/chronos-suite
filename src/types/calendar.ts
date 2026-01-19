@@ -21,6 +21,7 @@ export interface CalendarEvent {
     end: Date;
     calendarId?: string;
     description?: string;
+    location?: string;
     participants?: Participant[];
     userParticipationStatus?: ParticipationStatus;
 }

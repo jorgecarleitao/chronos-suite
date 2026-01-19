@@ -74,6 +74,15 @@ export async function fetchCalendarEvents(
                 userEmail
             );
 
+            // Parse location from locations object
+            let location: string | undefined;
+            if (event.locations) {
+                const firstLocation = Object.values(event.locations)[0] as any;
+                if (firstLocation && firstLocation.name) {
+                    location = firstLocation.name;
+                }
+            }
+
             return {
                 id: event.id,
                 title: event.title || '(No title)',
@@ -81,6 +90,7 @@ export async function fetchCalendarEvents(
                 end: endDate,
                 calendarId: Object.keys(event.calendarIds || {})[0],
                 description: event.description,
+                location,
                 participants: participants.length > 0 ? participants : undefined,
                 userParticipationStatus,
             };
@@ -158,6 +168,16 @@ export async function createCalendarEvent(
 
         if (event.description) {
             calendarEvent.description = event.description;
+        }
+
+        // Add location if provided
+        if (event.location) {
+            calendarEvent.locations = {
+                location1: {
+                    '@type': 'Location',
+                    name: event.location,
+                },
+            };
         }
 
         // Add participants if provided

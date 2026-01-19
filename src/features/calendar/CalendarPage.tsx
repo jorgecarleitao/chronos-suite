@@ -33,7 +33,7 @@ export default function Calendar({ path }: CalendarProps) {
     const [accountId, setAccountId] = useState<string | null>(null);
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
-    const [view, setView] = useState<'month' | 'week'>('month');
+    const [view, setView] = useState<'month' | 'week'>('week');
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [calendars, setCalendars] = useState<Array<{ id: string; name: string }>>([]);
     const [selectedCalendar, setSelectedCalendar] = useState<string | null>(null);

@@ -5,5 +5,6 @@ export interface CalendarEventFormData {
     start: Date;
     end: Date;
     description: string;
+    location?: string;
     participants: Participant[];
 }

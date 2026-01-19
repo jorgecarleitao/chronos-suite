@@ -71,16 +71,16 @@ export default function CalendarHeader({
             <Stack direction="row" spacing={2}>
                 <ButtonGroup variant="outlined" size="small">
                     <Button
-                        onClick={() => onViewChange('month')}
-                        variant={view === 'month' ? 'contained' : 'outlined'}
-                    >
-                        Month
-                    </Button>
-                    <Button
                         onClick={() => onViewChange('week')}
                         variant={view === 'week' ? 'contained' : 'outlined'}
                     >
                         Week
+                    </Button>
+                    <Button
+                        onClick={() => onViewChange('month')}
+                        variant={view === 'month' ? 'contained' : 'outlined'}
+                    >
+                        Month
                     </Button>
                 </ButtonGroup>
                 <Button variant="outlined" startIcon={<TodayIcon />} onClick={onToday}>
