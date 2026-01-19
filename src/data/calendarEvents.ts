@@ -203,8 +203,7 @@ export async function createCalendarEvent(
             event.participants.forEach((participant, index) => {
                 const participantId = `attendee-${index}`;
                 calendarEvent.participants[participantId] = createJmapParticipant(
-                    participant,
-                    participantId
+                    participant
                 );
             });
         }
@@ -312,8 +311,7 @@ export async function updateCalendarEvent(
             updates.participants.forEach((participant, index) => {
                 const participantId = `attendee-${index}`;
                 patch.participants[participantId] = createJmapParticipant(
-                    participant,
-                    participantId
+                    participant
                 );
             });
         }
@@ -577,7 +575,7 @@ export async function importCalendarInvite(
         };
 
         calendarEvent.participants = {
-            attendee: createJmapParticipant(attendeeParticipant, 'attendee'),
+            attendee: createJmapParticipant(attendeeParticipant),
         };
 
         if (invite.organizer) {

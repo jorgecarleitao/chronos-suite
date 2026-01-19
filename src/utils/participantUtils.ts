@@ -27,10 +27,7 @@ export function parseJmapParticipant(
 /**
  * Create a JMAP participant object from our application Participant type
  */
-export function createJmapParticipant(
-    participant: Participant,
-    participantId: string
-): JmapParticipant {
+export function createJmapParticipant(participant: Participant): JmapParticipant {
     return {
         '@type': 'Participant',
         name: participant.name || participant.email,
