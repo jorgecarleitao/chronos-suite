@@ -267,7 +267,7 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
                     cc={draftMessage.cc || ''}
                     bcc={draftMessage.bcc || ''}
                     subject={draftMessage.subject || ''}
-                    body={draftMessage.body || ''}
+                    body={draftMessage.textBody || ''}
                     draftEmailId={draftMessage.id}
                     accountId={accountId}
                 />

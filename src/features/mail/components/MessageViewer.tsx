@@ -248,7 +248,7 @@ export default function MessageViewer({
             to: message.to,
             cc: message.cc,
             subject: message.subject || '',
-            body: message.textBody || message.htmlBody || '',
+            body: message.textBody || '',
         });
         setComposeOpen(true);
     };

@@ -2,44 +2,16 @@ import { useState, useEffect } from 'preact/hooks';
 import { route } from 'preact-router';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import ListItemButton from '@mui/material/ListItemButton';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import ListItemText from '@mui/material/ListItemText';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
-import Divider from '@mui/material/Divider';
 import Paper from '@mui/material/Paper';
-import CircularProgress from '@mui/material/CircularProgress';
-import Collapse from '@mui/material/Collapse';
-
-import IconButton from '@mui/material/IconButton';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
-import Button from '@mui/material/Button';
-import TextField from '@mui/material/TextField';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
-import AddIcon from '@mui/icons-material/Add';
 
-import InboxIcon from '@mui/icons-material/Inbox';
-import SendIcon from '@mui/icons-material/Send';
-import DraftsIcon from '@mui/icons-material/Drafts';
-import DeleteIcon from '@mui/icons-material/Delete';
-import ReportIcon from '@mui/icons-material/Report';
-import FolderIcon from '@mui/icons-material/Folder';
-import FolderSharedIcon from '@mui/icons-material/FolderShared';
-import ExpandLess from '@mui/icons-material/ExpandLess';
-import ExpandMore from '@mui/icons-material/ExpandMore';
-import EditIcon from '@mui/icons-material/Edit';
-
-import Sidebar from '../../components/Sidebar';
+import MailSidebar from './components/MailSidebar';
 import MessageList from './components/MessageList';
 import ComposeEmail from './components/ComposeEmail';
+import MailboxDialogs from './components/MailboxDialogs';
 import {
     fetchMailboxes,
     fetchSharedMailboxes,
@@ -50,36 +22,17 @@ import {
 } from '../../data/mailboxes';
 import { getPrimaryAccountId } from '../../data/accounts';
 import { moveMessages } from '../../data/messages';
-import { drawerWidth } from '../../components/Sidebar';
+import {
+    convertToNode,
+    sortMailboxes,
+    isSelectableMailbox,
+    findInbox,
+    MailboxNode,
+} from './utils/mailboxHelpers';
 
 interface MailProps {
     path: string;
 }
-
-interface MailboxNode {
-    name: string; // Full path name
-    displayName: string; // Just the last segment
-    children: MailboxNode[];
-    isLeaf: boolean;
-    role?: string;
-    id?: string; // JMAP mailbox ID
-    parentId?: string | null;
-    unreadEmails?: number;
-    totalEmails?: number;
-}
-
-// Convert backend tree to frontend node structure (if needed for compatibility)
-const convertToNode = (mailbox: Mailbox): MailboxNode => ({
-    name: mailbox.name,
-    displayName: mailbox.display_name,
-    children: mailbox.children.map(convertToNode),
-    isLeaf: mailbox.is_selectable,
-    role: mailbox.role,
-    id: mailbox.id,
-    parentId: mailbox.parentId,
-    unreadEmails: mailbox.unreadEmails,
-    totalEmails: mailbox.totalEmails,
-});
 
 export default function Mail({ path }: MailProps) {
     const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
@@ -128,17 +81,6 @@ export default function Mail({ path }: MailProps) {
             setMailboxes(data.mailboxes || []);
 
             // Auto-select inbox mailbox
-            const findInbox = (mailboxList: Mailbox[]): Mailbox | null => {
-                for (const mb of mailboxList) {
-                    if (mb.role === 'inbox') return mb;
-                    if (mb.children.length > 0) {
-                        const found = findInbox(mb.children);
-                        if (found) return found;
-                    }
-                }
-                return null;
-            };
-
             const inboxMailbox = findInbox(data.mailboxes || []);
             if (inboxMailbox) {
                 setSelectedMailbox(inboxMailbox.name);
@@ -150,11 +92,9 @@ export default function Mail({ path }: MailProps) {
                 setSharedMailboxes(shared);
             } catch (sharedError) {
                 console.warn('Failed to load shared mailboxes:', sharedError);
-                // Don't fail the whole load if shared mailboxes fail
             }
         } catch (error) {
             console.error('Failed to load mailboxes:', error);
-            // If JMAP client not initialized, redirect to login
             if (error instanceof Error && error.message.includes('not initialized')) {
                 route('/login');
             }
@@ -261,305 +201,32 @@ export default function Mail({ path }: MailProps) {
         e.dataTransfer!.dropEffect = 'move';
     };
 
-    const renderMailboxNode = (node: MailboxNode, depth: number = 0) => {
-        const hasChildren = node.children.length > 0;
-        const isExpanded = expandedFolders.has(node.name);
-        const elements = [];
-
-        elements.push(
-            <ListItem
-                key={node.name}
-                disablePadding
-                secondaryAction={
-                    !node.role && (
-                        <IconButton
-                            edge="end"
-                            size="small"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleContextMenu(e as any, node);
-                            }}
-                        >
-                            <MoreVertIcon fontSize="small" />
-                        </IconButton>
-                    )
-                }
-            >
-                <ListItemButton
-                    selected={selectedMailbox === node.name && node.isLeaf}
-                    onClick={() => {
-                        if (hasChildren) {
-                            handleToggleFolder(node.name);
-                        }
-                        // Only set selected mailbox if it's an actual mailbox (selectable)
-                        if (node.isLeaf) {
-                            setSelectedMailbox(node.name);
-                        }
-                    }}
-                    onContextMenu={(e) => !node.role && handleContextMenu(e as any, node)}
-                    onDrop={(e) => node.id && handleDrop(e as any, node.id)}
-                    onDragOver={handleDragOver as any}
-                    style={{ paddingLeft: (2 + depth * 2) * 8 }}
-                    sx={{
-                        '&.MuiListItemButton-root': {
-                            transition: 'background-color 0.2s',
-                        },
-                        '&:hover': {
-                            backgroundColor: 'action.hover',
-                        },
-                    }}
-                >
-                    <ListItemIcon>{getMailboxIcon(node.role, node.name)}</ListItemIcon>
-                    <ListItemText
-                        primary={
-                            node.role === 'inbox' && node.unreadEmails
-                                ? `${node.displayName} (${node.unreadEmails})`
-                                : node.displayName
-                        }
-                        primaryTypographyProps={{
-                            fontWeight: node.role === 'inbox' ? 'bold' : 'normal',
-                        }}
-                    />
-                    {hasChildren && (isExpanded ? <ExpandLess /> : <ExpandMore />)}
-                </ListItemButton>
-            </ListItem>
-        );
-
-        // Render children if expanded
-        if (hasChildren && isExpanded) {
-            elements.push(
-                <Collapse
-                    key={`${node.name}-collapse`}
-                    in={isExpanded}
-                    timeout="auto"
-                    unmountOnExit
-                >
-                    <List component="div" disablePadding>
-                        {node.children.map((child) => renderMailboxNode(child, depth + 1))}
-                    </List>
-                </Collapse>
-            );
+    const handleMailboxSelect = (name: string, isLeaf: boolean) => {
+        if (isLeaf) {
+            setSelectedMailbox(name);
         }
-
-        return elements;
     };
-
-    // Custom order for main mailboxes
-    const MAIN_ORDER = ['inbox', 'drafts', 'sent items', 'junk mail', 'deleted items'];
-
-    // Helper to flatten and sort mailboxes by MAIN_ORDER, then others
-    function sortMailboxes(nodes: MailboxNode[]): MailboxNode[] {
-        // Separate main mailboxes and others
-        const main: MailboxNode[] = [];
-        const others: MailboxNode[] = [];
-        for (const node of nodes) {
-            const idx = MAIN_ORDER.findIndex((name) => node.displayName.toLowerCase() === name);
-            if (idx !== -1) {
-                main[idx] = node;
-            } else {
-                others.push(node);
-            }
-        }
-        // Filter out undefined slots in main
-        const orderedMain = main.filter(Boolean);
-        // Sort others alphabetically
-        others.sort((a, b) => a.displayName.localeCompare(b.displayName));
-        return [...orderedMain, ...others];
-    }
 
     // Convert backend tree structure to frontend nodes and sort
     const mailboxTree = sortMailboxes(mailboxes.map(convertToNode));
-
-    // Check if selected mailbox is selectable
-    const isSelectableMailbox = (name: string, mailboxes: Mailbox[]): boolean => {
-        for (const mb of mailboxes) {
-            if (mb.name === name) return mb.is_selectable;
-            if (mb.children.length > 0 && isSelectableMailbox(name, mb.children)) {
-                return true;
-            }
-        }
-        return false;
-    };
     const isActualMailbox = isSelectableMailbox(selectedMailbox, mailboxes);
-
-    const getMailboxIcon = (role?: string, name?: string) => {
-        // Use role if available (JMAP standard)
-        if (role) {
-            switch (role) {
-                case 'inbox':
-                    return <InboxIcon />;
-                case 'sent':
-                    return <SendIcon />;
-                case 'drafts':
-                    return <DraftsIcon />;
-                case 'trash':
-                    return <DeleteIcon />;
-                case 'junk':
-                    return <ReportIcon />;
-                default:
-                    return <FolderIcon />;
-            }
-        }
-        return <FolderIcon />;
-    };
 
     return (
         <Box display="flex">
-            {/* Mailbox sidebar */}
-            <Sidebar>
-                {!accountId ? (
-                    <Stack justifyContent="center" padding={3}>
-                        <CircularProgress />
-                        <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            textAlign="center"
-                            mt={2}
-                        >
-                            Loading account...
-                        </Typography>
-                    </Stack>
-                ) : (
-                    <>
-                        <Button
-                            variant="contained"
-                            fullWidth
-                            sx={{ mb: 2 }}
-                            onClick={() => setComposeOpen(true)}
-                            startIcon={<EditIcon />}
-                        >
-                            Compose Email
-                        </Button>
-
-                        <Divider sx={{ my: 2 }} />
-
-                        {loading ? (
-                            <Stack justifyContent="center" padding={3}>
-                                <CircularProgress />
-                                <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                    textAlign="center"
-                                    mt={2}
-                                >
-                                    Loading mailboxes...
-                                </Typography>
-                            </Stack>
-                        ) : mailboxes.length === 0 ? (
-                            <Stack justifyContent="center" padding={3}>
-                                <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                    textAlign="center"
-                                >
-                                    No mailboxes found
-                                </Typography>
-                            </Stack>
-                        ) : (
-                            <>
-                                <List>{mailboxTree.map((node) => renderMailboxNode(node))}</List>
-
-                                {sharedMailboxes.length > 0 && (
-                                    <>
-                                        <Divider />
-                                        <Typography
-                                            variant="subtitle2"
-                                            padding={2}
-                                            color="text.secondary"
-                                        >
-                                            Shared Mailboxes
-                                        </Typography>
-                                        <List>
-                                            {/* Group by account */}
-                                            {Object.entries(
-                                                sharedMailboxes.reduce(
-                                                    (acc, mailbox) => {
-                                                        const accountId = mailbox.accountId!;
-                                                        if (!acc[accountId]) {
-                                                            acc[accountId] = {
-                                                                accountName: mailbox.accountName!,
-                                                                mailboxes: [],
-                                                            };
-                                                        }
-                                                        acc[accountId].mailboxes.push(mailbox);
-                                                        return acc;
-                                                    },
-                                                    {} as Record<
-                                                        string,
-                                                        {
-                                                            accountName: string;
-                                                            mailboxes: Mailbox[];
-                                                        }
-                                                    >
-                                                )
-                                            ).map(
-                                                ([
-                                                    accountId,
-                                                    { accountName, mailboxes: accountMailboxes },
-                                                ]) => {
-                                                    const accountKey = `shared-${accountId}`;
-                                                    const isAccountExpanded =
-                                                        expandedFolders.has(accountKey);
-
-                                                    return (
-                                                        <>
-                                                            <ListItem
-                                                                key={accountKey}
-                                                                disablePadding
-                                                            >
-                                                                <ListItemButton
-                                                                    onClick={() =>
-                                                                        handleToggleFolder(
-                                                                            accountKey
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    <ListItemIcon>
-                                                                        <FolderSharedIcon />
-                                                                    </ListItemIcon>
-                                                                    <ListItemText
-                                                                        primary={accountName}
-                                                                    />
-                                                                    {isAccountExpanded ? (
-                                                                        <ExpandLess />
-                                                                    ) : (
-                                                                        <ExpandMore />
-                                                                    )}
-                                                                </ListItemButton>
-                                                            </ListItem>
-                                                            {isAccountExpanded && (
-                                                                <Collapse
-                                                                    in={isAccountExpanded}
-                                                                    timeout="auto"
-                                                                    unmountOnExit
-                                                                >
-                                                                    <List
-                                                                        component="div"
-                                                                        disablePadding
-                                                                    >
-                                                                        {accountMailboxes
-                                                                            .map(convertToNode)
-                                                                            .map((node) =>
-                                                                                renderMailboxNode(
-                                                                                    node,
-                                                                                    1
-                                                                                )
-                                                                            )}
-                                                                    </List>
-                                                                </Collapse>
-                                                            )}
-                                                        </>
-                                                    );
-                                                }
-                                            )}
-                                        </List>
-                                    </>
-                                )}
-                            </>
-                        )}
-                    </>
-                )}
-            </Sidebar>
+            <MailSidebar
+                accountId={accountId}
+                loading={loading}
+                mailboxTree={mailboxTree}
+                sharedMailboxes={sharedMailboxes}
+                selectedMailbox={selectedMailbox}
+                expandedFolders={expandedFolders}
+                onComposeClick={() => setComposeOpen(true)}
+                onMailboxSelect={handleMailboxSelect}
+                onToggleFolder={handleToggleFolder}
+                onContextMenu={handleContextMenu}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+            />
 
             {/* Message list area */}
             <Box component="main" flexGrow={1} padding={3}>
@@ -584,14 +251,12 @@ export default function Mail({ path }: MailProps) {
                 </Paper>
             </Box>
 
-            {/* Compose email drawer */}
             <ComposeEmail
                 open={composeOpen}
                 onClose={() => setComposeOpen(false)}
                 accountId={accountId || ''}
             />
 
-            {/* Context Menu */}
             <Menu
                 open={contextMenu !== null}
                 onClose={handleCloseContextMenu}
@@ -633,76 +298,20 @@ export default function Mail({ path }: MailProps) {
                 </MenuItem>
             </Menu>
 
-            {/* Create Mailbox Dialog */}
-            <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)}>
-                <DialogTitle>
-                    {selectedMailboxForAction ? 'Create Subfolder' : 'Create Mailbox'}
-                </DialogTitle>
-                <DialogContent>
-                    <TextField
-                        autoFocus
-                        margin="dense"
-                        label="Mailbox Name"
-                        fullWidth
-                        value={newMailboxName}
-                        onChange={(e) => setNewMailboxName((e.target as HTMLInputElement).value)}
-                        onKeyPress={(e) => {
-                            if (e.key === 'Enter') {
-                                handleCreateMailbox();
-                            }
-                        }}
-                    />
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
-                    <Button onClick={handleCreateMailbox} variant="contained">
-                        Create
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-            {/* Rename Mailbox Dialog */}
-            <Dialog open={renameDialogOpen} onClose={() => setRenameDialogOpen(false)}>
-                <DialogTitle>Rename Mailbox</DialogTitle>
-                <DialogContent>
-                    <TextField
-                        autoFocus
-                        margin="dense"
-                        label="New Name"
-                        fullWidth
-                        value={newMailboxName}
-                        onChange={(e) => setNewMailboxName((e.target as HTMLInputElement).value)}
-                        onKeyPress={(e) => {
-                            if (e.key === 'Enter') {
-                                handleRenameMailbox();
-                            }
-                        }}
-                    />
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setRenameDialogOpen(false)}>Cancel</Button>
-                    <Button onClick={handleRenameMailbox} variant="contained">
-                        Rename
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-            {/* Delete Mailbox Dialog */}
-            <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-                <DialogTitle>Delete Mailbox</DialogTitle>
-                <DialogContent>
-                    <Typography>
-                        Are you sure you want to delete "{selectedMailboxForAction?.displayName}"?
-                        This will permanently delete the mailbox and all its contents.
-                    </Typography>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-                    <Button onClick={handleDeleteMailbox} color="error" variant="contained">
-                        Delete
-                    </Button>
-                </DialogActions>
-            </Dialog>
+            <MailboxDialogs
+                createDialogOpen={createDialogOpen}
+                renameDialogOpen={renameDialogOpen}
+                deleteDialogOpen={deleteDialogOpen}
+                newMailboxName={newMailboxName}
+                selectedMailboxForAction={selectedMailboxForAction}
+                onCreateClose={() => setCreateDialogOpen(false)}
+                onRenameClose={() => setRenameDialogOpen(false)}
+                onDeleteClose={() => setDeleteDialogOpen(false)}
+                onNameChange={setNewMailboxName}
+                onCreateSubmit={handleCreateMailbox}
+                onRenameSubmit={handleRenameMailbox}
+                onDeleteSubmit={handleDeleteMailbox}
+            />
         </Box>
     );
 }
