@@ -23,7 +23,13 @@ export async function handleAuthError(error: any): Promise<never> {
                 console.error('Failed to refresh token:', refreshError);
             }
         }
+
+        oauthService.logout();
+        jmapService.clear();
+        window.location.href = '/login';
+        throw new Error('Session expired. Please log in again.');
     }
+
     throw error;
 }
 
