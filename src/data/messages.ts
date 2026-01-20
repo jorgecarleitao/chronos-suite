@@ -119,6 +119,7 @@ export interface MessageMetadata {
     to_email?: string;
     subject?: string;
     date: Date | null;
+    hasAttachment?: boolean;
 }
 
 export interface Messages {
@@ -155,6 +156,7 @@ function mapJmapToMessageMetadata(jmapEmail: any): MessageMetadata {
         to_email: to?.email,
         subject: jmapEmail.subject,
         date: parseDate(jmapEmail.receivedAt),
+        hasAttachment: jmapEmail.hasAttachment || false,
     };
 }
 

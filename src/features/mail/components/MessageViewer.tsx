@@ -17,6 +17,7 @@ import MessageHeader from './MessageHeader';
 import MessageMetadata from './MessageMetadata';
 import MessageBody from './MessageBody';
 import CalendarInvite from './CalendarInvite';
+import AttachmentList from './AttachmentList';
 import {
     findICSAttachment,
     parseICS,
@@ -301,6 +302,10 @@ export default function MessageViewer({
                                     }}
                                 />
                             )}
+                            <AttachmentList
+                                attachments={message.attachments as Attachment[] || []}
+                                accountId={accountId}
+                            />
                             <MessageBody htmlBody={message.htmlBody} textBody={message.textBody} />
                         </Box>
                     </Paper>

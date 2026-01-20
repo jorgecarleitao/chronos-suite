@@ -15,6 +15,7 @@ import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PersonIcon from '@mui/icons-material/Person';
+import AttachFileIcon from '@mui/icons-material/AttachFile';
 import { MessageMetadata } from '../../../data/messages';
 import { fetchContacts, Contact } from '../../../data/contacts';
 import { getPrimaryAccountId } from '../../../data/accounts';
@@ -161,9 +162,16 @@ export default function MessageListItem({
                         }}
                         sx={{ flex: 1, minWidth: 0 }}
                     />
-                    <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
-                        {formattedDate}
-                    </Typography>
+                    <Stack direction="row" spacing={0.5} alignItems="center" sx={{ flexShrink: 0 }}>
+                        {message.hasAttachment && (
+                            <Tooltip title="Has attachments">
+                                <AttachFileIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                            </Tooltip>
+                        )}
+                        <Typography variant="caption" color="text.secondary">
+                            {formattedDate}
+                        </Typography>
+                    </Stack>
                 </Stack>
             </ListItemButton>
         </ListItem>
