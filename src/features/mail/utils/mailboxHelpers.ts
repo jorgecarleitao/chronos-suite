@@ -1,4 +1,4 @@
-import { Mailbox } from '../../../data/mailboxes';
+import { Mailbox } from '../data/mailboxes';
 
 export interface MailboxNode {
     name: string; // Full path name

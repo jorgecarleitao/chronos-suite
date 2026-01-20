@@ -31,8 +31,8 @@ import {
     markAsRead as apiMarkAsRead,
     markAsAnswered as apiMarkAsAnswered,
     MessageDetail,
-} from '../../../data/messages';
-import { fetchCalendars } from '../../../data/calendarEvents';
+} from '../data/messages';
+import { fetchCalendars } from '../../calendar/data/calendarEvents';
 
 interface MessageViewerProps {
     onClose: () => void;

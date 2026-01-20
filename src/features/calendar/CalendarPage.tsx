@@ -14,7 +14,7 @@ import {
     fetchCalendars,
     CalendarEvent,
     Participant,
-} from '../../data/calendarEvents';
+} from './data/calendarEvents';
 import { CalendarEventFormData } from './types';
 import CalendarHeader from './components/calendar/CalendarHeader';
 import MonthView from './components/calendar/MonthView';

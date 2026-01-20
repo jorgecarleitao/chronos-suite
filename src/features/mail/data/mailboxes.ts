@@ -1,6 +1,6 @@
-import { jmapService } from './jmapClient';
-import { getAllAccounts, getPrimaryAccountId } from './accounts';
-import { withAuthHandling } from '../utils/authHandling';
+import { jmapService } from '../../../data/jmapClient';
+import { getAllAccounts, getPrimaryAccountId } from '../../../data/accounts';
+import { withAuthHandling } from '../../../utils/authHandling';
 
 // JMAP mailbox structure
 interface JmapMailbox {

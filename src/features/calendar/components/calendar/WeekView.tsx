@@ -2,7 +2,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Tooltip from '@mui/material/Tooltip';
 import PersonIcon from '@mui/icons-material/Person';
-import { CalendarEvent } from '../../../../data/calendarEvents';
+import { CalendarEvent } from '../../data/calendarEvents';
 import { isSameDay } from '../../../../utils/dateHelpers';
 
 interface WeekViewProps {

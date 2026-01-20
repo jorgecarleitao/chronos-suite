@@ -1,10 +1,10 @@
-import { jmapService } from './jmapClient';
-import { Invite } from '../utils/calendarInviteParser';
-import { withAuthHandling } from '../utils/authHandling';
-import { parseJmapParticipants, createJmapParticipant } from '../utils/participantUtils';
-import type { Participant, CalendarEvent } from '../types/calendar';
+import { jmapService } from '../../../data/jmapClient';
+import { Invite } from '../../../utils/calendarInviteParser';
+import { withAuthHandling } from '../../../utils/authHandling';
+import { parseJmapParticipants, createJmapParticipant } from '../../../utils/participantUtils';
+import type { Participant, CalendarEvent } from '../../../types/calendar';
 
-export type { Participant, CalendarEvent } from '../types/calendar';
+export type { Participant, CalendarEvent } from '../../../types/calendar';
 
 /**
  * Fetch calendar events within a date range

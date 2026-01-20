@@ -1,4 +1,4 @@
-import { Participant } from '../../data/calendarEvents';
+import { Participant } from '../../types/calendar';
 
 export interface CalendarEventFormData {
     title: string;

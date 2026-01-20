@@ -19,9 +19,9 @@ import {
     renameMailbox,
     deleteMailbox,
     Mailbox,
-} from '../../data/mailboxes';
+} from './data/mailboxes';
 import { getPrimaryAccountId } from '../../data/accounts';
-import { moveMessages } from '../../data/messages';
+import { moveMessages } from './data/messages';
 import {
     convertToNode,
     sortMailboxes,

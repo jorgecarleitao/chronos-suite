@@ -7,7 +7,7 @@ import Button from '@mui/material/Button';
 import EditIcon from '@mui/icons-material/Edit';
 import Sidebar from '../../../components/Sidebar';
 import MailboxListItem from './MailboxListItem';
-import { Mailbox } from '../../../data/mailboxes';
+import { Mailbox } from '../data/mailboxes';
 import { MailboxNode } from '../utils/mailboxHelpers';
 import SharedMailboxList from './SharedMailboxList';
 

@@ -8,7 +8,7 @@ import Chip from '@mui/material/Chip';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PersonIcon from '@mui/icons-material/Person';
-import { CalendarEvent } from '../../../../data/calendarEvents';
+import { CalendarEvent } from '../../data/calendarEvents';
 
 interface EventListProps {
     selectedDate: Date;

@@ -1,5 +1,5 @@
-import { jmapService, EmailData } from './jmapClient';
-import { withAuthHandling } from '../utils/authHandling';
+import { jmapService, EmailData } from '../../../data/jmapClient';
+import { withAuthHandling } from '../../../utils/authHandling';
 import { marked } from 'marked';
 
 export type MessageFlag = 'seen' | 'flagged' | 'draft' | 'answered';

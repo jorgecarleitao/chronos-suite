@@ -10,7 +10,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import EventIcon from '@mui/icons-material/Event';
-import { importCalendarInvite, checkEventExists } from '../../../data/calendarEvents';
+import { importCalendarInvite, checkEventExists } from '../../calendar/data/calendarEvents';
 import { type Invite } from '../../../utils/calendarInviteParser';
 
 interface CalendarInviteProps {

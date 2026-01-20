@@ -18,7 +18,7 @@ import ComposeEmail, { DraftMessage } from './ComposeEmail';
 import MessageListItem from './MessageListItem';
 import MessageActionsBar from './MessageActionsBar';
 import BulkActionsBar from './BulkActionsBar';
-import { fetchMessages, fetchMessage, MessageMetadata } from '../../../data/messages';
+import { fetchMessages, fetchMessage, MessageMetadata } from '../data/messages';
 import useMessageOperations from '../useMessageOperations';
 
 interface MessageListProps {

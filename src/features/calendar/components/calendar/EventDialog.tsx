@@ -13,7 +13,7 @@ import Typography from '@mui/material/Typography';
 import AddIcon from '@mui/icons-material/Add';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { CalendarEvent, Participant } from '../../../../data/calendarEvents';
+import { CalendarEvent, Participant } from '../../data/calendarEvents';
 import { CalendarEventFormData } from '../../types';
 import { participantsToArray, participantsToRecord } from '../../../../utils/participantUtils';
 

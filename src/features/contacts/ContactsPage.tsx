@@ -32,8 +32,8 @@ import {
     updateContact,
     createContact,
     Contact,
-} from '../../data/contacts';
-import { fetchAddressBooks, AddressBook } from '../../data/addressBook';
+} from './data/contacts';
+import { fetchAddressBooks, AddressBook } from './data/addressBook';
 import { getPrimaryAccountId } from '../../data/accounts';
 
 interface ContactsProps {

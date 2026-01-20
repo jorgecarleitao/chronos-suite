@@ -1,5 +1,5 @@
-import { jmapService } from './jmapClient';
-import { withAuthHandling } from '../utils/authHandling';
+import { jmapService } from '../../../data/jmapClient';
+import { withAuthHandling } from '../../../utils/authHandling';
 
 export interface Contact {
     id: string;

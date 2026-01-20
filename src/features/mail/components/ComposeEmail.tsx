@@ -21,7 +21,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
 import MDEditor from '@uiw/react-md-editor';
 import rehypeSanitize from 'rehype-sanitize';
-import { createDraft, updateDraft, prepareAndSendMessage } from '../../../data/messages';
+import { createDraft, updateDraft, prepareAndSendMessage } from '../data/messages';
 
 const composerWidth = 600;
 const composerHeight = 600;
