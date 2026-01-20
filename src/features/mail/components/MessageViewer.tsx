@@ -28,6 +28,7 @@ import { jmapService } from '../../../data/jmapClient';
 import {
     fetchMessage as apiFetchMessage,
     deleteMessage as apiDeleteMessage,
+    markAsRead as apiMarkAsRead,
 } from '../../../data/messages';
 import { fetchCalendars } from '../../../data/calendarEvents';
 
@@ -158,6 +159,16 @@ export default function MessageViewer({
         try {
             const data = await apiFetchMessage(accountId, emailId);
             setMessage(data);
+            
+            // Mark message as read when opened
+            const isUnread = !data.flags?.some((flag) => flag === 'Seen');
+            if (isUnread) {
+                try {
+                    await apiMarkAsRead(accountId, emailId);
+                } catch (err) {
+                    console.error('Failed to mark message as read:', err);
+                }
+            }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to fetch message');
         } finally {
