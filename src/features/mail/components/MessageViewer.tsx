@@ -12,7 +12,7 @@ import Stack from '@mui/material/Stack';
 import Paper from '@mui/material/Paper';
 import Divider from '@mui/material/Divider';
 import Button from '@mui/material/Button';
-import ComposeEmail from './ComposeEmail';
+import ComposeEmail, { DraftMessage } from './ComposeEmail';
 import MessageHeader from './MessageHeader';
 import MessageMetadata from './MessageMetadata';
 import MessageBody from './MessageBody';
@@ -29,6 +29,8 @@ import {
     fetchMessage as apiFetchMessage,
     deleteMessage as apiDeleteMessage,
     markAsRead as apiMarkAsRead,
+    markAsAnswered as apiMarkAsAnswered,
+    MessageDetail,
 } from '../../../data/messages';
 import { fetchCalendars } from '../../../data/calendarEvents';
 
@@ -50,23 +52,6 @@ interface MessageViewerProps {
     }) => JSX.Element;
 }
 
-interface MessageDetail {
-    id: string;
-    from_name: string;
-    from_email: string;
-    to_name?: string;
-    to_email: string;
-    to: string; // Comma-separated string for drafts
-    cc?: string;
-    bcc?: string;
-    subject: string;
-    date: Date | null;
-    htmlBody?: string;
-    textBody?: string;
-    flags?: string[];
-    attachments?: any[];
-}
-
 export default function MessageViewer({
     onClose,
     onDelete,
@@ -81,12 +66,7 @@ export default function MessageViewer({
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [composeOpen, setComposeOpen] = useState(false);
     const [success, setSuccess] = useState<string | null>(null);
-    const [composeData, setComposeData] = useState<{
-        to?: string;
-        cc?: string;
-        subject?: string;
-        body?: string;
-    }>({});
+    const [composeData, setComposeData] = useState<DraftMessage>({});
     const [parsedInvite, setParsedInvite] = useState<Invite | null>(null);
     const [calendarId, setCalendarId] = useState<string | null>(null);
 
@@ -161,7 +141,7 @@ export default function MessageViewer({
             setMessage(data);
             
             // Mark message as read when opened
-            const isUnread = !data.flags?.some((flag) => flag === 'Seen');
+            const isUnread = !data.flags?.some((flag) => flag === 'seen');
             if (isUnread) {
                 try {
                     await apiMarkAsRead(accountId, emailId);
@@ -177,7 +157,7 @@ export default function MessageViewer({
     };
 
     const isDraft = () => {
-        return message?.flags?.some((flag) => flag === 'Draft') || false;
+        return message?.flags?.some((flag) => flag === 'draft') || false;
     };
 
     const handleDeleteClick = () => {
@@ -202,41 +182,65 @@ export default function MessageViewer({
         setDeleteDialogOpen(false);
     };
 
-    const handleReply = () => {
+    const handleReply = async () => {
         if (!message) return;
         const originalBody = message.textBody || message.htmlBody || '';
         const quotedBody = `\n\n---\nOn ${message.date?.toLocaleString() || ''}, ${message.from_name} <${message.from_email}> wrote:\n\n${originalBody}`;
 
         setComposeData({
-            to: message.from_email,
+            to: message.from_email || '',
+            cc: message.cc || '',
             subject: message.subject?.startsWith('Re:')
                 ? message.subject
                 : `Re: ${message.subject || ''}`,
             body: quotedBody,
         });
         setComposeOpen(true);
+        
+        // Mark message as answered
+        try {
+            await apiMarkAsAnswered(accountId, emailId);
+        } catch (err) {
+            console.error('Failed to mark message as answered:', err);
+        }
     };
 
-    const handleReplyAll = () => {
+    const handleReplyAll = async () => {
         if (!message) return;
+        
+        // Build list of all recipients for CC (everyone except the sender)
         const toEmails = message.to
             .split(',')
             .map((e) => e.trim())
             .filter((e) => e);
-        const allRecipients = [message.from_email, ...toEmails];
+        const ccEmails = (message.cc || '')
+            .split(',')
+            .map((e) => e.trim())
+            .filter((e) => e);
+        
+        // Combine all recipients and remove sender
+        const allRecipients = [...toEmails, ...ccEmails].filter(e => e && e !== message.from_email);
         const uniqueRecipients = Array.from(new Set(allRecipients));
 
         const originalBody = message.textBody || message.htmlBody || '';
         const quotedBody = `\n\n---\nOn ${message.date?.toLocaleString() || ''}, ${message.from_name} <${message.from_email}> wrote:\n\n${originalBody}`;
 
         setComposeData({
-            to: uniqueRecipients.join(', '),
+            to: message.from_email || '',
+            cc: uniqueRecipients.join(', '),
             subject: message.subject?.startsWith('Re:')
                 ? message.subject
                 : `Re: ${message.subject || ''}`,
             body: quotedBody,
         });
         setComposeOpen(true);
+        
+        // Mark message as answered
+        try {
+            await apiMarkAsAnswered(accountId, emailId);
+        } catch (err) {
+            console.error('Failed to mark message as answered:', err);
+        }
     };
 
     const handleForward = () => {
@@ -341,10 +345,7 @@ export default function MessageViewer({
             <ComposeEmail
                 open={composeOpen}
                 onClose={() => setComposeOpen(false)}
-                to={composeData.to}
-                cc={composeData.cc}
-                subject={composeData.subject}
-                body={composeData.body}
+                message={composeData}
                 draftEmailId={isDraft() ? emailId : undefined}
                 accountId={accountId}
             />

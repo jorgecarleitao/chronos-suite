@@ -14,7 +14,7 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import MessageViewer from './MessageViewer';
-import ComposeEmail from './ComposeEmail';
+import ComposeEmail, { DraftMessage } from './ComposeEmail';
 import MessageListItem from './MessageListItem';
 import MessageActionsBar from './MessageActionsBar';
 import BulkActionsBar from './BulkActionsBar';
@@ -142,8 +142,8 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
         setBulkDeleteDialogOpen(false);
     };
 
-    const isUnread = (flags: string[]) => !flags.some((flag) => flag === 'Seen');
-    const isFlagged = (flags: string[]) => flags.some((flag) => flag === 'Flagged');
+    const isUnread = (flags: string[]) => !flags.some((flag) => flag === 'seen');
+    const isFlagged = (flags: string[]) => flags.some((flag) => flag === 'flagged');
 
     const now = new Date();
     const formatDate = (date: Date | null) => {
@@ -263,11 +263,13 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
                     mailbox={mailbox}
                     fromName={draftMessage.from_name}
                     fromEmail={draftMessage.from_email}
-                    to={draftMessage.to || ''}
-                    cc={draftMessage.cc || ''}
-                    bcc={draftMessage.bcc || ''}
-                    subject={draftMessage.subject || ''}
-                    body={draftMessage.textBody || ''}
+                    message={{
+                        to: draftMessage.to || '',
+                        cc: draftMessage.cc || '',
+                        bcc: draftMessage.bcc || '',
+                        subject: draftMessage.subject || '',
+                        body: draftMessage.textBody || '',
+                    }}
                     draftEmailId={draftMessage.id}
                     accountId={accountId}
                 />

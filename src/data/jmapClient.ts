@@ -433,6 +433,14 @@ class JmapService {
     }
 
     /**
+     * Mark email(s) as answered
+     */
+    async markAsAnswered(accountId: string, emailIds: string | string[]) {
+        const ids = Array.isArray(emailIds) ? emailIds : [emailIds];
+        return this.updateEmailKeywords(accountId, ids, { $answered: true });
+    }
+
+    /**
      * Move email(s) to a different mailbox
      */
     async moveEmails(accountId: string, emailIds: string[], targetMailboxId: string) {

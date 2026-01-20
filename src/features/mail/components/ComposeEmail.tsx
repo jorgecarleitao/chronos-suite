@@ -53,6 +53,14 @@ interface DraftData {
     bcc: string[];
 }
 
+export interface DraftMessage {
+    to?: string;
+    cc?: string;
+    bcc?: string;
+    subject?: string;
+    body?: string;
+}
+
 type AutoSaveStatus = 'idle' | 'saving' | 'saved';
 
 interface ComposeEmailProps {
@@ -61,11 +69,7 @@ interface ComposeEmailProps {
     mailbox?: string;
     fromName?: string;
     fromEmail?: string;
-    to?: string;
-    cc?: string;
-    bcc?: string;
-    subject?: string;
-    body?: string;
+    message?: DraftMessage;
     draftEmailId?: string;
     accountId: string;
 }
@@ -359,21 +363,17 @@ export default function ComposeEmail({
     mailbox = 'Drafts',
     fromName = '',
     fromEmail = '',
-    to: initialTo = '',
-    cc: initialCc = '',
-    bcc: initialBcc = '',
-    subject: initialSubject = '',
-    body: initialBody = '',
+    message,
     draftEmailId,
     accountId,
 }: ComposeEmailProps) {
-    const [to, setTo] = useState(initialTo);
-    const [cc, setCc] = useState(initialCc);
-    const [bcc, setBcc] = useState(initialBcc);
-    const [subject, setSubject] = useState(initialSubject);
-    const [body, setBody] = useState(initialBody);
-    const [showCc, setShowCc] = useState(!!initialCc);
-    const [showBcc, setShowBcc] = useState(!!initialBcc);
+    const [to, setTo] = useState(message?.to || '');
+    const [cc, setCc] = useState(message?.cc || '');
+    const [bcc, setBcc] = useState(message?.bcc || '');
+    const [subject, setSubject] = useState(message?.subject || '');
+    const [body, setBody] = useState(message?.body || '');
+    const [showCc, setShowCc] = useState(!!(message?.cc));
+    const [showBcc, setShowBcc] = useState(!!(message?.bcc));
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
@@ -382,6 +382,19 @@ export default function ComposeEmail({
     const [currentDraftId, setCurrentDraftId] = useState<string | undefined>(draftEmailId);
     const autoSaveTimerRef = useRef<number | null>(null);
     const lastSavedContentRef = useRef<string>('');
+
+    // Update fields when message prop changes
+    useEffect(() => {
+        if (message) {
+            setTo(message.to || '');
+            setCc(message.cc || '');
+            setBcc(message.bcc || '');
+            setSubject(message.subject || '');
+            setBody(message.body || '');
+            setShowCc(!!(message.cc));
+            setShowBcc(!!(message.bcc));
+        }
+    }, [message]);
 
     // Create draft data object
     const createDraftData = (): DraftData => ({

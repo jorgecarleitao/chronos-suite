@@ -2,6 +2,8 @@ import { jmapService, EmailData } from './jmapClient';
 import { withAuthHandling } from '../utils/authHandling';
 import { marked } from 'marked';
 
+export type MessageFlag = 'seen' | 'flagged' | 'draft' | 'answered';
+
 export interface Draft {
     to: string[];
     subject: string;
@@ -111,7 +113,7 @@ export async function updateDraft(accountId: string, emailId: string, draft: Dra
 // What the rest of the app uses
 export interface MessageMetadata {
     id: string; // The JMAP email ID
-    flags: string[];
+    flags: MessageFlag[];
     size?: number;
     from_name?: string;
     from_email?: string;
@@ -127,9 +129,38 @@ export interface Messages {
     total: number;
 }
 
+export interface MessageDetail {
+    id: string;
+    from_name?: string;
+    from_email?: string;
+    to_name?: string;
+    to_email?: string;
+    to: string; // Comma-separated string for drafts
+    cc?: string;
+    bcc?: string;
+    subject?: string;
+    date: Date | null;
+    htmlBody?: string;
+    textBody?: string;
+    flags?: MessageFlag[];
+    attachments?: any[];
+}
+
 function parseDate(value: string | null): Date | null {
     if (!value) return null;
     return new Date(value);
+}
+
+// Convert JMAP keywords to MessageFlag array
+function keywordsToFlags(keywords: any): MessageFlag[] {
+    const flags: MessageFlag[] = [];
+    if (keywords) {
+        if (keywords.$seen) flags.push('seen');
+        if (keywords.$flagged) flags.push('flagged');
+        if (keywords.$draft) flags.push('draft');
+        if (keywords.$answered) flags.push('answered');
+    }
+    return flags;
 }
 
 // Convert JMAP email to our MessageMetadata format
@@ -138,18 +169,9 @@ function mapJmapToMessageMetadata(jmapEmail: any): MessageMetadata {
     const from = jmapEmail.from?.[0];
     const to = jmapEmail.to?.[0];
 
-    // Convert JMAP keywords to flags
-    const flags: string[] = [];
-    if (jmapEmail.keywords) {
-        if (jmapEmail.keywords.$seen) flags.push('Seen');
-        if (jmapEmail.keywords.$flagged) flags.push('Flagged');
-        if (jmapEmail.keywords.$draft) flags.push('Draft');
-        if (jmapEmail.keywords.$answered) flags.push('Answered');
-    }
-
     return {
         id: jmapEmail.id,
-        flags,
+        flags: keywordsToFlags(jmapEmail.keywords),
         from_name: from?.name,
         from_email: from?.email,
         to_name: to?.name,
@@ -179,7 +201,7 @@ export async function fetchMessages(accountId: string, mailbox: string): Promise
     });
 }
 
-export async function fetchMessage(accountId: string, emailId: string) {
+export async function fetchMessage(accountId: string, emailId: string): Promise<MessageDetail> {
     return withAuthHandling(async () => {
         if (!jmapService.isInitialized()) {
             throw new Error('JMAP client not initialized. Please log in first.');
@@ -199,7 +221,7 @@ export async function fetchMessage(accountId: string, emailId: string) {
         }
 
         // Get text body
-        let textBody = '';
+        let textBody = undefined;
         if (email.textBody && email.textBody.length > 0) {
             const partId = email.textBody[0].partId;
             textBody = email.bodyValues?.[partId]?.value || '';
@@ -223,7 +245,7 @@ export async function fetchMessage(accountId: string, emailId: string) {
             date: parseDate(email.receivedAt),
             htmlBody: htmlBody || undefined,
             textBody: textBody || undefined,
-            has_attachments: email.hasAttachment,
+            flags: keywordsToFlags(email.keywords),
             attachments: email.attachments,
         };
     });
@@ -256,7 +278,7 @@ export async function prepareAndSendMessage(
     });
 }
 
-export async function sendMessage(
+async function sendMessage(
     accountId: string,
     to: string[],
     subject: string,
@@ -344,6 +366,16 @@ export async function markAsUnflagged(accountId: string, emailIds: string | stri
         }
 
         await jmapService.markAsUnflagged(accountId, emailIds);
+    });
+}
+
+export async function markAsAnswered(accountId: string, emailIds: string | string[]) {
+    return withAuthHandling(async () => {
+        if (!jmapService.isInitialized()) {
+            throw new Error('JMAP client not initialized. Please log in first.');
+        }
+
+        await jmapService.markAsAnswered(accountId, emailIds);
     });
 }
 
