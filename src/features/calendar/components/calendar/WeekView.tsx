@@ -291,8 +291,8 @@ export default function WeekView({
 
                                             // Determine visual style based on participation status
                                             const status = event.userParticipationStatus;
-                                            const participantCount = event.participants 
-                                                ? Object.keys(event.participants).length 
+                                            const participantCount = event.participants
+                                                ? Object.keys(event.participants).length
                                                 : 0;
 
                                             return (

@@ -87,7 +87,7 @@ export default function EventDialog({
             email: participantEmail.trim(),
             name: participantName.trim() || undefined,
             calendarAddress: `mailto:${participantEmail.trim()}`,
-            roles: { required: true },
+            roles: { attendee: true },
             participationStatus: 'needs-action',
             expectReply: true,
         };

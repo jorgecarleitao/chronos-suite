@@ -182,27 +182,12 @@ export async function createCalendarEvent(
 
         // Add participants if provided
         if (event.participants && Object.keys(event.participants).length > 0) {
-            // Get user's identity to add as attendee
-            const [identities] = await client.request(['Identity/get', { accountId }]);
-            const defaultIdentity = identities.list[0];
-
-            // Add self as attendee (server will handle owner/organizer role and replyTo)
-            calendarEvent.participants = {
-                self: {
-                    '@type': 'Participant',
-                    email: defaultIdentity.email,
-                    name: defaultIdentity.name,
-                    calendarAddress: `mailto:${defaultIdentity.email}`,
-                    roles: { required: true },
-                    participationStatus: 'accepted',
-                    expectReply: false,
-                },
-            };
-
-            // Add other participants
-            Object.entries(event.participants).forEach(([id, participant]) => {
-                calendarEvent.participants[id] = createJmapParticipant(participant);
-            });
+            calendarEvent.participants = Object.fromEntries(
+                Object.entries(event.participants).map(([id, participant]) => [
+                    id,
+                    createJmapParticipant(participant),
+                ])
+            );
         }
 
         const [response] = await client.request([
@@ -212,6 +197,7 @@ export async function createCalendarEvent(
                 create: {
                     'new-event': calendarEvent,
                 },
+                sendSchedulingMessages: true,
             },
         ]);
 
@@ -243,7 +229,8 @@ export async function createCalendarEvent(
             end: endDate,
             calendarId,
             description: createdEvent?.description || event.description,
-            participants: Object.keys(retrievedParticipants).length > 0 ? retrievedParticipants : undefined,
+            participants:
+                Object.keys(retrievedParticipants).length > 0 ? retrievedParticipants : undefined,
         };
     });
 }
@@ -302,27 +289,12 @@ export async function updateCalendarEvent(
 
         // Update participants if provided
         if (updates.participants !== undefined) {
-            // Get user's identity to add as attendee
-            const [identities] = await client.request(['Identity/get', { accountId }]);
-            const defaultIdentity = identities.list[0];
-
-            // Add self as attendee
-            patch.participants = {
-                self: {
-                    '@type': 'Participant',
-                    email: defaultIdentity.email,
-                    name: defaultIdentity.name,
-                    calendarAddress: `mailto:${defaultIdentity.email}`,
-                    roles: { required: true },
-                    participationStatus: 'accepted',
-                    expectReply: false,
-                },
-            };
-
-            // Add other participants
-            Object.entries(updates.participants).forEach(([id, participant]) => {
-                patch.participants[id] = createJmapParticipant(participant);
-            });
+            patch.participants = Object.fromEntries(
+                Object.entries(updates.participants).map(([id, participant]) => [
+                    id,
+                    createJmapParticipant(participant),
+                ])
+            );
         }
 
         await client.request([
@@ -332,6 +304,7 @@ export async function updateCalendarEvent(
                 update: {
                     [eventId]: patch,
                 },
+                sendSchedulingMessages: true, // Send iTIP updates to participants
             },
         ]);
     });
@@ -353,6 +326,7 @@ export async function deleteCalendarEvent(accountId: string, eventId: string): P
             {
                 accountId,
                 destroy: [eventId],
+                sendSchedulingMessages: true,
             },
         ]);
     });
@@ -582,7 +556,7 @@ export async function importCalendarInvite(
             email: defaultIdentity.email,
             name: defaultIdentity.name || defaultIdentity.email,
             calendarAddress: `mailto:${defaultIdentity.email}`,
-            roles: { required: true },
+            roles: { attendee: true },
             participationStatus: status,
             expectReply: false,
         };
@@ -599,6 +573,9 @@ export async function importCalendarInvite(
                 roles: { owner: true },
                 participationStatus: 'accepted',
                 expectReply: false,
+            };
+            calendarEvent.replyTo = {
+                imip: `mailto:${invite.organizer}`,
             };
         }
 

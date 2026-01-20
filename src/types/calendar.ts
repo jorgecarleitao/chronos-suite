@@ -2,12 +2,14 @@
  * Shared calendar-related types following JSCalendar RFC 8984
  */
 
-export type ParticipationStatus = 'needs-action' | 'accepted' | 'declined' | 'tentative' | 'delegated';
-
-export type ParticipantRole = 'owner' | 'optional' | 'informational' | 'chair' | 'required';
-
+export type ParticipationStatus =
+    | 'needs-action'
+    | 'accepted'
+    | 'declined'
+    | 'tentative'
+    | 'delegated';
+export type ParticipantRole = 'owner' | 'attendee' | 'chair' | 'contact' | 'organizer';
 export type ParticipantKind = 'individual' | 'group' | 'location' | 'resource';
-
 export type ParticipantProgress = 'in-process' | 'completed' | 'failed';
 
 export interface Participant {
@@ -16,7 +18,6 @@ export interface Participant {
     email?: string;
     description?: string;
     descriptionContentType?: string;
-    calendarAddress?: string;
     kind?: ParticipantKind;
     roles?: Record<ParticipantRole, boolean>;
     participationStatus?: ParticipationStatus;
@@ -59,6 +60,9 @@ export interface JmapParticipant {
     participationStatus: ParticipationStatus;
     expectReply: boolean;
     sentBy?: string;
+    sendTo?: {
+        imip?: string;
+    };
     delegatedTo?: Record<string, boolean>;
     delegatedFrom?: Record<string, boolean>;
     memberOf?: Record<string, boolean>;

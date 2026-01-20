@@ -11,25 +11,12 @@ export function parseJmapParticipant(
     participant: Participant;
     isCurrentUser: boolean;
 } {
-    // Extract email from calendarAddress if needed
-    let email = p.email;
-    let calendarAddress = p.calendarAddress;
-    
-    if (!email && calendarAddress) {
-        email = calendarAddress.replace(/^mailto:/i, '');
-    }
-    
-    if (!calendarAddress && email) {
-        calendarAddress = `mailto:${email}`;
-    }
-
     const participant: Participant = {
         '@type': 'Participant',
-        email,
+        email: p.email,
         name: p.name,
         description: p.description,
         descriptionContentType: p.descriptionContentType,
-        calendarAddress,
         kind: p.kind,
         roles: p.roles,
         participationStatus: p.participationStatus || 'needs-action',
@@ -45,7 +32,7 @@ export function parseJmapParticipant(
 
     return {
         participant,
-        isCurrentUser: userEmail ? email === userEmail : false,
+        isCurrentUser: userEmail ? p.email === userEmail : false,
     };
 }
 
@@ -54,21 +41,22 @@ export function parseJmapParticipant(
  * Follows JSCalendar RFC 8984 strictly
  */
 export function createJmapParticipant(participant: Participant): JmapParticipant {
-    const email = participant.email || participant.calendarAddress?.replace(/^mailto:/i, '');
-    const calendarAddress = participant.calendarAddress || (email ? `mailto:${email}` : undefined);
-    
+    const calendarAddress = `mailto:${participant.email}`;
+    const sendTo = { imip: `mailto:${participant.email}` };
+
     return {
         '@type': 'Participant',
-        email,
+        email: participant.email,
         name: participant.name,
         description: participant.description,
         descriptionContentType: participant.descriptionContentType,
         calendarAddress,
         kind: participant.kind,
-        roles: participant.roles || { required: true },
+        roles: participant.roles || { attendee: true },
         participationStatus: participant.participationStatus || 'needs-action',
         expectReply: participant.expectReply !== false,
         sentBy: participant.sentBy,
+        sendTo,
         delegatedTo: participant.delegatedTo,
         delegatedFrom: participant.delegatedFrom,
         memberOf: participant.memberOf,
@@ -92,8 +80,8 @@ export function parseJmapParticipants(
     if (eventParticipants) {
         Object.entries(eventParticipants).forEach(([id, p]) => {
             const { participant, isCurrentUser } = parseJmapParticipant(p, userEmail);
-            // Only add participants with valid email or calendarAddress
-            if (participant.email || participant.calendarAddress) {
+            // Only add participants with valid email
+            if (participant.email) {
                 participants[id] = participant;
 
                 if (isCurrentUser) {
@@ -109,11 +97,13 @@ export function parseJmapParticipants(
 /**
  * Get a display-friendly list of participant emails
  */
-export function getParticipantEmails(participants: Record<string, Participant> | undefined): string[] {
+export function getParticipantEmails(
+    participants: Record<string, Participant> | undefined
+): string[] {
     if (!participants) return [];
-    
+
     return Object.values(participants)
-        .map(p => p.email || p.calendarAddress?.replace(/^mailto:/i, ''))
+        .map((p) => p.email)
         .filter((email): email is string => !!email);
 }
 
@@ -123,20 +113,22 @@ export function getParticipantEmails(participants: Record<string, Participant> |
  */
 export function getParticipantRolePriority(participant: Participant): number {
     if (!participant.roles) return 0;
-    
-    if (participant.roles.chair) return 5;
-    if (participant.roles.owner) return 4;
-    if (participant.roles.required) return 3;
-    if (participant.roles.optional) return 2;
-    if (participant.roles.informational) return 1;
-    
+
+    if (participant.roles['chair']) return 5;
+    if (participant.roles['owner']) return 4;
+    if (participant.roles['required']) return 3;
+    if (participant.roles['optional']) return 2;
+    if (participant.roles['informational']) return 1;
+
     return 0;
 }
 
 /**
  * Convert participants Record to array for UI display
  */
-export function participantsToArray(participants: Record<string, Participant> | undefined): Participant[] {
+export function participantsToArray(
+    participants: Record<string, Participant> | undefined
+): Participant[] {
     if (!participants) return [];
     return Object.values(participants);
 }
@@ -145,10 +137,9 @@ export function participantsToArray(participants: Record<string, Participant> | 
  * Convert participants array to Record for storage
  */
 export function participantsToRecord(participants: Participant[]): Record<string, Participant> {
-    const record: Record<string, Participant> = {};
-    participants.forEach((participant, index) => {
-        const id = participant.calendarAddress || participant.email || `participant-${index}`;
-        record[id] = participant;
-    });
-    return record;
+    return Object.fromEntries(
+        participants.map((participant, index) => {
+            return [`participant${index}`, participant];
+        })
+    );
 }
