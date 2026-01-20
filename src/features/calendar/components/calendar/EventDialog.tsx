@@ -15,6 +15,7 @@ import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { CalendarEvent, Participant } from '../../../../data/calendarEvents';
 import { CalendarEventFormData } from '../../types';
+import { participantsToArray, participantsToRecord } from '../../../../utils/participantUtils';
 
 interface EventDialogProps {
     event: CalendarEvent | null;
@@ -58,7 +59,7 @@ export default function EventDialog({
                 endTime: event.end.toTimeString().slice(0, 5),
                 description: event.description || '',
                 location: event.location || '',
-                participants: event.participants || [],
+                participants: participantsToArray(event.participants),
             });
         } else if (mode === 'create') {
             const dateStr = initialDate.toISOString().split('T')[0];
@@ -82,10 +83,13 @@ export default function EventDialog({
         if (!participantEmail.trim()) return;
 
         const newParticipant: Participant = {
+            '@type': 'Participant',
             email: participantEmail.trim(),
             name: participantName.trim() || undefined,
-            role: 'attendee',
-            rsvp: true,
+            calendarAddress: `mailto:${participantEmail.trim()}`,
+            roles: { required: true },
+            participationStatus: 'needs-action',
+            expectReply: true,
         };
 
         setFormData({
@@ -115,7 +119,7 @@ export default function EventDialog({
             end,
             description: formData.description,
             location: formData.location,
-            participants: formData.participants,
+            participants: participantsToRecord(formData.participants),
         };
 
         if (mode === 'edit' && event) {

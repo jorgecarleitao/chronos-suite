@@ -153,8 +153,9 @@ interface EventTooltipContentProps {
 }
 
 function EventTooltipContent({ event }: EventTooltipContentProps) {
-    const participantCount = event.participants?.length || 0;
-    const participantNames = event.participants?.map((p) => p.name || p.email).join(', ') || '';
+    const participants = event.participants ? Object.values(event.participants) : [];
+    const participantCount = participants.length;
+    const participantNames = participants.map((p) => p.name || p.email).join(', ') || '';
 
     return (
         <Box>
@@ -290,8 +291,9 @@ export default function WeekView({
 
                                             // Determine visual style based on participation status
                                             const status = event.userParticipationStatus;
-                                            const participantCount =
-                                                event.participants?.length || 0;
+                                            const participantCount = event.participants 
+                                                ? Object.keys(event.participants).length 
+                                                : 0;
 
                                             return (
                                                 <Tooltip

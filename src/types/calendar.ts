@@ -1,17 +1,33 @@
 /**
- * Shared calendar-related types
+ * Shared calendar-related types following JSCalendar RFC 8984
  */
 
-export type ParticipationStatus = 'needs-action' | 'accepted' | 'declined' | 'tentative';
+export type ParticipationStatus = 'needs-action' | 'accepted' | 'declined' | 'tentative' | 'delegated';
 
-export type ParticipantRole = 'owner' | 'attendee' | 'optional';
+export type ParticipantRole = 'owner' | 'optional' | 'informational' | 'chair' | 'required';
+
+export type ParticipantKind = 'individual' | 'group' | 'location' | 'resource';
+
+export type ParticipantProgress = 'in-process' | 'completed' | 'failed';
 
 export interface Participant {
-    email: string;
+    '@type'?: 'Participant';
     name?: string;
-    role?: ParticipantRole;
-    rsvp?: boolean;
+    email?: string;
+    description?: string;
+    descriptionContentType?: string;
+    calendarAddress?: string;
+    kind?: ParticipantKind;
+    roles?: Record<ParticipantRole, boolean>;
     participationStatus?: ParticipationStatus;
+    expectReply?: boolean;
+    sentBy?: string;
+    delegatedTo?: Record<string, boolean>;
+    delegatedFrom?: Record<string, boolean>;
+    memberOf?: Record<string, boolean>;
+    links?: Record<string, any>; // Link type can be defined later if needed
+    progress?: ParticipantProgress; // Only for tasks
+    percentComplete?: number; // Only for tasks, 0-100
 }
 
 export interface CalendarEvent {
@@ -22,20 +38,28 @@ export interface CalendarEvent {
     calendarId?: string;
     description?: string;
     location?: string;
-    participants?: Participant[];
+    participants?: Record<string, Participant>;
+    organizerCalendarAddress?: string;
     userParticipationStatus?: ParticipationStatus;
 }
 
 /**
  * JMAP-specific types
+ * Note: JmapParticipant should follow JSCalendar RFC 8984 strictly
  */
 export interface JmapParticipant {
     '@type': 'Participant';
-    email: string;
     name?: string;
-    scheduleAgent?: 'server' | 'client' | 'none';
-    scheduleId?: string;
+    email?: string;
+    description?: string;
+    descriptionContentType?: string;
+    calendarAddress?: string;
+    kind?: ParticipantKind;
     roles: Record<string, boolean>;
     participationStatus: ParticipationStatus;
     expectReply: boolean;
+    sentBy?: string;
+    delegatedTo?: Record<string, boolean>;
+    delegatedFrom?: Record<string, boolean>;
+    memberOf?: Record<string, boolean>;
 }
