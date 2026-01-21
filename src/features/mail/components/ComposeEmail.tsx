@@ -385,9 +385,15 @@ export default function ComposeEmail({
     const [minimized, setMinimized] = useState(false);
     const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
     const [currentDraftId, setCurrentDraftId] = useState<string | undefined>(draftEmailId);
+    const currentDraftIdRef = useRef<string | undefined>(draftEmailId);
     const autoSaveTimerRef = useRef<number | null>(null);
     const lastSavedContentRef = useRef<string>('');
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Keep the ref in sync with state
+    useEffect(() => {
+        currentDraftIdRef.current = currentDraftId;
+    }, [currentDraftId]);
 
     // Update fields when message prop changes
     useEffect(() => {
@@ -441,14 +447,15 @@ export default function ComposeEmail({
 
         try {
             const draftData = createDraftData();
-            let savedDraftId = currentDraftId;
+            const existingDraftId = currentDraftIdRef.current;
 
-            if (currentDraftId) {
-                await updateDraft(accountId, currentDraftId, draftData);
+            if (existingDraftId) {
+                await updateDraft(accountId, existingDraftId, draftData);
             } else {
                 const result = await createDraft(accountId, draftData);
-                savedDraftId = result?.id;
-                setCurrentDraftId(savedDraftId);
+                const newDraftId = result?.id;
+                setCurrentDraftId(newDraftId);
+                currentDraftIdRef.current = newDraftId;
             }
 
             setSuccess('Draft saved successfully');
@@ -482,13 +489,16 @@ export default function ComposeEmail({
                 return;
             }
 
-            let savedDraftId = currentDraftId;
-            if (currentDraftId) {
-                await updateDraft(accountId, currentDraftId, draftData);
+            // Use ref to get the latest draft ID value
+            const existingDraftId = currentDraftIdRef.current;
+            
+            if (existingDraftId) {
+                await updateDraft(accountId, existingDraftId, draftData);
             } else {
                 const result = await createDraft(accountId, draftData);
-                savedDraftId = result?.id;
-                setCurrentDraftId(savedDraftId);
+                const newDraftId = result?.id;
+                setCurrentDraftId(newDraftId);
+                currentDraftIdRef.current = newDraftId;
             }
 
             lastSavedContentRef.current = currentContent;
@@ -538,6 +548,7 @@ export default function ComposeEmail({
         setMinimized(false);
         setAutoSaveStatus('idle');
         setCurrentDraftId(undefined);
+        currentDraftIdRef.current = undefined;
         lastSavedContentRef.current = '';
         if (autoSaveTimerRef.current) {
             clearTimeout(autoSaveTimerRef.current);
