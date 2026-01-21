@@ -32,6 +32,13 @@ export interface Participant {
     percentComplete?: number; // Only for tasks, 0-100
 }
 
+export interface VirtualLocation {
+    '@type': 'VirtualLocation';
+    uri: string; // The URI to join the virtual location
+    name?: string; // Display name for the virtual location
+    description?: string; // Additional description
+}
+
 export interface CalendarEvent {
     id: string;
     title: string;
@@ -40,6 +47,7 @@ export interface CalendarEvent {
     calendarId?: string;
     description?: string;
     location?: string;
+    virtualLocations?: Record<string, VirtualLocation>; // Virtual meeting links
     participants?: Record<string, Participant>;
     organizerCalendarAddress?: string;
     userParticipationStatus?: ParticipationStatus;

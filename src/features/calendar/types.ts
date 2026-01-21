@@ -11,6 +11,7 @@ export interface UICalendarEventFormData {
     end: Date;
     description: string;
     location?: string;
+    virtualLocation?: string; // Virtual meeting link (e.g., Zoom, Teams)
     participants?: UIParticipant[];
     timeZone?: string; // IANA timezone identifier
     showWithoutTime?: boolean; // All-day event flag

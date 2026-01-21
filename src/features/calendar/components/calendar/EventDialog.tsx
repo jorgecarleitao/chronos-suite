@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'preact/hooks';
+import type { JSX } from 'preact';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -32,6 +33,109 @@ interface ParticipantRow {
     required: boolean;
 }
 
+interface ParticipantSectionProps {
+    participantRows: ParticipantRow[];
+    onParticipantChange: (index: number, field: keyof ParticipantRow, value: string | boolean) => void;
+    onRemoveParticipant: (index: number) => void;
+}
+
+function ParticipantSection({
+    participantRows,
+    onParticipantChange,
+    onRemoveParticipant,
+}: ParticipantSectionProps) {
+    return (
+        <Box>
+            <Typography
+                variant="subtitle2"
+                gutterBottom
+                sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+            >
+                <PersonAddIcon fontSize="small" />
+                Invite Participants
+            </Typography>
+
+            {/* Participant rows */}
+            <Stack spacing={1.5}>
+                {participantRows.map((row, index) => (
+                    <Stack key={index} direction="row" spacing={1} alignItems="center">
+                        <TextField
+                            size="small"
+                            label="Email"
+                            type="email"
+                            placeholder="attendee@example.com"
+                            value={row.email}
+                            onChange={(e: JSX.TargetedEvent<HTMLInputElement>) =>
+                                onParticipantChange(
+                                    index,
+                                    'email',
+                                    e.currentTarget.value
+                                )
+                            }
+                            sx={{ flex: 2 }}
+                        />
+                        <TextField
+                            size="small"
+                            label="Name (optional)"
+                            placeholder="John Doe"
+                            value={row.name}
+                            onChange={(e: JSX.TargetedEvent<HTMLInputElement>) =>
+                                onParticipantChange(
+                                    index,
+                                    'name',
+                                    e.currentTarget.value
+                                )
+                            }
+                            sx={{ flex: 2 }}
+                        />
+                        <FormControlLabel
+                            control={
+                                <Switch
+                                    checked={row.required}
+                                    onChange={(e: JSX.TargetedEvent<HTMLInputElement>) =>
+                                        onParticipantChange(
+                                            index,
+                                            'required',
+                                            e.currentTarget.checked
+                                        )
+                                    }
+                                    size="small"
+                                />
+                            }
+                            label={
+                                <Typography
+                                    variant="caption"
+                                    sx={{ whiteSpace: 'nowrap' }}
+                                >
+                                    Required
+                                </Typography>
+                            }
+                            sx={{ minWidth: 110, mr: 0 }}
+                        />
+                        {row.email && (
+                            <IconButton
+                                size="small"
+                                onClick={() => onRemoveParticipant(index)}
+                                color="error"
+                            >
+                                <DeleteIcon fontSize="small" />
+                            </IconButton>
+                        )}
+                    </Stack>
+                ))}
+            </Stack>
+            <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ mt: 1, display: 'block' }}
+            >
+                Participants will receive email invitations. Toggle "Required" to mark
+                attendance as optional.
+            </Typography>
+        </Box>
+    );
+}
+
 interface EventDialogProps {
     event: CalendarEvent | null;
     initialDate: Date;
@@ -58,6 +162,7 @@ export default function EventDialog({
         endTime: '',
         description: '',
         location: '',
+        virtualLocation: '',
         allDay: false,
         timezone: getLocalTimezone(),
     });
@@ -69,6 +174,10 @@ export default function EventDialog({
     useEffect(() => {
         if (mode === 'edit' && event) {
             const isAllDay = event.showWithoutTime || false;
+            // Extract virtual location from virtualLocations
+            const virtualLocation = event.virtualLocations
+                ? Object.values(event.virtualLocations)[0]?.uri || ''
+                : '';
             setFormData({
                 title: event.title,
                 startDate: event.start.toISOString().split('T')[0],
@@ -77,6 +186,7 @@ export default function EventDialog({
                 endTime: isAllDay ? '23:59' : event.end.toTimeString().slice(0, 5),
                 description: event.description || '',
                 location: event.location || '',
+                virtualLocation,
                 allDay: isAllDay,
                 timezone: event.timeZone || getLocalTimezone(),
             });
@@ -104,6 +214,7 @@ export default function EventDialog({
                 endTime: endTime,
                 description: '',
                 location: '',
+                virtualLocation: '',
                 allDay: false,
                 timezone: getLocalTimezone(),
             });
@@ -165,6 +276,7 @@ export default function EventDialog({
             end,
             description: formData.description,
             location: formData.location,
+            virtualLocation: formData.virtualLocation,
             participants,
             timeZone: formData.timezone,
             showWithoutTime: formData.allDay,
@@ -186,10 +298,10 @@ export default function EventDialog({
                         label="Title"
                         fullWidth
                         value={formData.title}
-                        onChange={(e) =>
+                        onChange={(e: JSX.TargetedEvent<HTMLInputElement>) =>
                             setFormData({
                                 ...formData,
-                                title: (e.target as HTMLInputElement).value,
+                                title: e.currentTarget.value,
                             })
                         }
                     />
@@ -200,10 +312,10 @@ export default function EventDialog({
                             fullWidth
                             InputLabelProps={{ shrink: true }}
                             value={formData.startDate}
-                            onChange={(e) =>
+                            onChange={(e: JSX.TargetedEvent<HTMLInputElement>) =>
                                 setFormData({
                                     ...formData,
-                                    startDate: (e.target as HTMLInputElement).value,
+                                    startDate: e.currentTarget.value,
                                 })
                             }
                         />
@@ -213,10 +325,10 @@ export default function EventDialog({
                             fullWidth
                             InputLabelProps={{ shrink: true }}
                             value={formData.startTime}
-                            onChange={(e) =>
+                            onChange={(e: JSX.TargetedEvent<HTMLInputElement>) =>
                                 setFormData({
                                     ...formData,
-                                    startTime: (e.target as HTMLInputElement).value,
+                                    startTime: e.currentTarget.value,
                                 })
                             }
                             disabled={formData.allDay}
@@ -229,10 +341,10 @@ export default function EventDialog({
                             fullWidth
                             InputLabelProps={{ shrink: true }}
                             value={formData.endDate}
-                            onChange={(e) =>
+                            onChange={(e: JSX.TargetedEvent<HTMLInputElement>) =>
                                 setFormData({
                                     ...formData,
-                                    endDate: (e.target as HTMLInputElement).value,
+                                    endDate: e.currentTarget.value,
                                 })
                             }
                         />
@@ -242,10 +354,10 @@ export default function EventDialog({
                             fullWidth
                             InputLabelProps={{ shrink: true }}
                             value={formData.endTime}
-                            onChange={(e) =>
+                            onChange={(e: JSX.TargetedEvent<HTMLInputElement>) =>
                                 setFormData({
                                     ...formData,
-                                    endTime: (e.target as HTMLInputElement).value,
+                                    endTime: e.currentTarget.value,
                                 })
                             }
                             disabled={formData.allDay}
@@ -258,10 +370,10 @@ export default function EventDialog({
                             control={
                                 <Switch
                                     checked={formData.allDay}
-                                    onChange={(e) =>
+                                    onChange={(e: JSX.TargetedEvent<HTMLInputElement>) =>
                                         setFormData({
                                             ...formData,
-                                            allDay: (e.target as HTMLInputElement).checked,
+                                            allDay: e.currentTarget.checked,
                                         })
                                     }
                                 />
@@ -297,10 +409,10 @@ export default function EventDialog({
                         multiline
                         rows={3}
                         value={formData.description}
-                        onChange={(e) =>
+                        onChange={(e: JSX.TargetedEvent<HTMLInputElement>) =>
                             setFormData({
                                 ...formData,
-                                description: (e.target as HTMLInputElement).value,
+                                description: e.currentTarget.value,
                             })
                         }
                     />
@@ -309,103 +421,32 @@ export default function EventDialog({
                         fullWidth
                         placeholder="Enter event location"
                         value={formData.location}
-                        onChange={(e) =>
+                        onChange={(e: JSX.TargetedEvent<HTMLInputElement>) =>
                             setFormData({
                                 ...formData,
-                                location: (e.target as HTMLInputElement).value,
+                                location: e.currentTarget.value,
                             })
                         }
                     />
+                    <TextField
+                        label="Virtual Location (Meeting Link)"
+                        fullWidth
+                        placeholder="e.g., https://zoom.us/j/123456789 or https://teams.microsoft.com/..."
+                        value={formData.virtualLocation}
+                        onChange={(e: JSX.TargetedEvent<HTMLInputElement>) =>
+                            setFormData({
+                                ...formData,
+                                virtualLocation: e.currentTarget.value,
+                            })
+                        }
+                        helperText="Add a video conference or online meeting link"
+                    />
 
-                    {/* Participants Section */}
-                    <Box>
-                        <Typography
-                            variant="subtitle2"
-                            gutterBottom
-                            sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
-                        >
-                            <PersonAddIcon fontSize="small" />
-                            Invite Participants
-                        </Typography>
-
-                        {/* Participant rows */}
-                        <Stack spacing={1.5}>
-                            {participantRows.map((row, index) => (
-                                <Stack key={index} direction="row" spacing={1} alignItems="center">
-                                    <TextField
-                                        size="small"
-                                        label="Email"
-                                        type="email"
-                                        placeholder="attendee@example.com"
-                                        value={row.email}
-                                        onChange={(e) =>
-                                            handleParticipantChange(
-                                                index,
-                                                'email',
-                                                (e.target as HTMLInputElement).value
-                                            )
-                                        }
-                                        sx={{ flex: 2 }}
-                                    />
-                                    <TextField
-                                        size="small"
-                                        label="Name (optional)"
-                                        placeholder="John Doe"
-                                        value={row.name}
-                                        onChange={(e) =>
-                                            handleParticipantChange(
-                                                index,
-                                                'name',
-                                                (e.target as HTMLInputElement).value
-                                            )
-                                        }
-                                        sx={{ flex: 2 }}
-                                    />
-                                    <FormControlLabel
-                                        control={
-                                            <Switch
-                                                checked={row.required}
-                                                onChange={(e) =>
-                                                    handleParticipantChange(
-                                                        index,
-                                                        'required',
-                                                        (e.target as HTMLInputElement).checked
-                                                    )
-                                                }
-                                                size="small"
-                                            />
-                                        }
-                                        label={
-                                            <Typography
-                                                variant="caption"
-                                                sx={{ whiteSpace: 'nowrap' }}
-                                            >
-                                                Required
-                                            </Typography>
-                                        }
-                                        sx={{ minWidth: 110, mr: 0 }}
-                                    />
-                                    {row.email && (
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => handleRemoveParticipant(index)}
-                                            color="error"
-                                        >
-                                            <DeleteIcon fontSize="small" />
-                                        </IconButton>
-                                    )}
-                                </Stack>
-                            ))}
-                        </Stack>
-                        <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{ mt: 1, display: 'block' }}
-                        >
-                            Participants will receive email invitations. Toggle "Required" to mark
-                            attendance as optional.
-                        </Typography>
-                    </Box>
+                    <ParticipantSection
+                        participantRows={participantRows}
+                        onParticipantChange={handleParticipantChange}
+                        onRemoveParticipant={handleRemoveParticipant}
+                    />
                 </Stack>
             </DialogContent>
             <DialogActions>

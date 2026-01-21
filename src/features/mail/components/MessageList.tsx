@@ -142,22 +142,6 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
         setBulkDeleteDialogOpen(false);
     };
 
-    const isUnread = (flags: string[]) => !flags.some((flag) => flag === 'seen');
-    const isFlagged = (flags: string[]) => flags.some((flag) => flag === 'flagged');
-
-    const now = new Date();
-    const formatDate = (date: Date | null) => {
-        if (!date) return '';
-        try {
-            if (date.toDateString() === now.toDateString()) {
-                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            }
-            return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-        } catch {
-            return '';
-        }
-    };
-
     if (loading) {
         return (
             <Stack justifyContent="center" alignItems="center" height="100%">
@@ -200,11 +184,6 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
                     <BulkActionsBar
                         selectedCount={operations.selectedIds.size}
                         totalCount={total}
-                        allSelected={operations.selectedIds.size === messages.length}
-                        someSelected={
-                            operations.selectedIds.size > 0 &&
-                            operations.selectedIds.size < messages.length
-                        }
                         onSelectAll={operations.toggleSelectAll}
                         onMarkAsRead={operations.bulkMarkAsRead}
                         onMarkAsUnread={operations.bulkMarkAsUnread}
@@ -244,9 +223,6 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
                                 event.stopPropagation();
                                 operations.toggleStar(messageId, isFlagged);
                             }}
-                            formatDate={formatDate}
-                            isUnread={isUnread}
-                            isFlagged={isFlagged}
                         />
                     ))}
                 </List>

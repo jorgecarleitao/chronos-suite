@@ -15,8 +15,6 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 interface BulkActionsBarProps {
     selectedCount: number;
     totalCount: number;
-    allSelected: boolean;
-    someSelected: boolean;
     onSelectAll: () => void;
     onMarkAsRead: () => void;
     onMarkAsUnread: () => void;
@@ -29,8 +27,6 @@ interface BulkActionsBarProps {
 export default function BulkActionsBar({
     selectedCount,
     totalCount,
-    allSelected,
-    someSelected,
     onSelectAll,
     onMarkAsRead,
     onMarkAsUnread,
@@ -39,13 +35,16 @@ export default function BulkActionsBar({
     onDelete,
     onRefresh,
 }: BulkActionsBarProps) {
+    const allSelected = selectedCount === totalCount && totalCount > 0;
+    const someSelected = selectedCount > 0 && selectedCount < totalCount;
+
     return (
         <>
             <Checkbox
                 icon={<CheckBoxOutlineBlankIcon />}
                 checkedIcon={<CheckBoxIcon />}
                 indeterminateIcon={<IndeterminateCheckBoxIcon />}
-                checked={allSelected && totalCount > 0}
+                checked={allSelected}
                 indeterminate={someSelected}
                 onChange={onSelectAll}
                 title="Select all"

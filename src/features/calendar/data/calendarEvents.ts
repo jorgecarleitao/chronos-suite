@@ -104,6 +104,12 @@ export async function fetchCalendarEvents(
                 }
             }
 
+            // Parse virtual locations
+            let virtualLocations: Record<string, any> | undefined;
+            if (event.virtualLocations) {
+                virtualLocations = event.virtualLocations;
+            }
+
             return {
                 id: event.id,
                 title: event.title || '(No title)',
@@ -112,6 +118,7 @@ export async function fetchCalendarEvents(
                 calendarId: Object.keys(event.calendarIds || {})[0],
                 description: event.description,
                 location,
+                virtualLocations,
                 participants: Object.keys(participants).length > 0 ? participants : undefined,
                 userParticipationStatus,
                 timeZone: event.timeZone,
@@ -213,6 +220,16 @@ export async function createCalendarEvent(
             };
         }
 
+        // Add virtual location if provided
+        if (eventData.virtualLocation) {
+            calendarEvent.virtualLocations = {
+                virtual1: {
+                    '@type': 'VirtualLocation',
+                    uri: eventData.virtualLocation,
+                },
+            };
+        }
+
         // Add participants if provided
         if (eventData.participants && eventData.participants.length > 0) {
             const jmapParticipants = convertUIParticipantsToJmap(eventData.participants);
@@ -267,6 +284,7 @@ export async function createCalendarEvent(
                 Object.keys(retrievedParticipants).length > 0 ? retrievedParticipants : undefined,
             timeZone: createdEvent?.timeZone || eventData.timeZone,
             showWithoutTime: createdEvent?.showWithoutTime || eventData.showWithoutTime || false,
+            virtualLocations: createdEvent?.virtualLocations,
         };
     });
 }
@@ -331,6 +349,21 @@ export async function updateCalendarEvent(
             } else {
                 // Clear location if empty string
                 patch.locations = null;
+            }
+        }
+
+        // Update virtual location if provided
+        if (updates.virtualLocation !== undefined) {
+            if (updates.virtualLocation) {
+                patch.virtualLocations = {
+                    virtual1: {
+                        '@type': 'VirtualLocation',
+                        uri: updates.virtualLocation,
+                    },
+                };
+            } else {
+                // Clear virtual location if empty string
+                patch.virtualLocations = null;
             }
         }
 

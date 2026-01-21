@@ -5,9 +5,11 @@ import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import Alert from '@mui/material/Alert';
 import Chip from '@mui/material/Chip';
+import Link from '@mui/material/Link';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PersonIcon from '@mui/icons-material/Person';
+import VideocamIcon from '@mui/icons-material/Videocam';
 import { CalendarEvent } from '../../data/calendarEvents';
 import { formatDateWithTimezone, getLocalTimezone } from '../../../../utils/timezoneHelpers';
 
@@ -100,7 +102,25 @@ export default function EventList({
                                             {event.description}
                                         </Typography>
                                     )}
-                                    {event.participants && event.participants.length > 0 && (
+                                    {event.location && (
+                                        <Typography variant="body2" color="text.secondary" mt={1}>
+                                            📍 {event.location}
+                                        </Typography>
+                                    )}
+                                    {event.virtualLocations && Object.keys(event.virtualLocations).length > 0 && (
+                                        <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <VideocamIcon fontSize="small" color="primary" />
+                                            <Link
+                                                href={Object.values(event.virtualLocations)[0]?.uri}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                variant="body2"
+                                            >
+                                                Join Virtual Meeting
+                                            </Link>
+                                        </Box>
+                                    )}
+                                    {event.participants && Object.keys(event.participants).length > 0 && (
                                         <Box
                                             sx={{
                                                 display: 'flex',
@@ -111,7 +131,7 @@ export default function EventList({
                                             }}
                                         >
                                             <PersonIcon fontSize="small" color="action" />
-                                            {event.participants.map((participant, idx) => (
+                                            {Object.values(event.participants).map((participant, idx) => (
                                                 <Chip
                                                     key={idx}
                                                     label={participant.name || participant.email}

@@ -28,10 +28,23 @@ interface MessageListItemProps {
     onCheckboxChange: (messageId: string) => void;
     onDelete: (message: MessageMetadata, event: Event) => void;
     onToggleStar: (messageId: string, isFlagged: boolean, event: Event) => void;
-    formatDate: (date: Date | null) => string;
-    isUnread: (flags: string[]) => boolean;
-    isFlagged: (flags: string[]) => boolean;
 }
+
+const isUnread = (flags: string[]) => !flags.some((flag) => flag === 'seen');
+const isFlagged = (flags: string[]) => flags.some((flag) => flag === 'flagged');
+
+const formatDate = (date: Date | null) => {
+    if (!date) return '';
+    const now = new Date();
+    try {
+        if (date.toDateString() === now.toDateString()) {
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    } catch {
+        return '';
+    }
+};
 
 export default function MessageListItem({
     message,
@@ -41,9 +54,6 @@ export default function MessageListItem({
     onCheckboxChange,
     onDelete,
     onToggleStar,
-    formatDate,
-    isUnread,
-    isFlagged,
 }: MessageListItemProps) {
     const [contact, setContact] = useState<Contact | null>(null);
     const [loading, setLoading] = useState(true);

@@ -1,7 +1,9 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Tooltip from '@mui/material/Tooltip';
+import Link from '@mui/material/Link';
 import PersonIcon from '@mui/icons-material/Person';
+import VideocamIcon from '@mui/icons-material/Videocam';
 import { CalendarEvent } from '../../data/calendarEvents';
 import { isSameDay } from '../../../../utils/dateHelpers';
 import { getLocalTimezone } from '../../../../utils/timezoneHelpers';
@@ -198,6 +200,20 @@ function EventTooltipContent({ event }: EventTooltipContentProps) {
                 <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
                     📍 {event.location}
                 </Typography>
+            )}
+            {event.virtualLocations && Object.keys(event.virtualLocations).length > 0 && (
+                <Box sx={{ mt: 0.5, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <VideocamIcon fontSize="small" />
+                    <Link
+                        href={Object.values(event.virtualLocations)[0]?.uri}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        variant="caption"
+                        sx={{ color: 'inherit' }}
+                    >
+                        Virtual Meeting
+                    </Link>
+                </Box>
             )}
             {participantCount > 0 && (
                 <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
