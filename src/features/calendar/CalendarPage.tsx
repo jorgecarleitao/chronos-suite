@@ -15,7 +15,7 @@ import {
     CalendarEvent,
     Participant,
 } from './data/calendarEvents';
-import { CalendarEventFormData } from './types';
+import { UICalendarEventFormData } from './types';
 import CalendarHeader from './components/calendar/CalendarHeader';
 import MonthView from './components/calendar/MonthView';
 import WeekView from './components/calendar/WeekView';
@@ -133,7 +133,7 @@ export default function Calendar({ path }: CalendarProps) {
         setDialogEvent(event);
     };
 
-    const handleCreateEvent = async (data: CalendarEventFormData) => {
+    const handleCreateEvent = async (data: UICalendarEventFormData) => {
         if (!accountId || !selectedCalendar) return;
 
         try {
@@ -147,7 +147,7 @@ export default function Calendar({ path }: CalendarProps) {
         }
     };
 
-    const handleUpdateEvent = async (eventId: string, data: CalendarEventFormData) => {
+    const handleUpdateEvent = async (eventId: string, data: UICalendarEventFormData) => {
         if (!accountId) return;
 
         try {

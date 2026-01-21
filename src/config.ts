@@ -1,6 +1,21 @@
 /**
- * Application configuration loaded from environment variables at build time
+ * Application configuration loaded from environment variables
+ * Supports both build-time (Vite) and runtime (Docker) configuration
  */
+
+// Extend window interface for runtime config
+declare global {
+    interface Window {
+        _env_?: {
+            OAUTH2_AUTHORITY?: string;
+            OAUTH2_CLIENT_ID?: string;
+            OAUTH2_REDIRECT_URI?: string;
+            OAUTH2_SCOPES?: string;
+            JMAP_ENDPOINT?: string;
+            JMAP_SESSION_ENDPOINT?: string;
+        };
+    }
+}
 
 interface AppConfig {
     oauth: {
@@ -15,6 +30,11 @@ interface AppConfig {
     };
 }
 
+// Get environment variable from runtime config (Docker) or build-time config (Vite)
+const getEnv = (runtimeKey: keyof NonNullable<Window['_env_']>, viteKey: string): string | undefined => {
+    return window._env_?.[runtimeKey] || import.meta.env[viteKey];
+};
+
 // Parse scopes from space-separated string
 const parseScopes = (scopes: string | undefined): string[] => {
     return scopes?.split(' ').filter(Boolean) || [];
@@ -22,15 +42,15 @@ const parseScopes = (scopes: string | undefined): string[] => {
 
 export const config: AppConfig = {
     oauth: {
-        authority: import.meta.env.VITE_OAUTH_AUTHORITY || '',
-        clientId: import.meta.env.VITE_OAUTH_CLIENT_ID || '',
+        authority: getEnv('OAUTH2_AUTHORITY', 'VITE_OAUTH_AUTHORITY') || '',
+        clientId: getEnv('OAUTH2_CLIENT_ID', 'VITE_OAUTH_CLIENT_ID') || '',
         redirectUri:
-            import.meta.env.VITE_OAUTH_REDIRECT_URI || `${window.location.origin}/auth/callback`,
-        scopes: parseScopes(import.meta.env.VITE_OAUTH_SCOPES),
+            getEnv('OAUTH2_REDIRECT_URI', 'VITE_OAUTH_REDIRECT_URI') || `${window.location.origin}/auth/callback`,
+        scopes: parseScopes(getEnv('OAUTH2_SCOPES', 'VITE_OAUTH_SCOPES')),
     },
     jmap: {
-        endpoint: import.meta.env.VITE_JMAP_ENDPOINT || '',
-        sessionEndpoint: import.meta.env.VITE_JMAP_SESSION_ENDPOINT || '',
+        endpoint: getEnv('JMAP_ENDPOINT', 'VITE_JMAP_ENDPOINT') || '',
+        sessionEndpoint: getEnv('JMAP_SESSION_ENDPOINT', 'VITE_JMAP_SESSION_ENDPOINT') || '',
     },
 };
 

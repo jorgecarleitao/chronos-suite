@@ -3,8 +3,29 @@ import { Invite } from '../../../utils/calendarInviteParser';
 import { withAuthHandling } from '../../../utils/authHandling';
 import { parseJmapParticipants, createJmapParticipant } from '../../../utils/participantUtils';
 import type { Participant, CalendarEvent } from '../../../types/calendar';
+import type { UIParticipant, UICalendarEventFormData } from '../types';
 
 export type { Participant, CalendarEvent } from '../../../types/calendar';
+
+/**
+ * Convert UI participants to JMAP participants
+ */
+function convertUIParticipantsToJmap(uiParticipants: UIParticipant[]): Record<string, Participant> {
+    return Object.fromEntries(
+        uiParticipants.map((ui, index) => {
+            const participant: Participant = {
+                '@type': 'Participant',
+                email: ui.email,
+                name: ui.name,
+                calendarAddress: `mailto:${ui.email}`,
+                roles: { attendee: true },
+                participationStatus: 'needs-action',
+                expectReply: ui.required,
+            };
+            return [`participant${index}`, participant];
+        })
+    );
+}
 
 /**
  * Fetch calendar events within a date range
@@ -145,7 +166,7 @@ function calculateDuration(start: Date, end: Date): string {
 export async function createCalendarEvent(
     accountId: string,
     calendarId: string,
-    event: Partial<CalendarEvent>
+    eventData: UICalendarEventFormData
 ): Promise<CalendarEvent> {
     return withAuthHandling(async () => {
         if (!jmapService.isInitialized()) {
@@ -155,35 +176,36 @@ export async function createCalendarEvent(
         const client = jmapService.getClient();
 
         // Calculate duration from start to end
-        const endDate = event.end || new Date(event.start!.getTime() + 3600000); // Default 1 hour
-        const duration = calculateDuration(event.start!, endDate);
+        const endDate = eventData.end;
+        const duration = calculateDuration(eventData.start, endDate);
 
         const calendarEvent: any = {
             '@type': 'Event',
             calendarIds: { [calendarId]: true },
-            title: event.title || '',
-            start: event.start?.toISOString(),
+            title: eventData.title || '',
+            start: eventData.start.toISOString(),
             duration: duration,
         };
 
-        if (event.description) {
-            calendarEvent.description = event.description;
+        if (eventData.description) {
+            calendarEvent.description = eventData.description;
         }
 
         // Add location if provided
-        if (event.location) {
+        if (eventData.location) {
             calendarEvent.locations = {
                 location1: {
                     '@type': 'Location',
-                    name: event.location,
+                    name: eventData.location,
                 },
             };
         }
 
         // Add participants if provided
-        if (event.participants && Object.keys(event.participants).length > 0) {
+        if (eventData.participants && eventData.participants.length > 0) {
+            const jmapParticipants = convertUIParticipantsToJmap(eventData.participants);
             calendarEvent.participants = Object.fromEntries(
-                Object.entries(event.participants).map(([id, participant]) => [
+                Object.entries(jmapParticipants).map(([id, participant]) => [
                     id,
                     createJmapParticipant(participant),
                 ])
@@ -224,11 +246,11 @@ export async function createCalendarEvent(
 
         return {
             id: createdId,
-            title: createdEvent?.title || event.title || '',
-            start: event.start!,
+            title: createdEvent?.title || eventData.title || '',
+            start: eventData.start,
             end: endDate,
             calendarId,
-            description: createdEvent?.description || event.description,
+            description: createdEvent?.description || eventData.description,
             participants:
                 Object.keys(retrievedParticipants).length > 0 ? retrievedParticipants : undefined,
         };
@@ -241,7 +263,7 @@ export async function createCalendarEvent(
 export async function updateCalendarEvent(
     accountId: string,
     eventId: string,
-    updates: Partial<CalendarEvent>
+    updates: UICalendarEventFormData
 ): Promise<void> {
     return withAuthHandling(async () => {
         if (!jmapService.isInitialized()) {
@@ -263,9 +285,6 @@ export async function updateCalendarEvent(
             if (updates.end !== undefined) {
                 patch.duration = calculateDuration(updates.start, updates.end);
             }
-        } else if (updates.end !== undefined && updates.start) {
-            // If only end is updated, recalculate duration with existing start
-            patch.duration = calculateDuration(updates.start, updates.end);
         }
 
         if (updates.description !== undefined) {
@@ -289,8 +308,9 @@ export async function updateCalendarEvent(
 
         // Update participants if provided
         if (updates.participants !== undefined) {
+            const jmapParticipants = convertUIParticipantsToJmap(updates.participants);
             patch.participants = Object.fromEntries(
-                Object.entries(updates.participants).map(([id, participant]) => [
+                Object.entries(jmapParticipants).map(([id, participant]) => [
                     id,
                     createJmapParticipant(participant),
                 ])

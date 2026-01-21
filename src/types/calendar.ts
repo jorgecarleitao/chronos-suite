@@ -18,8 +18,9 @@ export interface Participant {
     email?: string;
     description?: string;
     descriptionContentType?: string;
+    calendarAddress?: string;
     kind?: ParticipantKind;
-    roles?: Record<ParticipantRole, boolean>;
+    roles?: Partial<Record<ParticipantRole, boolean>>;
     participationStatus?: ParticipationStatus;
     expectReply?: boolean;
     sentBy?: string;

@@ -6,23 +6,29 @@ import DialogActions from '@mui/material/DialogActions';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
-import Chip from '@mui/material/Chip';
 import IconButton from '@mui/material/IconButton';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import AddIcon from '@mui/icons-material/Add';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Switch from '@mui/material/Switch';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { CalendarEvent, Participant } from '../../data/calendarEvents';
-import { CalendarEventFormData } from '../../types';
-import { participantsToArray, participantsToRecord } from '../../../../utils/participantUtils';
+import { CalendarEvent } from '../../data/calendarEvents';
+import { UICalendarEventFormData, UIParticipant } from '../../types';
+import { participantsToArray } from '../../../../utils/participantUtils';
+
+interface ParticipantRow {
+    email: string;
+    name: string;
+    required: boolean;
+}
 
 interface EventDialogProps {
     event: CalendarEvent | null;
     initialDate: Date;
     onClose: () => void;
-    onCreate: (data: CalendarEventFormData) => void;
-    onUpdate: (eventId: string, data: CalendarEventFormData) => void;
+    onCreate: (data: UICalendarEventFormData) => void;
+    onUpdate: (eventId: string, data: UICalendarEventFormData) => void;
     onDelete: (eventId: string) => void;
 }
 
@@ -35,8 +41,6 @@ export default function EventDialog({
     onDelete,
 }: EventDialogProps) {
     const mode = event ? 'edit' : 'create';
-    const [participantEmail, setParticipantEmail] = useState('');
-    const [participantName, setParticipantName] = useState('');
     const [formData, setFormData] = useState({
         title: '',
         startDate: '',
@@ -45,8 +49,10 @@ export default function EventDialog({
         endTime: '',
         description: '',
         location: '',
-        participants: [] as Participant[],
     });
+    const [participantRows, setParticipantRows] = useState<ParticipantRow[]>([
+        { email: '', name: '', required: true },
+    ]);
 
     // Initialize form data when dialog mounts
     useEffect(() => {
@@ -59,8 +65,18 @@ export default function EventDialog({
                 endTime: event.end.toTimeString().slice(0, 5),
                 description: event.description || '',
                 location: event.location || '',
-                participants: participantsToArray(event.participants),
             });
+            
+            // Convert participants to rows
+            const existingParticipants = participantsToArray(event.participants);
+            const rows: ParticipantRow[] = existingParticipants.map(p => ({
+                email: p.email || '',
+                name: p.name || '',
+                required: p.expectReply !== false,
+            }));
+            // Always add an empty row at the end
+            rows.push({ email: '', name: '', required: true });
+            setParticipantRows(rows);
         } else if (mode === 'create') {
             const dateStr = initialDate.toISOString().split('T')[0];
             const startHour = initialDate.getHours();
@@ -74,44 +90,49 @@ export default function EventDialog({
                 endTime: endTime,
                 description: '',
                 location: '',
-                participants: [],
             });
         }
     }, []);
 
-    const handleAddParticipant = () => {
-        if (!participantEmail.trim()) return;
-
-        const newParticipant: Participant = {
-            '@type': 'Participant',
-            email: participantEmail.trim(),
-            name: participantName.trim() || undefined,
-            calendarAddress: `mailto:${participantEmail.trim()}`,
-            roles: { attendee: true },
-            participationStatus: 'needs-action',
-            expectReply: true,
-        };
-
-        setFormData({
-            ...formData,
-            participants: [...formData.participants, newParticipant],
-        });
-
-        setParticipantEmail('');
-        setParticipantName('');
+    const handleParticipantChange = (index: number, field: keyof ParticipantRow, value: string | boolean) => {
+        const updatedRows = [...participantRows];
+        updatedRows[index] = { ...updatedRows[index], [field]: value };
+        
+        // If this is the last row and email is not empty, add a new empty row
+        if (index === participantRows.length - 1 && field === 'email' && value) {
+            setParticipantRows([...updatedRows, { email: '', name: '', required: true }]);
+        }
+        // If the email is cleared on the last row and there are other rows, remove it
+        else if (index === participantRows.length - 1 && field === 'email' && !value && participantRows.length > 1) {
+            setParticipantRows(updatedRows.slice(0, -1));
+        }
+        // Otherwise just update the rows
+        else {
+            setParticipantRows(updatedRows);
+        }
     };
 
     const handleRemoveParticipant = (index: number) => {
-        const updatedParticipants = formData.participants.filter((_, i) => i !== index);
-        setFormData({
-            ...formData,
-            participants: updatedParticipants,
-        });
+        const updatedRows = participantRows.filter((_, i) => i !== index);
+        // Ensure there's always at least one empty row
+        if (updatedRows.length === 0 || updatedRows[updatedRows.length - 1].email !== '') {
+            updatedRows.push({ email: '', name: '', required: true });
+        }
+        setParticipantRows(updatedRows);
     };
 
     const handleSubmit = () => {
         const start = new Date(`${formData.startDate}T${formData.startTime}`);
         const end = new Date(`${formData.endDate}T${formData.endTime}`);
+
+        // Convert participant rows to UI participant objects (filter out empty rows)
+        const participants: UIParticipant[] = participantRows
+            .filter(row => row.email.trim())
+            .map(row => ({
+                email: row.email.trim(),
+                name: row.name.trim() || undefined,
+                required: row.required,
+            }));
 
         const data = {
             title: formData.title,
@@ -119,7 +140,7 @@ export default function EventDialog({
             end,
             description: formData.description,
             location: formData.location,
-            participants: participantsToRecord(formData.participants),
+            participants,
         };
 
         if (mode === 'edit' && event) {
@@ -238,72 +259,66 @@ export default function EventDialog({
                             Invite Participants
                         </Typography>
 
-                        {/* Display existing participants */}
-                        {formData.participants.length > 0 && (
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                                {formData.participants.map((participant, index) => (
-                                    <Chip
-                                        key={index}
-                                        label={participant.name || participant.email}
-                                        onDelete={() => handleRemoveParticipant(index)}
+                        {/* Participant rows */}
+                        <Stack spacing={1.5}>
+                            {participantRows.map((row, index) => (
+                                <Stack key={index} direction="row" spacing={1} alignItems="center">
+                                    <TextField
                                         size="small"
-                                        color="primary"
-                                        variant="outlined"
+                                        label="Email"
+                                        type="email"
+                                        placeholder="attendee@example.com"
+                                        value={row.email}
+                                        onChange={(e) =>
+                                            handleParticipantChange(index, 'email', (e.target as HTMLInputElement).value)
+                                        }
+                                        sx={{ flex: 2 }}
                                     />
-                                ))}
-                            </Box>
-                        )}
-
-                        {/* Add participant form */}
-                        <Stack direction="row" spacing={1}>
-                            <TextField
-                                size="small"
-                                label="Email"
-                                type="email"
-                                placeholder="attendee@example.com"
-                                value={participantEmail}
-                                onChange={(e) =>
-                                    setParticipantEmail((e.target as HTMLInputElement).value)
-                                }
-                                onKeyPress={(e) => {
-                                    if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        handleAddParticipant();
-                                    }
-                                }}
-                                sx={{ flex: 2 }}
-                            />
-                            <TextField
-                                size="small"
-                                label="Name (optional)"
-                                placeholder="John Doe"
-                                value={participantName}
-                                onChange={(e) =>
-                                    setParticipantName((e.target as HTMLInputElement).value)
-                                }
-                                onKeyPress={(e) => {
-                                    if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        handleAddParticipant();
-                                    }
-                                }}
-                                sx={{ flex: 2 }}
-                            />
-                            <IconButton
-                                color="primary"
-                                onClick={handleAddParticipant}
-                                disabled={!participantEmail.trim()}
-                                size="small"
-                            >
-                                <AddIcon />
-                            </IconButton>
+                                    <TextField
+                                        size="small"
+                                        label="Name (optional)"
+                                        placeholder="John Doe"
+                                        value={row.name}
+                                        onChange={(e) =>
+                                            handleParticipantChange(index, 'name', (e.target as HTMLInputElement).value)
+                                        }
+                                        sx={{ flex: 2 }}
+                                    />
+                                    <FormControlLabel
+                                        control={
+                                            <Switch
+                                                checked={row.required}
+                                                onChange={(e) =>
+                                                    handleParticipantChange(index, 'required', (e.target as HTMLInputElement).checked)
+                                                }
+                                                size="small"
+                                            />
+                                        }
+                                        label={
+                                            <Typography variant="caption" sx={{ whiteSpace: 'nowrap' }}>
+                                                Required
+                                            </Typography>
+                                        }
+                                        sx={{ minWidth: 110, mr: 0 }}
+                                    />
+                                    {row.email && (
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => handleRemoveParticipant(index)}
+                                            color="error"
+                                        >
+                                            <DeleteIcon fontSize="small" />
+                                        </IconButton>
+                                    )}
+                                </Stack>
+                            ))}
                         </Stack>
                         <Typography
                             variant="caption"
                             color="text.secondary"
-                            sx={{ mt: 0.5, display: 'block' }}
+                            sx={{ mt: 1, display: 'block' }}
                         >
-                            Participants will receive email invitations with calendar event details
+                            Participants will receive email invitations. Toggle "Required" to mark attendance as optional.
                         </Typography>
                     </Box>
                 </Stack>

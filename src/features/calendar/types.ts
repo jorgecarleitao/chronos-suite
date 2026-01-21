@@ -1,10 +1,15 @@
-import { Participant } from '../../types/calendar';
+// UI-focused participant interface (JMAP-agnostic)
+export interface UIParticipant {
+    email: string;
+    name?: string;
+    required: boolean;
+}
 
-export interface CalendarEventFormData {
+export interface UICalendarEventFormData {
     title: string;
     start: Date;
     end: Date;
     description: string;
     location?: string;
-    participants: Participant[];
+    participants?: UIParticipant[];
 }
