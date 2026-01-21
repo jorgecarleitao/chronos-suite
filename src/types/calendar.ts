@@ -43,6 +43,8 @@ export interface CalendarEvent {
     participants?: Record<string, Participant>;
     organizerCalendarAddress?: string;
     userParticipationStatus?: ParticipationStatus;
+    timeZone?: string; // IANA timezone identifier (e.g., 'America/New_York')
+    showWithoutTime?: boolean; // All-day event flag
 }
 
 /**

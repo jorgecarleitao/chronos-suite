@@ -11,11 +11,16 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { CalendarEvent } from '../../data/calendarEvents';
 import { UICalendarEventFormData, UIParticipant } from '../../types';
 import { participantsToArray } from '../../../../utils/participantUtils';
+import { getCommonTimezones, getLocalTimezone, formatTimezoneDisplay } from '../../../../utils/timezoneHelpers';
 
 interface ParticipantRow {
     email: string;
@@ -49,6 +54,8 @@ export default function EventDialog({
         endTime: '',
         description: '',
         location: '',
+        allDay: false,
+        timezone: getLocalTimezone(),
     });
     const [participantRows, setParticipantRows] = useState<ParticipantRow[]>([
         { email: '', name: '', required: true },
@@ -57,14 +64,17 @@ export default function EventDialog({
     // Initialize form data when dialog mounts
     useEffect(() => {
         if (mode === 'edit' && event) {
+            const isAllDay = event.showWithoutTime || false;
             setFormData({
                 title: event.title,
                 startDate: event.start.toISOString().split('T')[0],
-                startTime: event.start.toTimeString().slice(0, 5),
+                startTime: isAllDay ? '00:00' : event.start.toTimeString().slice(0, 5),
                 endDate: event.end.toISOString().split('T')[0],
-                endTime: event.end.toTimeString().slice(0, 5),
+                endTime: isAllDay ? '23:59' : event.end.toTimeString().slice(0, 5),
                 description: event.description || '',
                 location: event.location || '',
+                allDay: isAllDay,
+                timezone: event.timeZone || getLocalTimezone(),
             });
             
             // Convert participants to rows
@@ -90,6 +100,8 @@ export default function EventDialog({
                 endTime: endTime,
                 description: '',
                 location: '',
+                allDay: false,
+                timezone: getLocalTimezone(),
             });
         }
     }, []);
@@ -134,13 +146,15 @@ export default function EventDialog({
                 required: row.required,
             }));
 
-        const data = {
+        const data: UICalendarEventFormData = {
             title: formData.title,
             start,
             end,
             description: formData.description,
             location: formData.location,
             participants,
+            timeZone: formData.timezone,
+            showWithoutTime: formData.allDay,
         };
 
         if (mode === 'edit' && event) {
@@ -192,6 +206,7 @@ export default function EventDialog({
                                     startTime: (e.target as HTMLInputElement).value,
                                 })
                             }
+                            disabled={formData.allDay}
                         />
                     </Stack>
                     <Stack direction="row" spacing={2}>
@@ -220,8 +235,49 @@ export default function EventDialog({
                                     endTime: (e.target as HTMLInputElement).value,
                                 })
                             }
+                            disabled={formData.allDay}
                         />
                     </Stack>
+                    
+                    {/* All-day and Timezone Section */}
+                    <Stack direction="row" spacing={2} alignItems="center">
+                        <FormControlLabel
+                            control={
+                                <Switch
+                                    checked={formData.allDay}
+                                    onChange={(e) =>
+                                        setFormData({
+                                            ...formData,
+                                            allDay: (e.target as HTMLInputElement).checked,
+                                        })
+                                    }
+                                />
+                            }
+                            label="All-day event"
+                        />
+                        <FormControl fullWidth>
+                            <InputLabel id="timezone-label">Timezone</InputLabel>
+                            <Select
+                                labelId="timezone-label"
+                                value={formData.timezone}
+                                label="Timezone"
+                                onChange={(e) =>
+                                    setFormData({
+                                        ...formData,
+                                        timezone: e.target.value as string,
+                                    })
+                                }
+                                disabled={formData.allDay}
+                            >
+                                {getCommonTimezones().map((tz) => (
+                                    <MenuItem key={tz} value={tz}>
+                                        {formatTimezoneDisplay(tz)}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Stack>
+                    
                     <TextField
                         label="Description"
                         fullWidth

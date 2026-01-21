@@ -4,6 +4,7 @@ import Tooltip from '@mui/material/Tooltip';
 import PersonIcon from '@mui/icons-material/Person';
 import { CalendarEvent } from '../../data/calendarEvents';
 import { isSameDay } from '../../../../utils/dateHelpers';
+import { getLocalTimezone } from '../../../../utils/timezoneHelpers';
 
 interface WeekViewProps {
     currentDate: Date;
@@ -162,17 +163,28 @@ function EventTooltipContent({ event }: EventTooltipContentProps) {
             <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
                 {event.title}
             </Typography>
-            <Typography variant="caption" display="block">
-                {event.start.toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                })}{' '}
-                -{' '}
-                {event.end.toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                })}
-            </Typography>
+            {event.showWithoutTime ? (
+                <Typography variant="caption" display="block">
+                    All-day event
+                </Typography>
+            ) : (
+                <Typography variant="caption" display="block">
+                    {event.start.toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                    })}{' '}
+                    -{' '}
+                    {event.end.toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                    })}
+                    {event.timeZone && event.timeZone !== getLocalTimezone() && (
+                        <Typography component="span" variant="caption" sx={{ ml: 0.5, opacity: 0.7 }}>
+                            ({event.timeZone})
+                        </Typography>
+                    )}
+                </Typography>
+            )}
             {event.description && (
                 <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
                     {event.description}

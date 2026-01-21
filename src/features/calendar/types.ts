@@ -12,4 +12,6 @@ export interface UICalendarEventFormData {
     description: string;
     location?: string;
     participants?: UIParticipant[];
+    timeZone?: string; // IANA timezone identifier
+    showWithoutTime?: boolean; // All-day event flag
 }

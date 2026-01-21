@@ -114,6 +114,8 @@ export async function fetchCalendarEvents(
                 location,
                 participants: Object.keys(participants).length > 0 ? participants : undefined,
                 userParticipationStatus,
+                timeZone: event.timeZone,
+                showWithoutTime: event.showWithoutTime || false,
             };
         });
 
@@ -187,6 +189,16 @@ export async function createCalendarEvent(
             duration: duration,
         };
 
+        // Add timezone if provided (and not an all-day event)
+        if (eventData.timeZone && !eventData.showWithoutTime) {
+            calendarEvent.timeZone = eventData.timeZone;
+        }
+
+        // Add all-day flag if set
+        if (eventData.showWithoutTime) {
+            calendarEvent.showWithoutTime = true;
+        }
+
         if (eventData.description) {
             calendarEvent.description = eventData.description;
         }
@@ -253,6 +265,8 @@ export async function createCalendarEvent(
             description: createdEvent?.description || eventData.description,
             participants:
                 Object.keys(retrievedParticipants).length > 0 ? retrievedParticipants : undefined,
+            timeZone: createdEvent?.timeZone || eventData.timeZone,
+            showWithoutTime: createdEvent?.showWithoutTime || eventData.showWithoutTime || false,
         };
     });
 }
@@ -289,6 +303,20 @@ export async function updateCalendarEvent(
 
         if (updates.description !== undefined) {
             patch.description = updates.description;
+        }
+
+        // Update timezone if provided (only applies to timed events)
+        if (updates.timeZone !== undefined && !updates.showWithoutTime) {
+            patch.timeZone = updates.timeZone;
+        }
+
+        // Update all-day flag if provided
+        if (updates.showWithoutTime !== undefined) {
+            patch.showWithoutTime = updates.showWithoutTime;
+            // If changing to all-day, remove timezone
+            if (updates.showWithoutTime) {
+                patch.timeZone = null;
+            }
         }
 
         // Update location if provided

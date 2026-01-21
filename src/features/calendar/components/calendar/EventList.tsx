@@ -9,6 +9,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PersonIcon from '@mui/icons-material/Person';
 import { CalendarEvent } from '../../data/calendarEvents';
+import { formatDateWithTimezone, getLocalTimezone } from '../../../../utils/timezoneHelpers';
 
 interface EventListProps {
     selectedDate: Date;
@@ -67,17 +68,28 @@ export default function EventList({
                                     <Typography variant="subtitle1" fontWeight="bold">
                                         {event.title}
                                     </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        {event.start.toLocaleTimeString([], {
-                                            hour: '2-digit',
-                                            minute: '2-digit',
-                                        })}
-                                        {' - '}
-                                        {event.end.toLocaleTimeString([], {
-                                            hour: '2-digit',
-                                            minute: '2-digit',
-                                        })}
-                                    </Typography>
+                                    {event.showWithoutTime ? (
+                                        <Typography variant="body2" color="text.secondary">
+                                            All-day event
+                                        </Typography>
+                                    ) : (
+                                        <Typography variant="body2" color="text.secondary">
+                                            {event.start.toLocaleTimeString([], {
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                            })}
+                                            {' - '}
+                                            {event.end.toLocaleTimeString([], {
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                            })}
+                                            {event.timeZone && event.timeZone !== getLocalTimezone() && (
+                                                <Typography component="span" variant="caption" sx={{ ml: 1, opacity: 0.7 }}>
+                                                    ({event.timeZone})
+                                                </Typography>
+                                            )}
+                                        </Typography>
+                                    )}
                                     {event.description && (
                                         <Typography variant="body2" mt={1}>
                                             {event.description}
