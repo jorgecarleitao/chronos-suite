@@ -2,7 +2,7 @@
 set -e
 
 # Generate env-config.js with runtime environment variables mapped to VITE_ format
-cat > /app/dist/env-config.js << EOF
+cat > /usr/share/nginx/html/env-config.js << EOF
 window._env_ = {
   VITE_OAUTH_AUTHORITY: "${OAUTH_AUTHORITY:-}",
   VITE_OAUTH_CLIENT_ID: "${OAUTH_CLIENT_ID:-}",

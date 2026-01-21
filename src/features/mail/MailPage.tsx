@@ -94,7 +94,8 @@ export default function Mail({ path }: MailProps) {
                 console.warn('Failed to load shared mailboxes:', sharedError);
             }
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error) || 'Unknown error';
+            const errorMessage =
+                error instanceof Error ? error.message : String(error) || 'Unknown error';
             console.error('Failed to load mailboxes:', errorMessage, error);
             if (errorMessage.includes('not initialized')) {
                 route('/login');

@@ -491,7 +491,7 @@ export default function ComposeEmail({
 
             // Use ref to get the latest draft ID value
             const existingDraftId = currentDraftIdRef.current;
-            
+
             if (existingDraftId) {
                 await updateDraft(accountId, existingDraftId, draftData);
             } else {
@@ -533,6 +533,31 @@ export default function ComposeEmail({
             }
         };
     }, [to, cc, bcc, subject, body, showCc, showBcc, attachments, open]);
+
+    const handleClose = async () => {
+        // Save draft before closing if there's content
+        if (to || subject || body || cc || bcc || attachments.length > 0) {
+            try {
+                const draftData = createDraftData();
+                const currentContent = JSON.stringify(draftData);
+
+                // Only save if content has changed since last save
+                if (currentContent !== lastSavedContentRef.current) {
+                    const existingDraftId = currentDraftIdRef.current;
+
+                    if (existingDraftId) {
+                        await updateDraft(accountId, existingDraftId, draftData);
+                    } else {
+                        await createDraft(accountId, draftData);
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to save draft on close:', err);
+            }
+        }
+
+        onClose();
+    };
 
     const handleClear = () => {
         setTo('');
@@ -625,7 +650,7 @@ export default function ComposeEmail({
                 autoSaveStatus={autoSaveStatus}
                 minimized={minimized}
                 onMinimize={() => setMinimized(!minimized)}
-                onClose={onClose}
+                onClose={handleClose}
                 onExpandClick={() => minimized && setMinimized(false)}
             />
 

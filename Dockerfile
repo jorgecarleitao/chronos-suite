@@ -21,23 +21,38 @@ COPY . .
 RUN pnpm run build
 
 # Stage 2: Runtime
-FROM alpine:3.19
-
-# Install static-web-server (Rust-based, high performance)
-RUN apk add --no-cache static-web-server
+FROM nginx:alpine
 
 # Create non-root user
 RUN addgroup -g 1001 -S appuser && \
     adduser -u 1001 -S appuser -G appuser
 
-WORKDIR /app
-
 # Copy built assets from builder
-COPY --from=builder --chown=appuser:appuser /app/dist ./dist
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy nginx configuration for SPA
+RUN echo 'server { \
+    listen 8080; \
+    root /usr/share/nginx/html; \
+    index index.html; \
+    location / { \
+        try_files $uri $uri/ /index.html; \
+    } \
+}' > /etc/nginx/conf.d/default.conf
 
 # Copy env injection script
-COPY --chown=appuser:appuser docker-entrypoint.sh /docker-entrypoint.sh
+COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
+
+# Update nginx to run on port 8080 (non-privileged)
+RUN sed -i 's/listen\s*80;/listen 8080;/' /etc/nginx/conf.d/default.conf
+
+# Make html directory writable by appuser for env-config.js generation
+RUN chown -R appuser:appuser /usr/share/nginx/html && \
+    chown appuser:appuser /var/cache/nginx && \
+    chown -R appuser:appuser /var/log/nginx && \
+    touch /var/run/nginx.pid && \
+    chown appuser:appuser /var/run/nginx.pid
 
 # Switch to non-root user
 USER appuser
@@ -45,4 +60,4 @@ USER appuser
 EXPOSE 8080
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["static-web-server", "-p", "8080", "-d", "dist", "--page-fallback", "dist/index.html"]
+CMD ["nginx", "-g", "daemon off;"]

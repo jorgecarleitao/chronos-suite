@@ -107,40 +107,57 @@ export default function EventList({
                                             📍 {event.location}
                                         </Typography>
                                     )}
-                                    {event.virtualLocations && Object.keys(event.virtualLocations).length > 0 && (
-                                        <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <VideocamIcon fontSize="small" color="primary" />
-                                            <Link
-                                                href={Object.values(event.virtualLocations)[0]?.uri}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                variant="body2"
+                                    {event.virtualLocations &&
+                                        Object.keys(event.virtualLocations).length > 0 && (
+                                            <Box
+                                                sx={{
+                                                    mt: 1,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 1,
+                                                }}
                                             >
-                                                Join Virtual Meeting
-                                            </Link>
-                                        </Box>
-                                    )}
-                                    {event.participants && Object.keys(event.participants).length > 0 && (
-                                        <Box
-                                            sx={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: 1,
-                                                mt: 1,
-                                                flexWrap: 'wrap',
-                                            }}
-                                        >
-                                            <PersonIcon fontSize="small" color="action" />
-                                            {Object.values(event.participants).map((participant, idx) => (
-                                                <Chip
-                                                    key={idx}
-                                                    label={participant.name || participant.email}
-                                                    size="small"
-                                                    variant="outlined"
-                                                />
-                                            ))}
-                                        </Box>
-                                    )}
+                                                <VideocamIcon fontSize="small" color="primary" />
+                                                <Link
+                                                    href={
+                                                        Object.values(event.virtualLocations)[0]
+                                                            ?.uri
+                                                    }
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    variant="body2"
+                                                >
+                                                    Join Virtual Meeting
+                                                </Link>
+                                            </Box>
+                                        )}
+                                    {event.participants &&
+                                        Object.keys(event.participants).length > 0 && (
+                                            <Box
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 1,
+                                                    mt: 1,
+                                                    flexWrap: 'wrap',
+                                                }}
+                                            >
+                                                <PersonIcon fontSize="small" color="action" />
+                                                {Object.values(event.participants).map(
+                                                    (participant, idx) => (
+                                                        <Chip
+                                                            key={idx}
+                                                            label={
+                                                                participant.name ||
+                                                                participant.email
+                                                            }
+                                                            size="small"
+                                                            variant="outlined"
+                                                        />
+                                                    )
+                                                )}
+                                            </Box>
+                                        )}
                                 </Box>
                                 <Stack direction="row" spacing={1}>
                                     <IconButton size="small" onClick={() => onEditEvent(event)}>

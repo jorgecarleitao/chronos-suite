@@ -35,7 +35,11 @@ interface ParticipantRow {
 
 interface ParticipantSectionProps {
     participantRows: ParticipantRow[];
-    onParticipantChange: (index: number, field: keyof ParticipantRow, value: string | boolean) => void;
+    onParticipantChange: (
+        index: number,
+        field: keyof ParticipantRow,
+        value: string | boolean
+    ) => void;
     onRemoveParticipant: (index: number) => void;
 }
 
@@ -66,11 +70,7 @@ function ParticipantSection({
                             placeholder="attendee@example.com"
                             value={row.email}
                             onChange={(e: JSX.TargetedEvent<HTMLInputElement>) =>
-                                onParticipantChange(
-                                    index,
-                                    'email',
-                                    e.currentTarget.value
-                                )
+                                onParticipantChange(index, 'email', e.currentTarget.value)
                             }
                             sx={{ flex: 2 }}
                         />
@@ -80,11 +80,7 @@ function ParticipantSection({
                             placeholder="John Doe"
                             value={row.name}
                             onChange={(e: JSX.TargetedEvent<HTMLInputElement>) =>
-                                onParticipantChange(
-                                    index,
-                                    'name',
-                                    e.currentTarget.value
-                                )
+                                onParticipantChange(index, 'name', e.currentTarget.value)
                             }
                             sx={{ flex: 2 }}
                         />
@@ -103,10 +99,7 @@ function ParticipantSection({
                                 />
                             }
                             label={
-                                <Typography
-                                    variant="caption"
-                                    sx={{ whiteSpace: 'nowrap' }}
-                                >
+                                <Typography variant="caption" sx={{ whiteSpace: 'nowrap' }}>
                                     Required
                                 </Typography>
                             }
@@ -124,13 +117,9 @@ function ParticipantSection({
                     </Stack>
                 ))}
             </Stack>
-            <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ mt: 1, display: 'block' }}
-            >
-                Participants will receive email invitations. Toggle "Required" to mark
-                attendance as optional.
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                Participants will receive email invitations. Toggle "Required" to mark attendance as
+                optional.
             </Typography>
         </Box>
     );
