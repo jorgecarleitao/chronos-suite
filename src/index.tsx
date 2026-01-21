@@ -29,6 +29,7 @@ const initializeFromStorage = async () => {
         try {
             await jmapService.initialize(accessToken);
         } catch (error) {
+            console.error('Failed to initialize JMAP client:', error);
             oauthService.logout();
         }
     }

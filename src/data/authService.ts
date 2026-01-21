@@ -53,7 +53,7 @@ class OAuthService {
         authorizationUrl.searchParams.set('client_id', this.client.client_id);
         authorizationUrl.searchParams.set('redirect_uri', config.oauth.redirectUri);
         authorizationUrl.searchParams.set('response_type', 'code');
-        authorizationUrl.searchParams.set('scope', config.oauth.scopes.join(' '));
+        authorizationUrl.searchParams.set('scope', config.oauth.scopes);
         authorizationUrl.searchParams.set('state', state);
         authorizationUrl.searchParams.set('code_challenge', codeChallenge);
         authorizationUrl.searchParams.set('code_challenge_method', 'S256');

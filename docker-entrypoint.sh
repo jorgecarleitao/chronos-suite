@@ -1,15 +1,15 @@
 #!/bin/sh
 set -e
 
-# Generate env-config.js with runtime environment variables
+# Generate env-config.js with runtime environment variables mapped to VITE_ format
 cat > /app/dist/env-config.js << EOF
 window._env_ = {
-  OAUTH2_AUTHORITY: "${OAUTH2_AUTHORITY:-}",
-  OAUTH2_CLIENT_ID: "${OAUTH2_CLIENT_ID:-}",
-  OAUTH2_REDIRECT_URI: "${OAUTH2_REDIRECT_URI:-}",
-  OAUTH2_SCOPES: "${OAUTH2_SCOPES:-}",
-  JMAP_ENDPOINT: "${JMAP_ENDPOINT:-}",
-  JMAP_SESSION_ENDPOINT: "${JMAP_SESSION_ENDPOINT:-}"
+  VITE_OAUTH_AUTHORITY: "${OAUTH_AUTHORITY:-}",
+  VITE_OAUTH_CLIENT_ID: "${OAUTH_CLIENT_ID:-}",
+  VITE_BASE_URL: "${BASE_URL:-}",
+  VITE_OAUTH_SCOPES: "${OAUTH_SCOPES:-}",
+  VITE_JMAP_ENDPOINT: "${JMAP_ENDPOINT:-}",
+  VITE_JMAP_SESSION_ENDPOINT: "${JMAP_SESSION_ENDPOINT:-}"
 };
 EOF
 

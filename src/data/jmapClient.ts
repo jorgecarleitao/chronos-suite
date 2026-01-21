@@ -332,8 +332,7 @@ class JmapService {
                 type: 'multipart/mixed',
                 subParts: [
                     contentPart,
-                    ...email.attachments.map((attachment, index) => ({
-                        partId: `attachment${index}`,
+                    ...email.attachments.map((attachment) => ({
                         blobId: attachment.blobId,
                         type: attachment.type,
                         name: attachment.name,
