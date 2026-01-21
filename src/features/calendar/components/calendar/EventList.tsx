@@ -83,11 +83,16 @@ export default function EventList({
                                                 hour: '2-digit',
                                                 minute: '2-digit',
                                             })}
-                                            {event.timeZone && event.timeZone !== getLocalTimezone() && (
-                                                <Typography component="span" variant="caption" sx={{ ml: 1, opacity: 0.7 }}>
-                                                    ({event.timeZone})
-                                                </Typography>
-                                            )}
+                                            {event.timeZone &&
+                                                event.timeZone !== getLocalTimezone() && (
+                                                    <Typography
+                                                        component="span"
+                                                        variant="caption"
+                                                        sx={{ ml: 1, opacity: 0.7 }}
+                                                    >
+                                                        ({event.timeZone})
+                                                    </Typography>
+                                                )}
                                         </Typography>
                                     )}
                                     {event.description && (

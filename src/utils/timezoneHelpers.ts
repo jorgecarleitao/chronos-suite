@@ -97,17 +97,17 @@ export function formatTimezoneDisplay(timezone: string, date?: Date): string {
             timeZone: timezone,
             timeZoneName: 'short',
         });
-        
+
         const parts = formatter.formatToParts(targetDate);
-        const timeZoneName = parts.find(part => part.type === 'timeZoneName')?.value;
-        
+        const timeZoneName = parts.find((part) => part.type === 'timeZoneName')?.value;
+
         if (timeZoneName) {
             return `${timezone} (${timeZoneName})`;
         }
     } catch (e) {
         console.warn(`Could not format timezone ${timezone}:`, e);
     }
-    
+
     return timezone;
 }
 
@@ -127,10 +127,10 @@ export function dateToTimezoneISOString(date: Date, timezone: string): string {
             second: '2-digit',
             hour12: false,
         });
-        
+
         const parts = formatter.formatToParts(date);
-        const getValue = (type: string) => parts.find(p => p.type === type)?.value || '';
-        
+        const getValue = (type: string) => parts.find((p) => p.type === type)?.value || '';
+
         return `${getValue('year')}-${getValue('month')}-${getValue('day')}T${getValue('hour')}:${getValue('minute')}:${getValue('second')}`;
     } catch (e) {
         console.warn(`Could not convert date to timezone ${timezone}:`, e);
@@ -142,7 +142,11 @@ export function dateToTimezoneISOString(date: Date, timezone: string): string {
 /**
  * Format a date for display with timezone awareness
  */
-export function formatDateWithTimezone(date: Date, timezone?: string, showTimezone: boolean = false): string {
+export function formatDateWithTimezone(
+    date: Date,
+    timezone?: string,
+    showTimezone: boolean = false
+): string {
     if (!timezone || timezone === getLocalTimezone()) {
         // Use local time
         const formatted = date.toLocaleString('en-US', {
@@ -154,7 +158,7 @@ export function formatDateWithTimezone(date: Date, timezone?: string, showTimezo
         });
         return showTimezone ? `${formatted} (Local)` : formatted;
     }
-    
+
     try {
         const formatted = date.toLocaleString('en-US', {
             timeZone: timezone,
@@ -164,16 +168,18 @@ export function formatDateWithTimezone(date: Date, timezone?: string, showTimezo
             hour: '2-digit',
             minute: '2-digit',
         });
-        
+
         if (showTimezone) {
             const tzAbbr = new Intl.DateTimeFormat('en-US', {
                 timeZone: timezone,
                 timeZoneName: 'short',
-            }).formatToParts(date).find(part => part.type === 'timeZoneName')?.value;
-            
+            })
+                .formatToParts(date)
+                .find((part) => part.type === 'timeZoneName')?.value;
+
             return tzAbbr ? `${formatted} ${tzAbbr}` : formatted;
         }
-        
+
         return formatted;
     } catch (e) {
         console.warn(`Could not format date with timezone ${timezone}:`, e);

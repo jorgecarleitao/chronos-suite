@@ -139,7 +139,7 @@ export default function MessageViewer({
         try {
             const data = await apiFetchMessage(accountId, emailId);
             setMessage(data);
-            
+
             // Mark message as read when opened
             const isUnread = !data.flags?.some((flag) => flag === 'seen');
             if (isUnread) {
@@ -196,7 +196,7 @@ export default function MessageViewer({
             body: quotedBody,
         });
         setComposeOpen(true);
-        
+
         // Mark message as answered
         try {
             await apiMarkAsAnswered(accountId, emailId);
@@ -207,7 +207,7 @@ export default function MessageViewer({
 
     const handleReplyAll = async () => {
         if (!message) return;
-        
+
         // Build list of all recipients for CC (everyone except the sender)
         const toEmails = message.to
             .split(',')
@@ -217,9 +217,11 @@ export default function MessageViewer({
             .split(',')
             .map((e) => e.trim())
             .filter((e) => e);
-        
+
         // Combine all recipients and remove sender
-        const allRecipients = [...toEmails, ...ccEmails].filter(e => e && e !== message.from_email);
+        const allRecipients = [...toEmails, ...ccEmails].filter(
+            (e) => e && e !== message.from_email
+        );
         const uniqueRecipients = Array.from(new Set(allRecipients));
 
         const originalBody = message.textBody || message.htmlBody || '';
@@ -234,7 +236,7 @@ export default function MessageViewer({
             body: quotedBody,
         });
         setComposeOpen(true);
-        
+
         // Mark message as answered
         try {
             await apiMarkAsAnswered(accountId, emailId);
@@ -318,7 +320,7 @@ export default function MessageViewer({
                                 />
                             )}
                             <AttachmentList
-                                attachments={message.attachments as Attachment[] || []}
+                                attachments={(message.attachments as Attachment[]) || []}
                                 accountId={accountId}
                             />
                             <MessageBody htmlBody={message.htmlBody} textBody={message.textBody} />

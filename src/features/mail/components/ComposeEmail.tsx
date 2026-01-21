@@ -22,6 +22,8 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import MDEditor from '@uiw/react-md-editor';
 import rehypeSanitize from 'rehype-sanitize';
 import { createDraft, updateDraft, prepareAndSendMessage } from '../data/messages';
+import { jmapService, Attachment } from '../../../data/jmapClient';
+import AttachmentsSection from './AttachmentsSection';
 
 const composerWidth = 600;
 const composerHeight = 600;
@@ -51,6 +53,7 @@ interface DraftData {
     body: string;
     cc: string[];
     bcc: string[];
+    attachments?: Attachment[];
 }
 
 export interface DraftMessage {
@@ -372,9 +375,11 @@ export default function ComposeEmail({
     const [bcc, setBcc] = useState(message?.bcc || '');
     const [subject, setSubject] = useState(message?.subject || '');
     const [body, setBody] = useState(message?.body || '');
-    const [showCc, setShowCc] = useState(!!(message?.cc));
-    const [showBcc, setShowBcc] = useState(!!(message?.bcc));
+    const [attachments, setAttachments] = useState<Attachment[]>([]);
+    const [showCc, setShowCc] = useState(!!message?.cc);
+    const [showBcc, setShowBcc] = useState(!!message?.bcc);
     const [saving, setSaving] = useState(false);
+    const [uploading, setUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
     const [minimized, setMinimized] = useState(false);
@@ -382,6 +387,7 @@ export default function ComposeEmail({
     const [currentDraftId, setCurrentDraftId] = useState<string | undefined>(draftEmailId);
     const autoSaveTimerRef = useRef<number | null>(null);
     const lastSavedContentRef = useRef<string>('');
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Update fields when message prop changes
     useEffect(() => {
@@ -391,8 +397,8 @@ export default function ComposeEmail({
             setBcc(message.bcc || '');
             setSubject(message.subject || '');
             setBody(message.body || '');
-            setShowCc(!!(message.cc));
-            setShowBcc(!!(message.bcc));
+            setShowCc(!!message.cc);
+            setShowBcc(!!message.bcc);
         }
     }, [message]);
 
@@ -403,6 +409,7 @@ export default function ComposeEmail({
         body,
         cc: showCc ? parseEmailList(cc) : [],
         bcc: showBcc ? parseEmailList(bcc) : [],
+        attachments: attachments.length > 0 ? attachments : undefined,
     });
 
     const handleSend = async () => {
@@ -413,6 +420,7 @@ export default function ComposeEmail({
             const data = await prepareAndSendMessage(accountId, parseEmailList(to), subject, body, {
                 cc: showCc && cc ? parseEmailList(cc) : undefined,
                 bcc: showBcc && bcc ? parseEmailList(bcc) : undefined,
+                attachments: attachments.length > 0 ? attachments : undefined,
             });
             setSuccess('Email sent successfully');
             setTimeout(() => {
@@ -514,7 +522,7 @@ export default function ComposeEmail({
                 clearTimeout(autoSaveTimerRef.current);
             }
         };
-    }, [to, cc, bcc, subject, body, showCc, showBcc, open]);
+    }, [to, cc, bcc, subject, body, showCc, showBcc, attachments, open]);
 
     const handleClear = () => {
         setTo('');
@@ -522,6 +530,7 @@ export default function ComposeEmail({
         setBcc('');
         setSubject('');
         setBody('');
+        setAttachments([]);
         setShowCc(false);
         setShowBcc(false);
         setError(null);
@@ -543,6 +552,45 @@ export default function ComposeEmail({
         } catch (err) {
             setError('Failed to upload image');
         }
+    };
+
+    const handleFileAttach = async (event: Event) => {
+        const input = event.target as HTMLInputElement;
+        const files = input.files;
+        if (!files || files.length === 0) return;
+
+        setUploading(true);
+        setError(null);
+
+        try {
+            const newAttachments: Attachment[] = [];
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const uploadResult = await jmapService.uploadBlob(accountId, file);
+
+                newAttachments.push({
+                    blobId: uploadResult.blobId,
+                    name: file.name,
+                    type: uploadResult.type,
+                    size: uploadResult.size,
+                });
+            }
+
+            setAttachments((prev) => [...prev, ...newAttachments]);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to upload attachments');
+        } finally {
+            setUploading(false);
+            // Reset input so the same file can be selected again
+            if (input) {
+                input.value = '';
+            }
+        }
+    };
+
+    const handleRemoveAttachment = (index: number) => {
+        setAttachments((prev) => prev.filter((_, i) => i !== index));
     };
 
     if (!open) return null;
@@ -609,6 +657,15 @@ export default function ComposeEmail({
                         body={body}
                         onBodyChange={setBody}
                         onImageUpload={handleImageUpload}
+                    />
+
+                    <AttachmentsSection
+                        attachments={attachments}
+                        uploading={uploading}
+                        saving={saving}
+                        fileInputRef={fileInputRef}
+                        onFileAttach={handleFileAttach}
+                        onRemoveAttachment={handleRemoveAttachment}
                     />
 
                     <ActionsBar

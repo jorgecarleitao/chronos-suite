@@ -179,7 +179,11 @@ function EventTooltipContent({ event }: EventTooltipContentProps) {
                         minute: '2-digit',
                     })}
                     {event.timeZone && event.timeZone !== getLocalTimezone() && (
-                        <Typography component="span" variant="caption" sx={{ ml: 0.5, opacity: 0.7 }}>
+                        <Typography
+                            component="span"
+                            variant="caption"
+                            sx={{ ml: 0.5, opacity: 0.7 }}
+                        >
                             ({event.timeZone})
                         </Typography>
                     )}

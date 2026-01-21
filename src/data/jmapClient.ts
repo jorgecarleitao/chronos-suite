@@ -13,6 +13,14 @@ export interface EmailData {
     subject: string;
     bodyText?: string;
     bodyHtml?: string;
+    attachments?: Attachment[];
+}
+
+export interface Attachment {
+    blobId: string;
+    name: string;
+    type: string;
+    size: number;
 }
 
 /**
@@ -315,6 +323,27 @@ class JmapService {
         emailObject.bodyValues = bodyValues;
         emailObject.bodyStructure = bodyStructure;
 
+        // Add attachments if provided
+        if (email.attachments && email.attachments.length > 0) {
+            // Convert to multipart/mixed if we have attachments
+            const contentPart = bodyStructure;
+
+            emailObject.bodyStructure = {
+                type: 'multipart/mixed',
+                subParts: [
+                    contentPart,
+                    ...email.attachments.map((attachment, index) => ({
+                        partId: `attachment${index}`,
+                        blobId: attachment.blobId,
+                        type: attachment.type,
+                        name: attachment.name,
+                        disposition: 'attachment',
+                        size: attachment.size,
+                    })),
+                ],
+            };
+        }
+
         // Create the email
         const [createResponse] = await client.request([
             'Email/set',
@@ -541,6 +570,25 @@ class JmapService {
             mimeType: mimeType || 'application/octet-stream',
             fileName: 'attachment',
         });
+    }
+
+    /**
+     * Upload a blob (for attachments)
+     */
+    async uploadBlob(
+        accountId: string,
+        file: File
+    ): Promise<{ blobId: string; size: number; type: string }> {
+        const client = this.getClient();
+
+        // Upload the file as a blob - uploadBlob takes accountId and body as separate parameters
+        const uploadResponse = await client.uploadBlob(accountId, file);
+
+        return {
+            blobId: uploadResponse.blobId,
+            size: uploadResponse.size,
+            type: uploadResponse.type || file.type,
+        };
     }
 
     /**

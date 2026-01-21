@@ -31,7 +31,10 @@ interface AppConfig {
 }
 
 // Get environment variable from runtime config (Docker) or build-time config (Vite)
-const getEnv = (runtimeKey: keyof NonNullable<Window['_env_']>, viteKey: string): string | undefined => {
+const getEnv = (
+    runtimeKey: keyof NonNullable<Window['_env_']>,
+    viteKey: string
+): string | undefined => {
     return window._env_?.[runtimeKey] || import.meta.env[viteKey];
 };
 
@@ -45,7 +48,8 @@ export const config: AppConfig = {
         authority: getEnv('OAUTH2_AUTHORITY', 'VITE_OAUTH_AUTHORITY') || '',
         clientId: getEnv('OAUTH2_CLIENT_ID', 'VITE_OAUTH_CLIENT_ID') || '',
         redirectUri:
-            getEnv('OAUTH2_REDIRECT_URI', 'VITE_OAUTH_REDIRECT_URI') || `${window.location.origin}/auth/callback`,
+            getEnv('OAUTH2_REDIRECT_URI', 'VITE_OAUTH_REDIRECT_URI') ||
+            `${window.location.origin}/auth/callback`,
         scopes: parseScopes(getEnv('OAUTH2_SCOPES', 'VITE_OAUTH_SCOPES')),
     },
     jmap: {

@@ -20,7 +20,11 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { CalendarEvent } from '../../data/calendarEvents';
 import { UICalendarEventFormData, UIParticipant } from '../../types';
 import { participantsToArray } from '../../../../utils/participantUtils';
-import { getCommonTimezones, getLocalTimezone, formatTimezoneDisplay } from '../../../../utils/timezoneHelpers';
+import {
+    getCommonTimezones,
+    getLocalTimezone,
+    formatTimezoneDisplay,
+} from '../../../../utils/timezoneHelpers';
 
 interface ParticipantRow {
     email: string;
@@ -76,10 +80,10 @@ export default function EventDialog({
                 allDay: isAllDay,
                 timezone: event.timeZone || getLocalTimezone(),
             });
-            
+
             // Convert participants to rows
             const existingParticipants = participantsToArray(event.participants);
-            const rows: ParticipantRow[] = existingParticipants.map(p => ({
+            const rows: ParticipantRow[] = existingParticipants.map((p) => ({
                 email: p.email || '',
                 name: p.name || '',
                 required: p.expectReply !== false,
@@ -106,16 +110,25 @@ export default function EventDialog({
         }
     }, []);
 
-    const handleParticipantChange = (index: number, field: keyof ParticipantRow, value: string | boolean) => {
+    const handleParticipantChange = (
+        index: number,
+        field: keyof ParticipantRow,
+        value: string | boolean
+    ) => {
         const updatedRows = [...participantRows];
         updatedRows[index] = { ...updatedRows[index], [field]: value };
-        
+
         // If this is the last row and email is not empty, add a new empty row
         if (index === participantRows.length - 1 && field === 'email' && value) {
             setParticipantRows([...updatedRows, { email: '', name: '', required: true }]);
         }
         // If the email is cleared on the last row and there are other rows, remove it
-        else if (index === participantRows.length - 1 && field === 'email' && !value && participantRows.length > 1) {
+        else if (
+            index === participantRows.length - 1 &&
+            field === 'email' &&
+            !value &&
+            participantRows.length > 1
+        ) {
             setParticipantRows(updatedRows.slice(0, -1));
         }
         // Otherwise just update the rows
@@ -139,8 +152,8 @@ export default function EventDialog({
 
         // Convert participant rows to UI participant objects (filter out empty rows)
         const participants: UIParticipant[] = participantRows
-            .filter(row => row.email.trim())
-            .map(row => ({
+            .filter((row) => row.email.trim())
+            .map((row) => ({
                 email: row.email.trim(),
                 name: row.name.trim() || undefined,
                 required: row.required,
@@ -238,7 +251,7 @@ export default function EventDialog({
                             disabled={formData.allDay}
                         />
                     </Stack>
-                    
+
                     {/* All-day and Timezone Section */}
                     <Stack direction="row" spacing={2} alignItems="center">
                         <FormControlLabel
@@ -277,7 +290,7 @@ export default function EventDialog({
                             </Select>
                         </FormControl>
                     </Stack>
-                    
+
                     <TextField
                         label="Description"
                         fullWidth
@@ -326,7 +339,11 @@ export default function EventDialog({
                                         placeholder="attendee@example.com"
                                         value={row.email}
                                         onChange={(e) =>
-                                            handleParticipantChange(index, 'email', (e.target as HTMLInputElement).value)
+                                            handleParticipantChange(
+                                                index,
+                                                'email',
+                                                (e.target as HTMLInputElement).value
+                                            )
                                         }
                                         sx={{ flex: 2 }}
                                     />
@@ -336,7 +353,11 @@ export default function EventDialog({
                                         placeholder="John Doe"
                                         value={row.name}
                                         onChange={(e) =>
-                                            handleParticipantChange(index, 'name', (e.target as HTMLInputElement).value)
+                                            handleParticipantChange(
+                                                index,
+                                                'name',
+                                                (e.target as HTMLInputElement).value
+                                            )
                                         }
                                         sx={{ flex: 2 }}
                                     />
@@ -345,13 +366,20 @@ export default function EventDialog({
                                             <Switch
                                                 checked={row.required}
                                                 onChange={(e) =>
-                                                    handleParticipantChange(index, 'required', (e.target as HTMLInputElement).checked)
+                                                    handleParticipantChange(
+                                                        index,
+                                                        'required',
+                                                        (e.target as HTMLInputElement).checked
+                                                    )
                                                 }
                                                 size="small"
                                             />
                                         }
                                         label={
-                                            <Typography variant="caption" sx={{ whiteSpace: 'nowrap' }}>
+                                            <Typography
+                                                variant="caption"
+                                                sx={{ whiteSpace: 'nowrap' }}
+                                            >
                                                 Required
                                             </Typography>
                                         }
@@ -374,7 +402,8 @@ export default function EventDialog({
                             color="text.secondary"
                             sx={{ mt: 1, display: 'block' }}
                         >
-                            Participants will receive email invitations. Toggle "Required" to mark attendance as optional.
+                            Participants will receive email invitations. Toggle "Required" to mark
+                            attendance as optional.
                         </Typography>
                     </Box>
                 </Stack>

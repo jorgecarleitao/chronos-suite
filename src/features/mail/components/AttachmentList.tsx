@@ -37,11 +37,11 @@ interface AttachmentListProps {
  */
 function formatFileSize(bytes: number): string {
     if (bytes === 0) return '0 Bytes';
-    
+
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
+
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
 }
 
@@ -59,7 +59,11 @@ function getFileIcon(mimeType: string): JSX.Element {
         return <VideoLibraryIcon />;
     } else if (mimeType.startsWith('audio/')) {
         return <AudioFileIcon />;
-    } else if (mimeType.includes('zip') || mimeType.includes('compress') || mimeType.includes('archive')) {
+    } else if (
+        mimeType.includes('zip') ||
+        mimeType.includes('compress') ||
+        mimeType.includes('archive')
+    ) {
         return <FolderZipIcon />;
     }
     return <AttachFileIcon />;
@@ -89,7 +93,7 @@ async function downloadAttachment(
     try {
         const response = await jmapService.downloadBlob(accountId, blobId, mimeType);
         const blob = await response.blob();
-        
+
         // Create a download link
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -108,19 +112,15 @@ async function downloadAttachment(
 /**
  * Open attachment in new tab (for PDFs, images, etc.)
  */
-async function openAttachment(
-    accountId: string,
-    blobId: string,
-    mimeType: string
-): Promise<void> {
+async function openAttachment(accountId: string, blobId: string, mimeType: string): Promise<void> {
     try {
         const response = await jmapService.downloadBlob(accountId, blobId, mimeType);
         const blob = await response.blob();
-        
+
         // Create a URL for the blob and open in new tab
         const url = URL.createObjectURL(blob);
         const newWindow = window.open(url, '_blank');
-        
+
         // Clean up the URL after a delay
         if (newWindow) {
             setTimeout(() => URL.revokeObjectURL(url), 60000); // Clean up after 1 minute
@@ -158,7 +158,9 @@ export default function AttachmentList({ attachments, accountId }: AttachmentLis
             <List disablePadding>
                 {regularAttachments.map((attachment, index) => {
                     const fileName = attachment.name || `attachment-${index + 1}`;
-                    const fileSize = attachment.size ? formatFileSize(attachment.size) : 'Unknown size';
+                    const fileSize = attachment.size
+                        ? formatFileSize(attachment.size)
+                        : 'Unknown size';
                     const canPreview = canPreviewInBrowser(attachment.type);
 
                     return (

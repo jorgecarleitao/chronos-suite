@@ -1,4 +1,4 @@
-import { jmapService, EmailData } from '../../../data/jmapClient';
+import { jmapService, EmailData, Attachment } from '../../../data/jmapClient';
 import { withAuthHandling } from '../../../utils/authHandling';
 import { marked } from 'marked';
 
@@ -10,6 +10,7 @@ export interface Draft {
     body: string;
     cc?: string[];
     bcc?: string[];
+    attachments?: Attachment[];
 }
 
 // Mailbox cache to map names to IDs
@@ -263,6 +264,7 @@ export async function prepareAndSendMessage(
     options?: {
         cc?: string[];
         bcc?: string[];
+        attachments?: Attachment[];
     }
 ) {
     // Convert markdown to HTML
@@ -288,6 +290,7 @@ async function sendMessage(
         bcc?: string[];
         isHtml?: boolean;
         plainText?: string;
+        attachments?: Attachment[];
     }
 ) {
     if (!jmapService.isInitialized()) {
@@ -305,6 +308,11 @@ async function sendMessage(
     }
     if (options?.bcc && options.bcc.length > 0) {
         emailData.bcc = options.bcc.map((email) => ({ email }));
+    }
+
+    // Add attachments if provided
+    if (options?.attachments && options.attachments.length > 0) {
+        emailData.attachments = options.attachments;
     }
 
     // Set both HTML and plain text body for better compatibility
