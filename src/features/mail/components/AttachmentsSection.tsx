@@ -40,28 +40,13 @@ export default function AttachmentsSection({
 }: AttachmentsSectionProps) {
     return (
         <Box>
-            <Stack direction="row" spacing={1} alignItems="center" mb={1}>
-                <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    style={{ display: 'none' }}
-                    onChange={onFileAttach}
-                />
-                <Button
-                    size="small"
-                    startIcon={uploading ? <CircularProgress size={16} /> : <AttachFileIcon />}
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploading}
-                >
-                    {uploading ? 'Uploading...' : 'Attach Files'}
-                </Button>
-                {attachments.length > 0 && (
-                    <Typography variant="caption" color="text.secondary">
-                        {attachments.length} file{attachments.length > 1 ? 's' : ''} attached
-                    </Typography>
-                )}
-            </Stack>
+            <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                style={{ display: 'none' }}
+                onChange={onFileAttach}
+            />
 
             {attachments.length > 0 && (
                 <List

@@ -209,6 +209,12 @@ export default function Mail({ path }: MailProps) {
         }
     };
 
+    const handleCreateMailboxFromSidebar = async (name: string, parentId?: string) => {
+        if (!accountId) return;
+        await createMailbox(accountId, name, parentId);
+        await loadMailboxes(accountId);
+    };
+
     // Convert backend tree structure to frontend nodes and sort
     const mailboxTree = sortMailboxes(mailboxes.map(convertToNode));
     const isActualMailbox = isSelectableMailbox(selectedMailbox, mailboxes);
@@ -228,6 +234,7 @@ export default function Mail({ path }: MailProps) {
                 onContextMenu={handleContextMenu}
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
+                onCreateMailbox={handleCreateMailboxFromSidebar}
             />
 
             {/* Message list area */}

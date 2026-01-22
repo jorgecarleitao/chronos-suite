@@ -18,10 +18,15 @@ import SaveIcon from '@mui/icons-material/Save';
 import MinimizeIcon from '@mui/icons-material/Minimize';
 import MaximizeIcon from '@mui/icons-material/Maximize';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AttachFileIcon from '@mui/icons-material/AttachFile';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+import FormatColorTextIcon from '@mui/icons-material/FormatColorText';
 
 import MDEditor from '@uiw/react-md-editor';
 import rehypeSanitize from 'rehype-sanitize';
-import { createDraft, updateDraft, prepareAndSendMessage } from '../data/messages';
+import { createDraft, updateDraft, prepareAndSendMessage, deleteMessage } from '../data/messages';
 import { jmapService, Attachment } from '../../../data/jmapClient';
 import AttachmentsSection from './AttachmentsSection';
 
@@ -98,13 +103,10 @@ function ComposerHeader({
             direction="row"
             justifyContent="space-between"
             alignItems="center"
-            sx={{
-                bgcolor: 'primary.main',
-                color: 'primary.contrastText',
-                px: 2,
-                py: 1,
-                cursor: minimized ? 'pointer' : 'default',
-            }}
+            bgcolor="primary.main"
+            color="primary.contrastText"
+            px={2}
+            py={1}
             onClick={onExpandClick}
         >
             <Stack direction="row" alignItems="center" spacing={1}>
@@ -115,27 +117,11 @@ function ComposerHeader({
                     <Chip
                         size="small"
                         label="Saving..."
-                        icon={<CircularProgress size={12} sx={{ color: 'inherit' }} />}
-                        sx={{
-                            height: 20,
-                            fontSize: '0.7rem',
-                            bgcolor: 'rgba(255,255,255,0.2)',
-                            color: 'inherit',
-                        }}
+                        icon={<CircularProgress size={12} color="inherit" />}
                     />
                 )}
                 {autoSaveStatus === 'saved' && (
-                    <Chip
-                        size="small"
-                        label="Saved"
-                        icon={<CheckCircleIcon sx={{ fontSize: 14 }} />}
-                        sx={{
-                            height: 20,
-                            fontSize: '0.7rem',
-                            bgcolor: 'rgba(255,255,255,0.2)',
-                            color: 'inherit',
-                        }}
-                    />
+                    <Chip size="small" label="Saved" icon={<CheckCircleIcon fontSize="small" />} />
                 )}
             </Stack>
             <Stack direction="row" spacing={0.5}>
@@ -145,7 +131,7 @@ function ComposerHeader({
                         onMinimize();
                     }}
                     size="small"
-                    sx={{ color: 'inherit' }}
+                    color="inherit"
                 >
                     {minimized ? (
                         <MaximizeIcon fontSize="small" />
@@ -159,7 +145,7 @@ function ComposerHeader({
                         onClose();
                     }}
                     size="small"
-                    sx={{ color: 'inherit' }}
+                    color="inherit"
                 >
                     <CloseIcon fontSize="small" />
                 </IconButton>
@@ -203,73 +189,69 @@ function EmailFields({
     onToggleBcc,
 }: EmailFieldsProps) {
     return (
-        <>
-            {(fromName || fromEmail) && (
+        <Stack spacing={0} divider={<Divider />}>
+            <Stack direction="row" alignItems="center" spacing={1} py={1} px={2}>
                 <TextField
-                    label="From"
-                    variant="outlined"
+                    variant="standard"
                     size="small"
                     fullWidth
-                    value={fromName ? `${fromName} <${fromEmail}>` : fromEmail}
-                    disabled
-                    InputProps={{ readOnly: true }}
+                    value={to}
+                    onChange={(e) => onToChange((e.target as HTMLInputElement).value)}
+                    placeholder="Recipients"
+                    InputProps={{ disableUnderline: true }}
+                    autoComplete="off"
                 />
-            )}
-
-            <TextField
-                label="To"
-                variant="outlined"
-                size="small"
-                fullWidth
-                value={to}
-                onChange={(e) => onToChange((e.target as HTMLInputElement).value)}
-                required
-                helperText="Separate multiple addresses with commas or semicolons"
-            />
-
-            <Stack direction="row" spacing={1}>
                 <Button size="small" onClick={onToggleCc}>
-                    {showCc ? 'Remove Cc' : 'Add Cc'}
+                    Cc
                 </Button>
                 <Button size="small" onClick={onToggleBcc}>
-                    {showBcc ? 'Remove Bcc' : 'Add Bcc'}
+                    Bcc
                 </Button>
             </Stack>
 
             {showCc && (
-                <TextField
-                    label="Cc"
-                    variant="outlined"
-                    size="small"
-                    fullWidth
-                    value={cc}
-                    onChange={(e) => onCcChange((e.target as HTMLInputElement).value)}
-                    helperText="Separate multiple addresses with commas or semicolons"
-                />
+                <Stack direction="row" alignItems="center" spacing={1} py={1} px={2}>
+                    <TextField
+                        variant="standard"
+                        size="small"
+                        fullWidth
+                        value={cc}
+                        onChange={(e) => onCcChange((e.target as HTMLInputElement).value)}
+                        placeholder="Cc"
+                        InputProps={{ disableUnderline: true }}
+                        autoComplete="off"
+                    />
+                </Stack>
             )}
 
             {showBcc && (
-                <TextField
-                    label="Bcc"
-                    variant="outlined"
-                    size="small"
-                    fullWidth
-                    value={bcc}
-                    onChange={(e) => onBccChange((e.target as HTMLInputElement).value)}
-                    helperText="Separate multiple addresses with commas or semicolons"
-                />
+                <Stack direction="row" alignItems="center" spacing={1} py={1} px={2}>
+                    <TextField
+                        variant="standard"
+                        size="small"
+                        fullWidth
+                        value={bcc}
+                        onChange={(e) => onBccChange((e.target as HTMLInputElement).value)}
+                        placeholder="Bcc"
+                        InputProps={{ disableUnderline: true }}
+                        autoComplete="off"
+                    />
+                </Stack>
             )}
 
-            <TextField
-                label="Subject"
-                variant="outlined"
-                size="small"
-                fullWidth
-                value={subject}
-                onChange={(e) => onSubjectChange((e.target as HTMLInputElement).value)}
-                required
-            />
-        </>
+            <Stack direction="row" alignItems="center" spacing={1} py={1} px={2}>
+                <TextField
+                    variant="standard"
+                    size="small"
+                    fullWidth
+                    value={subject}
+                    onChange={(e) => onSubjectChange((e.target as HTMLInputElement).value)}
+                    placeholder="Subject"
+                    InputProps={{ disableUnderline: true }}
+                    autoComplete="off"
+                />
+            </Stack>
+        </Stack>
     );
 }
 
@@ -302,20 +284,24 @@ function BodyEditor({ body, onBodyChange, onImageUpload }: BodyEditorProps) {
     };
 
     return (
-        <Box>
-            <Typography variant="caption" color="text.secondary" display="block" marginBottom={1}>
-                Body (Markdown supported - paste images directly)
-            </Typography>
-            <div data-color-mode="light" onPaste={handlePaste}>
+        <Box flex={1} minHeight={0} display="flex" flexDirection="column" px={2} pt={2}>
+            <Box
+                data-color-mode="light"
+                onPaste={handlePaste}
+                flex={1}
+                minHeight={0}
+                display="flex"
+                flexDirection="column"
+            >
                 <MDEditor
                     value={body}
                     onChange={handleEditorChange}
-                    height={300}
+                    height="100%"
                     previewOptions={{
                         rehypePlugins: [[rehypeSanitize]],
                     }}
                 />
-            </div>
+            </Box>
         </Box>
     );
 }
@@ -324,38 +310,32 @@ function BodyEditor({ body, onBodyChange, onImageUpload }: BodyEditorProps) {
 interface ActionsBarProps {
     saving: boolean;
     onSend: () => void;
-    onSaveDraft: () => void;
-    onClear: () => void;
+    onAttach: () => void;
+    onDelete: () => void;
 }
 
-function ActionsBar({ saving, onSend, onSaveDraft, onClear }: ActionsBarProps) {
+function ActionsBar({ saving, onSend, onAttach, onDelete }: ActionsBarProps) {
     return (
-        <>
-            <Divider />
-            <Stack direction="row" spacing={1}>
-                <Button
-                    variant="contained"
-                    startIcon={saving ? <CircularProgress size={20} /> : <SendIcon />}
-                    onClick={onSend}
-                    disabled={saving}
-                    fullWidth
-                    color="primary"
-                >
-                    Send
-                </Button>
-                <Button
-                    variant="outlined"
-                    startIcon={<SaveIcon />}
-                    onClick={onSaveDraft}
-                    disabled={saving}
-                >
-                    Save Draft
-                </Button>
-                <Button variant="outlined" onClick={onClear} disabled={saving}>
-                    Clear
-                </Button>
-            </Stack>
-        </>
+        <Stack direction="row" spacing={0.5} px={2} py={1.5} borderTop={1} borderColor="divider">
+            <Button
+                variant="contained"
+                startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <SendIcon />}
+                endIcon={<ArrowDropDownIcon />}
+                onClick={onSend}
+                disabled={saving}
+            >
+                Send
+            </Button>
+
+            <Box flex={1} />
+
+            <IconButton size="small" onClick={onAttach} disabled={saving} title="Attach files">
+                <AttachFileIcon fontSize="small" />
+            </IconButton>
+            <IconButton size="small" onClick={onDelete} disabled={saving} title="Delete draft">
+                <DeleteIcon fontSize="small" />
+            </IconButton>
+        </Stack>
     );
 }
 
@@ -435,37 +415,6 @@ export default function ComposeEmail({
             }, 1500);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to send email');
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const handleSaveDraft = async () => {
-        setSaving(true);
-        setError(null);
-        setSuccess(null);
-
-        try {
-            const draftData = createDraftData();
-            const existingDraftId = currentDraftIdRef.current;
-
-            if (existingDraftId) {
-                await updateDraft(accountId, existingDraftId, draftData);
-            } else {
-                const result = await createDraft(accountId, draftData);
-                const newDraftId = result?.id;
-                setCurrentDraftId(newDraftId);
-                currentDraftIdRef.current = newDraftId;
-            }
-
-            setSuccess('Draft saved successfully');
-            lastSavedContentRef.current = JSON.stringify(draftData);
-            setTimeout(() => {
-                handleClear();
-                onClose();
-            }, 1500);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to save draft');
         } finally {
             setSaving(false);
         }
@@ -559,6 +508,28 @@ export default function ComposeEmail({
         onClose();
     };
 
+    const handleDelete = async () => {
+        // Clear auto-save timer immediately to prevent saving while deleting
+        if (autoSaveTimerRef.current) {
+            clearTimeout(autoSaveTimerRef.current);
+        }
+
+        const existingDraftId = currentDraftIdRef.current;
+
+        // Clear and close immediately
+        handleClear();
+        onClose();
+
+        // Delete in background if draft exists
+        if (existingDraftId) {
+            try {
+                await deleteMessage(accountId, existingDraftId);
+            } catch (err) {
+                console.error('Failed to delete draft:', err);
+            }
+        }
+    };
+
     const handleClear = () => {
         setTo('');
         setCc('');
@@ -629,6 +600,14 @@ export default function ComposeEmail({
         setAttachments((prev) => prev.filter((_, i) => i !== index));
     };
 
+    const handleAttachClick = () => {
+        if (fileInputRef.current) {
+            fileInputRef.current.click();
+        } else {
+            console.error('File input ref is null');
+        }
+    };
+
     if (!open) return null;
 
     return (
@@ -639,11 +618,12 @@ export default function ComposeEmail({
                 bottom: 16,
                 right: 16,
                 width: composerWidth,
-                maxHeight: minimized ? 'auto' : composerHeight,
+                height: minimized ? 'auto' : composerHeight,
                 display: 'flex',
                 flexDirection: 'column',
                 zIndex: 1300,
                 overflow: 'hidden',
+                borderRadius: 2,
             }}
         >
             <ComposerHeader
@@ -654,22 +634,30 @@ export default function ComposeEmail({
                 onExpandClick={() => minimized && setMinimized(false)}
             />
 
-            <Collapse in={!minimized}>
-                <Stack
-                    padding={2}
-                    spacing={2}
-                    sx={{ maxHeight: composerHeight - 60, overflow: 'auto' }}
-                >
+            <Collapse in={!minimized} timeout="auto" unmountOnExit>
+                <Stack height={composerHeight - 48} display="flex" flexDirection="column">
                     {/* Success/Error messages */}
-                    {success && (
-                        <Alert severity="success" onClose={() => setSuccess(null)}>
-                            {success}
-                        </Alert>
-                    )}
-                    {error && (
-                        <Alert severity="error" onClose={() => setError(null)}>
-                            {error}
-                        </Alert>
+                    {(success || error) && (
+                        <Box px={2} pt={1}>
+                            {success && (
+                                <Alert
+                                    severity="success"
+                                    onClose={() => setSuccess(null)}
+                                    sx={{ mb: 1 }}
+                                >
+                                    {success}
+                                </Alert>
+                            )}
+                            {error && (
+                                <Alert
+                                    severity="error"
+                                    onClose={() => setError(null)}
+                                    sx={{ mb: 1 }}
+                                >
+                                    {error}
+                                </Alert>
+                            )}
+                        </Box>
                     )}
 
                     <EmailFields
@@ -695,20 +683,33 @@ export default function ComposeEmail({
                         onImageUpload={handleImageUpload}
                     />
 
-                    <AttachmentsSection
-                        attachments={attachments}
-                        uploading={uploading}
-                        saving={saving}
-                        fileInputRef={fileInputRef}
-                        onFileAttach={handleFileAttach}
-                        onRemoveAttachment={handleRemoveAttachment}
+                    {/* Hidden file input - always rendered */}
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        style={{ display: 'none' }}
+                        onChange={handleFileAttach}
                     />
+
+                    {attachments.length > 0 && (
+                        <Box px={2} pb={1}>
+                            <AttachmentsSection
+                                attachments={attachments}
+                                uploading={uploading}
+                                saving={saving}
+                                fileInputRef={fileInputRef}
+                                onFileAttach={handleFileAttach}
+                                onRemoveAttachment={handleRemoveAttachment}
+                            />
+                        </Box>
+                    )}
 
                     <ActionsBar
                         saving={saving}
                         onSend={handleSend}
-                        onSaveDraft={handleSaveDraft}
-                        onClear={handleClear}
+                        onAttach={handleAttachClick}
+                        onDelete={handleDelete}
                     />
                 </Stack>
             </Collapse>
