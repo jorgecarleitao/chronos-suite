@@ -13,7 +13,6 @@ import {
     deleteCalendarEvent,
     fetchCalendars,
     CalendarEvent,
-    Participant,
 } from './data/calendarEvents';
 import { UICalendarEventFormData } from './types';
 import CalendarHeader from './components/calendar/CalendarHeader';
@@ -22,7 +21,7 @@ import WeekView from './components/calendar/WeekView';
 import EventList from './components/calendar/EventList';
 import EventDialog from './components/calendar/EventDialog';
 import CalendarSidebar from './components/calendar/CalendarSidebar';
-import { getWeekStart } from '../../utils/dateHelpers';
+import { useDocumentTitle } from '../../utils/useDocumentTitle';
 
 interface CalendarProps {
     path: string;
@@ -39,6 +38,38 @@ export default function Calendar({ path }: CalendarProps) {
     const [selectedCalendar, setSelectedCalendar] = useState<string | null>(null);
     const [dialogEvent, setDialogEvent] = useState<CalendarEvent | null | undefined>(undefined);
     const [error, setError] = useState<string | null>(null);
+
+    // Update document title with next event time/date
+    const now = new Date();
+    const upcomingEvents = events
+        .filter(e => new Date(e.start) > now)
+        .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+    
+    const nextEvent = upcomingEvents[0];
+    let title = 'MailNow - Calendar';
+    
+    if (nextEvent) {
+        const eventDate = new Date(nextEvent.start);
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        const isToday = eventDate.toDateString() === today.toDateString();
+        const isTomorrow = eventDate.toDateString() === tomorrow.toDateString();
+        
+        if (isToday) {
+            const timeStr = eventDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+            title = `Next: ${timeStr} - Calendar`;
+        } else if (isTomorrow) {
+            const timeStr = eventDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+            title = `Next: Tomorrow ${timeStr} - Calendar`;
+        } else {
+            const dateStr = eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            title = `Next: ${dateStr} - Calendar`;
+        }
+    }
+    
+    useDocumentTitle(title);
 
     useEffect(() => {
         loadAccount();

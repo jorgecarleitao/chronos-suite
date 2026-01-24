@@ -29,6 +29,7 @@ import {
     findInbox,
     MailboxNode,
 } from './utils/mailboxHelpers';
+import { useDocumentTitle } from '../../utils/useDocumentTitle';
 
 interface MailProps {
     path: string;
@@ -55,6 +56,12 @@ export default function Mail({ path }: MailProps) {
     const [selectedMailboxForAction, setSelectedMailboxForAction] = useState<MailboxNode | null>(
         null
     );
+
+    // Update document title with unread count
+    const inboxMailbox = mailboxes.find(m => m.role === 'inbox' || m.name === 'INBOX');
+    const unreadCount = inboxMailbox?.unreadEmails ?? 0;
+    const title = unreadCount > 0 ? `MailNow (${unreadCount})` : 'MailNow';
+    useDocumentTitle(title);
 
     useEffect(() => {
         // Check authentication will be handled by the backend
