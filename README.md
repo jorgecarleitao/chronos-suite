@@ -84,3 +84,43 @@ pnpm dev
 ```bash
 pnpm build
 ```
+
+## Docker
+
+### Building the image log
+
+```bash
+docker build -t chronos-suite .
+```
+
+### Running with Docker
+
+```bash
+docker run -d \
+  -p 8080:8080 \
+  -e OAUTH_AUTHORITY=https://idp.example.com/application/o/mail-client1/ \
+  -e OAUTH_CLIENT_ID=your-client-id \
+  -e BASE_URL=https://mail.yourdomain.com \
+  -e OAUTH_SCOPES="openid email profile" \
+  -e JMAP_SESSION_ENDPOINT=https://mail.example.com/jmap/session \
+  --name chronos-suite \
+  chronos-suite
+```
+
+### Environment Variables
+
+The Docker container requires the following environment variables at runtime:
+
+| Variable | Required | Description | Example |
+|----------|----------|-------------|---------|
+| `OAUTH_AUTHORITY` | Yes | OAuth2 provider authorization endpoint URL | `https://idp.example.com/application/o/mail-client1/` |
+| `OAUTH_CLIENT_ID` | Yes | OAuth2 client ID for authentication | `mail-client-abc123` |
+| `BASE_URL` | Yes | Public URL where the application is deployed (used for OAuth redirect) | `https://mail.yourdomain.com` |
+| `OAUTH_SCOPES` | Yes | OAuth2 scopes to request (space-separated) | `openid email profile` |
+| `JMAP_SESSION_ENDPOINT` | Yes | JMAP server session endpoint URL | `https://mail.example.com/jmap/session` |
+
+**Notes:**
+- Variables are injected at container startup via `docker-entrypoint.sh`
+- The application runs on port `8080` (non-privileged) inside the container
+- Nginx serves the static files and handles SPA routing
+- No rebuild needed when changing configuration - just restart with new environment variables
