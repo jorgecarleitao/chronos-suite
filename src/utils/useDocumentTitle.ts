@@ -12,7 +12,7 @@ export function useDocumentTitle(title: string | null) {
         
         // Cleanup: restore default title on unmount
         return () => {
-            document.title = 'MailNow';
+            document.title = 'Chronos Suite';
         };
     }, [title]);
 }

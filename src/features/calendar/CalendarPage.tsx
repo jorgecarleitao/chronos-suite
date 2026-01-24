@@ -44,10 +44,10 @@ export default function Calendar({ path }: CalendarProps) {
     const upcomingEvents = events
         .filter(e => new Date(e.start) > now)
         .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
-    
+
     const nextEvent = upcomingEvents[0];
-    let title = 'MailNow - Calendar';
-    
+    let title = 'Chronos Suite - Calendar';
+
     if (nextEvent) {
         const eventDate = new Date(nextEvent.start);
         const today = new Date();

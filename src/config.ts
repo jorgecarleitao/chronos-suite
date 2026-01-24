@@ -18,7 +18,6 @@ interface AppConfig {
         scopes: string;
     };
     jmap: {
-        endpoint: string;
         sessionEndpoint: string;
     };
 }
@@ -36,7 +35,6 @@ export const config: AppConfig = {
         scopes: getEnv('VITE_OAUTH_SCOPES') || '',
     },
     jmap: {
-        endpoint: getEnv('VITE_JMAP_ENDPOINT') || '',
         sessionEndpoint: getEnv('VITE_JMAP_SESSION_ENDPOINT') || '',
     },
 };
@@ -49,7 +47,6 @@ export const validateConfig = (): void => {
     if (!config.oauth.clientId) errors.push('OAUTH_CLIENT_ID is required');
     if (!config.oauth.redirectUri) errors.push('BASE_URL is required');
     if (config.oauth.scopes.length === 0) errors.push('OAUTH_SCOPES is required');
-    if (!config.jmap.endpoint) errors.push('JMAP_ENDPOINT is required');
     if (!config.jmap.sessionEndpoint) errors.push('JMAP_SESSION_ENDPOINT is required');
 
     if (errors.length > 0) {
