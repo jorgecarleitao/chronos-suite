@@ -113,12 +113,7 @@ export default function MailSidebar({
 
     return (
         <Sidebar>
-            <Button
-                variant="contained"
-                fullWidth
-                onClick={onComposeClick}
-                startIcon={<EditIcon />}
-            >
+            <Button variant="contained" fullWidth onClick={onComposeClick} startIcon={<EditIcon />}>
                 Compose Email
             </Button>
 

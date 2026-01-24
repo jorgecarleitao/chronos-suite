@@ -11,21 +11,18 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
 import Collapse from '@mui/material/Collapse';
 import Chip from '@mui/material/Chip';
+import { useTheme } from '@mui/material/styles';
 
 import CloseIcon from '@mui/icons-material/Close';
 import SendIcon from '@mui/icons-material/Send';
-import SaveIcon from '@mui/icons-material/Save';
 import MinimizeIcon from '@mui/icons-material/Minimize';
 import MaximizeIcon from '@mui/icons-material/Maximize';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
-import FormatColorTextIcon from '@mui/icons-material/FormatColorText';
 
-import MDEditor from '@uiw/react-md-editor';
-import rehypeSanitize from 'rehype-sanitize';
+import Markdown from 'preact-markdown';
 import { createDraft, updateDraft, prepareAndSendMessage, deleteMessage } from '../data/messages';
 import { jmapService, Attachment } from '../../../data/jmapClient';
 import AttachmentsSection from './AttachmentsSection';
@@ -42,7 +39,7 @@ const parseEmailList = (emails: string): string[] => {
         .filter((e) => e.length > 0);
 };
 
-const uploadImageAsBase64 = async (file: File): Promise<string> => {
+const fileToBase64 = async (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result as string);
@@ -70,6 +67,14 @@ export interface DraftMessage {
 }
 
 type AutoSaveStatus = 'idle' | 'saving' | 'saved';
+
+// Map to track inline images: clean marker (filename) -> attachment + preview data
+interface InlineImage {
+    file: File;
+    dataUrl: string; // base64 data URL for preview rendering
+    attachment: Attachment; // Already uploaded attachment
+    marker: string; // Clean markdown marker like 'inline:image.png'
+}
 
 interface ComposeEmailProps {
     open: boolean;
@@ -260,9 +265,13 @@ interface BodyEditorProps {
     body: string;
     onBodyChange: (value: string) => void;
     onImageUpload: (file: File) => Promise<void>;
+    inlineImages: Map<string, InlineImage>;
 }
 
-function BodyEditor({ body, onBodyChange, onImageUpload }: BodyEditorProps) {
+function BodyEditor({ body, onBodyChange, onImageUpload, inlineImages }: BodyEditorProps) {
+    const [showPreview, setShowPreview] = useState(false);
+    const theme = useTheme();
+
     const handlePaste = async (event: ClipboardEvent) => {
         const items = event.clipboardData?.items;
         if (!items) return;
@@ -278,30 +287,105 @@ function BodyEditor({ body, onBodyChange, onImageUpload }: BodyEditorProps) {
         }
     };
 
-    const handleEditorChange = (val: string | undefined) => {
-        const newValue = val || '';
-        onBodyChange(newValue);
+    // Replace inline: markers with actual base64 for preview
+    const getPreviewBody = () => {
+        let previewBody = body;
+        for (const [marker, imageData] of inlineImages.entries()) {
+            // Replace ![name](inline:filename) with ![name](data:...)
+            const markerRegex = new RegExp(`\\(${marker}\\)`, 'g');
+            previewBody = previewBody.replace(markerRegex, `(${imageData.dataUrl})`);
+        }
+        return previewBody;
     };
 
     return (
         <Box flex={1} minHeight={0} display="flex" flexDirection="column" px={2} pt={2}>
-            <Box
-                data-color-mode="light"
-                onPaste={handlePaste}
-                flex={1}
-                minHeight={0}
-                display="flex"
-                flexDirection="column"
-            >
-                <MDEditor
+            {/* Editor Tabs */}
+            <Stack direction="row" spacing={1} mb={1}>
+                <Button
+                    size="small"
+                    variant={!showPreview ? 'contained' : 'outlined'}
+                    onClick={() => setShowPreview(false)}
+                >
+                    Edit
+                </Button>
+                <Button
+                    size="small"
+                    variant={showPreview ? 'contained' : 'outlined'}
+                    onClick={() => setShowPreview(true)}
+                >
+                    Preview
+                </Button>
+            </Stack>
+
+            {!showPreview ? (
+                <TextField
                     value={body}
-                    onChange={handleEditorChange}
-                    height="100%"
-                    previewOptions={{
-                        rehypePlugins: [[rehypeSanitize]],
+                    onChange={(e) => onBodyChange((e.target as HTMLTextAreaElement).value)}
+                    onPaste={handlePaste}
+                    placeholder="Write your message in Markdown..."
+                    multiline
+                    minRows={10}
+                    maxRows={20}
+                    fullWidth
+                    variant="outlined"
+                    InputProps={{
+                        sx: {
+                            fontFamily: 'monospace',
+                            fontSize: '14px',
+                            alignItems: 'flex-start',
+                        },
                     }}
+                    sx={{ flex: 1 }}
                 />
-            </Box>
+            ) : (
+                <Box
+                    flex={1}
+                    p={2}
+                    border={1}
+                    borderColor="divider"
+                    borderRadius={1}
+                    overflow="auto"
+                    bgcolor="background.paper"
+                    sx={{
+                        '& img': {
+                            maxWidth: '100%',
+                            height: 'auto',
+                        },
+                        '& a': {
+                            color: 'primary.main',
+                        },
+                        '& code': {
+                            backgroundColor: (theme) =>
+                                theme.palette.mode === 'dark'
+                                    ? 'rgba(255,255,255,0.1)'
+                                    : 'rgba(0,0,0,0.05)',
+                            px: 0.75,
+                            py: 0.25,
+                            borderRadius: 0.5,
+                            fontFamily: 'monospace',
+                        },
+                        '& pre': {
+                            backgroundColor: (theme) =>
+                                theme.palette.mode === 'dark'
+                                    ? 'rgba(255,255,255,0.05)'
+                                    : 'rgba(0,0,0,0.03)',
+                            p: 1.5,
+                            borderRadius: 0.5,
+                            overflow: 'auto',
+                        },
+                        '& blockquote': {
+                            borderLeft: 4,
+                            borderColor: 'divider',
+                            pl: 2,
+                            ml: 0,
+                            color: 'text.secondary',
+                        },
+                    }}
+                >
+                    <Markdown markdown={getPreviewBody()} />
+                </Box>
+            )}
         </Box>
     );
 }
@@ -356,6 +440,7 @@ export default function ComposeEmail({
     const [subject, setSubject] = useState(message?.subject || '');
     const [body, setBody] = useState(message?.body || '');
     const [attachments, setAttachments] = useState<Attachment[]>([]);
+    const [inlineImages, setInlineImages] = useState<Map<string, InlineImage>>(new Map());
     const [showCc, setShowCc] = useState(!!message?.cc);
     const [showBcc, setShowBcc] = useState(!!message?.bcc);
     const [saving, setSaving] = useState(false);
@@ -403,11 +488,44 @@ export default function ComposeEmail({
         setError(null);
         setSuccess(null);
         try {
-            const data = await prepareAndSendMessage(accountId, parseEmailList(to), subject, body, {
-                cc: showCc && cc ? parseEmailList(cc) : undefined,
-                bcc: showBcc && bcc ? parseEmailList(bcc) : undefined,
-                attachments: attachments.length > 0 ? attachments : undefined,
-            });
+            // Process body to replace inline: markers with cid: references
+            let processedBody = body;
+            const inlineAttachments: Attachment[] = [];
+
+            // Collect inline image attachments and replace inline: markers with cid:
+            for (const [marker, imageData] of inlineImages.entries()) {
+                // Use blobId as unique Content-ID
+                const contentId = imageData.attachment.blobId;
+                const inlineAttachment = {
+                    ...imageData.attachment,
+                    cid: contentId, // Set Content-ID for inline image
+                };
+                inlineAttachments.push(inlineAttachment);
+
+                // Replace inline:blobId with cid:blobId
+                const cidReference = `cid:${contentId}`;
+                // Escape special regex characters in marker
+                const escapedMarker = marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                processedBody = processedBody.replace(
+                    new RegExp(`\\(${escapedMarker}\\)`, 'g'),
+                    `(${cidReference})`
+                );
+            }
+
+            // Combine inline attachments with regular attachments
+            const allAttachments = [...attachments, ...inlineAttachments];
+
+            const data = await prepareAndSendMessage(
+                accountId,
+                parseEmailList(to),
+                subject,
+                processedBody,
+                {
+                    cc: showCc && cc ? parseEmailList(cc) : undefined,
+                    bcc: showBcc && bcc ? parseEmailList(bcc) : undefined,
+                    attachments: allAttachments.length > 0 ? allAttachments : undefined,
+                }
+            );
             setSuccess('Email sent successfully');
             setTimeout(() => {
                 handleClear();
@@ -537,6 +655,7 @@ export default function ComposeEmail({
         setSubject('');
         setBody('');
         setAttachments([]);
+        setInlineImages(new Map());
         setShowCc(false);
         setShowBcc(false);
         setError(null);
@@ -552,12 +671,38 @@ export default function ComposeEmail({
     };
 
     const handleImageUpload = async (file: File) => {
+        setUploading(true);
         try {
-            const base64 = await uploadImageAsBase64(file);
-            const imageMarkdown = `![image](${base64})`;
+            // Upload the image immediately to get blobId for sending later
+            const uploadResult = await jmapService.uploadBlob(accountId, file);
+            const attachment: Attachment = {
+                blobId: uploadResult.blobId,
+                name: file.name,
+                type: uploadResult.type,
+                size: uploadResult.size,
+            };
+
+            // Convert to base64 data URL for preview rendering
+            const dataUrl = await fileToBase64(file);
+
+            // Create unique marker using blobId (e.g., "inline:Gf2e8b7a9c1d4e5f")
+            const marker = `inline:${uploadResult.blobId}`;
+
+            // Store the inline image data
+            setInlineImages((prev) => {
+                const updated = new Map(prev);
+                updated.set(marker, { file, dataUrl, attachment, marker });
+                return updated;
+            });
+
+            // Insert markdown with unique marker (will be replaced with cid: before sending)
+            // Use filename in alt text for readability
+            const imageMarkdown = `![${file.name}](${marker})`;
             setBody((prev) => prev + '\n' + imageMarkdown);
         } catch (err) {
             setError('Failed to upload image');
+        } finally {
+            setUploading(false);
         }
     };
 
@@ -681,6 +826,7 @@ export default function ComposeEmail({
                         body={body}
                         onBodyChange={setBody}
                         onImageUpload={handleImageUpload}
+                        inlineImages={inlineImages}
                     />
 
                     {/* Hidden file input - always rendered */}
@@ -690,6 +836,7 @@ export default function ComposeEmail({
                         multiple
                         style={{ display: 'none' }}
                         onChange={handleFileAttach}
+                        accept="*/*"
                     />
 
                     {attachments.length > 0 && (

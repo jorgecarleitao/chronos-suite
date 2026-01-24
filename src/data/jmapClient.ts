@@ -21,6 +21,7 @@ export interface Attachment {
     name: string;
     type: string;
     size: number;
+    cid?: string; // Content-ID for inline images
 }
 
 /**
@@ -325,22 +326,48 @@ class JmapService {
 
         // Add attachments if provided
         if (email.attachments && email.attachments.length > 0) {
-            // Convert to multipart/mixed if we have attachments
-            const contentPart = bodyStructure;
+            // Separate inline (with cid) and regular attachments
+            const inlineAttachments = email.attachments.filter((att) => att.cid);
+            const regularAttachments = email.attachments.filter((att) => !att.cid);
 
-            emailObject.bodyStructure = {
-                type: 'multipart/mixed',
-                subParts: [
-                    contentPart,
-                    ...email.attachments.map((attachment) => ({
-                        blobId: attachment.blobId,
-                        type: attachment.type,
-                        name: attachment.name,
-                        disposition: 'attachment',
-                        size: attachment.size,
-                    })),
-                ],
-            };
+            let contentPart = bodyStructure;
+
+            // Wrap content with inline images in multipart/related
+            if (inlineAttachments.length > 0) {
+                contentPart = {
+                    type: 'multipart/related',
+                    subParts: [
+                        contentPart,
+                        ...inlineAttachments.map((attachment) => ({
+                            blobId: attachment.blobId,
+                            type: attachment.type,
+                            name: attachment.name,
+                            cid: attachment.cid,
+                            disposition: 'inline',
+                            size: attachment.size,
+                        })),
+                    ],
+                };
+            }
+
+            // Wrap everything in multipart/mixed if we have regular attachments
+            if (regularAttachments.length > 0) {
+                emailObject.bodyStructure = {
+                    type: 'multipart/mixed',
+                    subParts: [
+                        contentPart,
+                        ...regularAttachments.map((attachment) => ({
+                            blobId: attachment.blobId,
+                            type: attachment.type,
+                            name: attachment.name,
+                            disposition: 'attachment',
+                            size: attachment.size,
+                        })),
+                    ],
+                };
+            } else {
+                emailObject.bodyStructure = contentPart;
+            }
         }
 
         // Create the email
