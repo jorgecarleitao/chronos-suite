@@ -1,15 +1,11 @@
 import { RefObject } from 'preact';
 import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
-import Typography from '@mui/material/Typography';
-import Stack from '@mui/material/Stack';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
 import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction';
-import CircularProgress from '@mui/material/CircularProgress';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import DeleteIcon from '@mui/icons-material/Delete';
 import type { Attachment } from '../../../data/jmapClient';

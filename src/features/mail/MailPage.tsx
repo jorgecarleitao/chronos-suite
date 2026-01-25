@@ -18,10 +18,10 @@ import {
     createMailbox,
     renameMailbox,
     deleteMailbox,
-    Mailbox,
-} from './data/mailboxes';
+    type UIMailbox as Mailbox,
+} from './data/mailbox';
 import { getPrimaryAccountId } from '../../data/accounts';
-import { moveMessages } from './data/messages';
+import { moveMessages } from './data/message';
 import {
     convertToNode,
     sortMailboxes,

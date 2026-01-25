@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'preact/hooks';
-import { useTranslation } from 'react-i18next';
 import { JSX } from 'preact';
 import Box from '@mui/material/Box';
 import Dialog from '@mui/material/Dialog';
@@ -31,8 +30,8 @@ import {
     deleteMessage as apiDeleteMessage,
     markAsRead as apiMarkAsRead,
     markAsAnswered as apiMarkAsAnswered,
-    MessageDetail,
-} from '../data/messages';
+    type MessageDetail,
+} from '../data/message';
 import { fetchCalendars } from '../../../data/calendarService';
 
 interface MessageViewerProps {

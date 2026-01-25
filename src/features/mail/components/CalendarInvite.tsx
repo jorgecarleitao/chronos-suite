@@ -4,8 +4,6 @@ import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
-import Divider from '@mui/material/Divider';
-import Alert from '@mui/material/Alert';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
@@ -13,6 +11,7 @@ import EventIcon from '@mui/icons-material/Event';
 import { importCalendarInvite, checkEventExists } from '../../../data/calendarService';
 import { type Invite } from '../../../utils/calendarInviteParser';
 import { useTranslation } from 'react-i18next';
+import Alert from '@mui/material/Alert';
 
 interface CalendarInviteProps {
     invite: Invite;

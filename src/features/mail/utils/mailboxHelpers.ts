@@ -1,4 +1,4 @@
-import { Mailbox } from '../data/mailboxes';
+import { type UIMailbox as Mailbox } from '../data/mailbox';
 
 export interface MailboxNode {
     name: string; // Full path name
@@ -15,9 +15,9 @@ export interface MailboxNode {
 // Convert backend tree to frontend node structure
 export const convertToNode = (mailbox: Mailbox): MailboxNode => ({
     name: mailbox.name,
-    displayName: mailbox.display_name,
+    displayName: mailbox.displayName,
     children: mailbox.children.map(convertToNode),
-    isLeaf: mailbox.is_selectable,
+    isLeaf: mailbox.isSelectable,
     role: mailbox.role,
     id: mailbox.id,
     parentId: mailbox.parentId,
@@ -50,7 +50,7 @@ export function sortMailboxes(nodes: MailboxNode[]): MailboxNode[] {
 // Check if selected mailbox is selectable
 export const isSelectableMailbox = (name: string, mailboxes: Mailbox[]): boolean => {
     for (const mb of mailboxes) {
-        if (mb.name === name) return mb.is_selectable;
+        if (mb.name === name) return mb.isSelectable;
         if (mb.children.length > 0 && isSelectableMailbox(name, mb.children)) {
             return true;
         }

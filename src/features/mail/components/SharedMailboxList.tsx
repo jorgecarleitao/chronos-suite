@@ -9,7 +9,7 @@ import FolderSharedIcon from '@mui/icons-material/FolderShared';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import MailboxListItem from './MailboxListItem';
-import { Mailbox } from '../data/mailboxes';
+import { type UIMailbox as Mailbox } from '../data/mailbox';
 import {
     convertToNode,
     groupSharedMailboxesByAccount,

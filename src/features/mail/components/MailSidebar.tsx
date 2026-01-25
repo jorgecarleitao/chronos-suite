@@ -6,7 +6,6 @@ import Typography from '@mui/material/Typography';
 import Divider from '@mui/material/Divider';
 import CircularProgress from '@mui/material/CircularProgress';
 import Button from '@mui/material/Button';
-import IconButton from '@mui/material/IconButton';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -18,7 +17,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder';
 import Sidebar from '../../../components/Sidebar';
 import MailboxListItem from './MailboxListItem';
-import { Mailbox } from '../data/mailboxes';
+import { type UIMailbox as Mailbox } from '../data/mailbox';
 import { MailboxNode } from '../utils/mailboxHelpers';
 import SharedMailboxList from './SharedMailboxList';
 

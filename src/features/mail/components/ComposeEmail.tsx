@@ -24,7 +24,7 @@ import AttachFileIcon from '@mui/icons-material/AttachFile';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 
 import Markdown from 'preact-markdown';
-import { createDraft, updateDraft, prepareAndSendMessage, deleteMessage } from '../data/messages';
+import { createDraft, updateDraft, prepareAndSendMessage, deleteMessage } from '../data/message';
 import { jmapService, Attachment } from '../../../data/jmapClient';
 import AttachmentsSection from './AttachmentsSection';
 
@@ -535,17 +535,14 @@ export default function ComposeEmail({
             // Combine inline attachments with regular attachments
             const allAttachments = [...attachments, ...inlineAttachments];
 
-            const data = await prepareAndSendMessage(
-                accountId,
-                parseEmailList(to),
+            const data = await prepareAndSendMessage(accountId, {
+                to: parseEmailList(to),
                 subject,
-                processedBody,
-                {
-                    cc: showCc && cc ? parseEmailList(cc) : undefined,
-                    bcc: showBcc && bcc ? parseEmailList(bcc) : undefined,
-                    attachments: allAttachments.length > 0 ? allAttachments : undefined,
-                }
-            );
+                body: processedBody,
+                cc: showCc && cc ? parseEmailList(cc) : undefined,
+                bcc: showBcc && bcc ? parseEmailList(bcc) : undefined,
+                attachments: allAttachments.length > 0 ? allAttachments : undefined,
+            });
             setSuccess(t('compose.emailSentSuccessfully'));
             setTimeout(() => {
                 handleClear();

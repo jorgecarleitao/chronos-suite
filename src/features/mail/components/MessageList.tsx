@@ -15,12 +15,12 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import MessageViewer from './MessageViewer';
-import ComposeEmail, { DraftMessage } from './ComposeEmail';
+import ComposeEmail from './ComposeEmail';
 import MessageListItem from './MessageListItem';
 import MessageActionsBar from './MessageActionsBar';
 import BulkActionsBar from './BulkActionsBar';
 import PaginationBar from './PaginationBar';
-import { fetchMessages, fetchMessage, MessageMetadata } from '../data/messages';
+import { fetchMessages, fetchMessage, type MessageMetadata } from '../data/message';
 import useMessageOperations from '../useMessageOperations';
 
 interface MessageListProps {

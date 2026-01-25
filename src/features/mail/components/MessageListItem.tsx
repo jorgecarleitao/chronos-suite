@@ -17,7 +17,7 @@ import StarBorderIcon from '@mui/icons-material/StarBorder';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PersonIcon from '@mui/icons-material/Person';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
-import { MessageMetadata } from '../data/messages';
+import { type MessageMetadata } from '../data/message';
 import { getPrimaryAccountId } from '../../../data/accounts';
 import { findContactByEmail, type ContactInfo } from '../../../data/contactService';
 
