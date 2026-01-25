@@ -50,7 +50,6 @@ export function toJmap(pattern: UIRecurrencePattern): RecurrenceRule | null {
     // Handle day-specific recurrences
     if (pattern.frequency === 'weekly' && pattern.byDayOfWeek?.length) {
         rule.byDay = pattern.byDayOfWeek.map((day) => ({
-            '@type': 'NDay',
             day: day.toLowerCase() as NDay['day'],
         }));
     }

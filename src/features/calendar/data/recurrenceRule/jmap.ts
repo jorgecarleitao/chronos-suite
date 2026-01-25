@@ -13,7 +13,7 @@ export interface RecurrenceRule {
     rscale?: string; // Calendar system (default is 'gregorian')
     skip?: 'omit' | 'backward' | 'forward'; // How to handle invalid dates
     firstDayOfWeek?: 'mo' | 'tu' | 'we' | 'th' | 'fr' | 'sa' | 'su'; // Default is 'mo'
-    byDay?: Array<NDay | string>; // Days of week/month
+    byDay?: NDay[]; // Days of week/month
     byMonthDay?: number[]; // Days of month (1-31, negative for end of month)
     byMonth?: string[]; // Months (1-12 as strings)
     byYearDay?: number[]; // Days of year (1-366, negative for end of year)
@@ -30,7 +30,7 @@ export interface RecurrenceRule {
  * NDay object for byDay in RecurrenceRule (JSCalendar RFC 8984)
  */
 export interface NDay {
-    '@type': 'NDay';
+    '@type'?: 'NDay';
     day: 'mo' | 'tu' | 'we' | 'th' | 'fr' | 'sa' | 'su';
     nthOfPeriod?: number; // e.g., 1 for first Monday, -1 for last Monday
 }

@@ -108,11 +108,29 @@ export function toJmap(
 ): JmapCalendarEvent {
     const duration = calculateDuration(formData.start, formData.end);
 
+    // Format start time based on whether we have a timezone
+    // If timezone is provided: use local time format (no Z)
+    // If no timezone: use UTC format (with Z)
+    let startString: string;
+    if (formData.timeZone && !formData.showWithoutTime) {
+        // Local time format: YYYY-MM-DDTHH:mm:ss
+        const year = formData.start.getFullYear();
+        const month = String(formData.start.getMonth() + 1).padStart(2, '0');
+        const day = String(formData.start.getDate()).padStart(2, '0');
+        const hours = String(formData.start.getHours()).padStart(2, '0');
+        const minutes = String(formData.start.getMinutes()).padStart(2, '0');
+        const seconds = String(formData.start.getSeconds()).padStart(2, '0');
+        startString = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+    } else {
+        // UTC format with Z
+        startString = formData.start.toISOString();
+    }
+
     const event: JmapCalendarEvent = {
         '@type': 'Event',
         calendarIds: { [calendarId]: true },
         title: formData.title || '',
-        start: formData.start.toISOString(),
+        start: startString,
         duration,
     };
 

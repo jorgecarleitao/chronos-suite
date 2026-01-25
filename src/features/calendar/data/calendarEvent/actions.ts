@@ -91,6 +91,9 @@ export async function createCalendarEvent(
 
     const calendarEvent = CalendarEventUI.toJmap(eventData, calendarId);
 
+    // Log the event being created for debugging
+    console.log('Creating calendar event:', JSON.stringify(calendarEvent, null, 2));
+
     const [response] = await withAuthHandling(() =>
         client.request([
             'CalendarEvent/set' as any,
@@ -103,6 +106,8 @@ export async function createCalendarEvent(
             },
         ])
     );
+
+    console.log('Create response:', JSON.stringify(response, null, 2));
 
     const createdId = response.created?.['new-event']?.id;
     if (!createdId) {
