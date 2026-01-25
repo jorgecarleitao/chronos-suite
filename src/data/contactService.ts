@@ -3,8 +3,8 @@
  * Used by multiple features (mail, contacts, etc.)
  */
 
-import { jmapService } from './jmapClient';
-import { withAuthHandling } from '../utils/authHandling';
+import { jmapClient } from './jmapClient';
+import { withAuthHandling, getAuthenticatedClient } from '../utils/authHandling';
 
 /**
  * Minimal contact info for lookups
@@ -24,11 +24,7 @@ export interface ContactInfo {
  */
 export async function fetchContactsForLookup(accountId: string): Promise<ContactInfo[]> {
     return withAuthHandling(async () => {
-        if (!jmapService.isInitialized()) {
-            throw new Error('JMAP client not initialized. Please log in first.');
-        }
-
-        const client = jmapService.getClient();
+        const client = getAuthenticatedClient();
 
         // Query for all contacts
         const [queryResponse] = await client.request([

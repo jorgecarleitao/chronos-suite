@@ -27,7 +27,7 @@ export interface UIAddressBookFormData {
 export function fromJmap(jmapAddressBook: JmapAddressBook): UIAddressBook {
     // Convert shareWith from Record to Array
     let shareWith: Array<{ email: string; mayRead: boolean; mayWrite: boolean }> | undefined;
-    
+
     if (jmapAddressBook.shareWith) {
         shareWith = Object.entries(jmapAddressBook.shareWith).map(([email, rights]) => ({
             email,

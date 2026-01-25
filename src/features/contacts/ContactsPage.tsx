@@ -122,7 +122,9 @@ export default function Contacts({ path }: ContactsProps) {
         if (!accountId) return;
 
         try {
-            await contactActions.updateContact(accountId, contact.id, { isFavorite: !contact.isFavorite });
+            await contactActions.updateContact(accountId, contact.id, {
+                isFavorite: !contact.isFavorite,
+            });
             loadContacts(accountId, selectedAddressBook);
         } catch (err) {
             setError(err instanceof Error ? err.message : t('contacts.failedToUpdateContact'));

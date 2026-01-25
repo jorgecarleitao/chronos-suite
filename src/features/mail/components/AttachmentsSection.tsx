@@ -8,7 +8,7 @@ import ListItemText from '@mui/material/ListItemText';
 import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import DeleteIcon from '@mui/icons-material/Delete';
-import type { Attachment } from '../../../data/jmapClient';
+import type { Attachment } from '../data/message';
 
 interface AttachmentsSectionProps {
     attachments: Attachment[];

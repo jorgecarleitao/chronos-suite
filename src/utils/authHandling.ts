@@ -1,5 +1,16 @@
-import { jmapService } from '../data/jmapClient';
+import { jmapClient } from '../data/jmapClient';
 import { oauthService } from '../data/authService';
+
+/**
+ * Get authenticated JMAP client
+ * Throws error if client is not initialized
+ */
+export function getAuthenticatedClient() {
+    if (!jmapClient.isInitialized()) {
+        throw new Error('JMAP client not initialized. Please log in first.');
+    }
+    return jmapClient.getClient();
+}
 
 /**
  * Handle authentication errors and attempt token refresh
@@ -16,7 +27,7 @@ export async function handleAuthError(error: any): Promise<never> {
                 await oauthService.refreshAccessToken(refreshToken);
                 const newAccessToken = oauthService.getAccessToken();
                 if (newAccessToken) {
-                    await jmapService.initialize(newAccessToken);
+                    await jmapClient.initialize(newAccessToken);
                     throw new Error('TOKEN_REFRESHED');
                 }
             } catch (refreshError) {
@@ -25,7 +36,7 @@ export async function handleAuthError(error: any): Promise<never> {
         }
 
         oauthService.logout();
-        jmapService.clear();
+        jmapClient.clear();
         window.location.href = '/login';
         throw new Error('Session expired. Please log in again.');
     }

@@ -24,8 +24,14 @@ import AttachFileIcon from '@mui/icons-material/AttachFile';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 
 import Markdown from 'preact-markdown';
-import { createDraft, updateDraft, prepareAndSendMessage, deleteMessage } from '../data/message';
-import { jmapService, Attachment } from '../../../data/jmapClient';
+import {
+    createDraft,
+    updateDraft,
+    prepareAndSendMessage,
+    deleteMessage,
+    type Attachment,
+    uploadBlob,
+} from '../data/message';
 import AttachmentsSection from './AttachmentsSection';
 
 const composerWidth = 600;
@@ -40,7 +46,7 @@ const parseEmailList = (emails: string): string[] => {
         .filter((e) => e.length > 0);
 };
 
-const fileToBase64 = async (file: File): Promise<string> => {
+const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result as string);
@@ -391,7 +397,7 @@ function BodyEditor({ body, onBodyChange, onImageUpload, inlineImages }: BodyEdi
                         },
                     }}
                 >
-                    <Markdown markdown={getPreviewBody()} />
+                    {Markdown({ markdown: getPreviewBody() })}
                 </Box>
             )}
         </Box>
@@ -691,7 +697,7 @@ export default function ComposeEmail({
         setUploading(true);
         try {
             // Upload the image immediately to get blobId for sending later
-            const uploadResult = await jmapService.uploadBlob(accountId, file);
+            const uploadResult = await uploadBlob(accountId, file);
             const attachment: Attachment = {
                 blobId: uploadResult.blobId,
                 name: file.name,
@@ -736,7 +742,7 @@ export default function ComposeEmail({
 
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
-                const uploadResult = await jmapService.uploadBlob(accountId, file);
+                const uploadResult = await uploadBlob(accountId, file);
 
                 newAttachments.push({
                     blobId: uploadResult.blobId,

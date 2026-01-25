@@ -3,7 +3,15 @@
  */
 
 // Re-export JMAP types (server format)
-export type { ContactCard, NameComponent, EmailAddress, Phone, Address, Organization, Title } from './jmap';
+export type {
+    ContactCard,
+    NameComponent,
+    EmailAddress,
+    Phone,
+    Address,
+    Organization,
+    Title,
+} from './jmap';
 
 // Re-export UI namespace
 import * as UI from './ui';

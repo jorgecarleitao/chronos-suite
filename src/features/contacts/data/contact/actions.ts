@@ -2,20 +2,10 @@
  * Contact CRUD operations
  */
 
-import { jmapService } from '../../../../data/jmapClient';
-import { withAuthHandling } from '../../../../utils/authHandling';
+import { jmapClient } from '../../../../data/jmapClient';
+import { withAuthHandling, getAuthenticatedClient } from '../../../../utils/authHandling';
 import type { UIContact, UIContactFormData } from './ui';
 import * as ContactUI from './ui';
-
-/**
- * Get authenticated JMAP client
- */
-function getAuthenticatedClient() {
-    if (!jmapService.isInitialized()) {
-        throw new Error('JMAP client not initialized. Please log in first.');
-    }
-    return jmapService.getClient();
-}
 
 /**
  * Fetch contacts from an address book
@@ -57,9 +47,7 @@ export async function fetchContacts(
         ])
     );
 
-    const contacts = getResponse.list.map((jmapContact: any) =>
-        ContactUI.fromJmap(jmapContact)
-    );
+    const contacts = getResponse.list.map((jmapContact: any) => ContactUI.fromJmap(jmapContact));
 
     // Sort client-side by lastName, then firstName
     contacts.sort((a, b) => {

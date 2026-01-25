@@ -2,20 +2,10 @@
  * AddressBook CRUD operations
  */
 
-import { jmapService } from '../../../../data/jmapClient';
-import { withAuthHandling } from '../../../../utils/authHandling';
+import { jmapClient } from '../../../../data/jmapClient';
+import { withAuthHandling, getAuthenticatedClient } from '../../../../utils/authHandling';
 import type { UIAddressBook, UIAddressBookFormData } from './ui';
 import * as AddressBookUI from './ui';
-
-/**
- * Get authenticated JMAP client
- */
-function getAuthenticatedClient() {
-    if (!jmapService.isInitialized()) {
-        throw new Error('JMAP client not initialized. Please log in first.');
-    }
-    return jmapService.getClient();
-}
 
 /**
  * Fetch all address books for an account
@@ -32,9 +22,7 @@ export async function fetchAddressBooks(accountId: string): Promise<UIAddressBoo
         ])
     );
 
-    return response.list.map((jmapAddressBook: any) =>
-        AddressBookUI.fromJmap(jmapAddressBook)
-    );
+    return response.list.map((jmapAddressBook: any) => AddressBookUI.fromJmap(jmapAddressBook));
 }
 
 /**

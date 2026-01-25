@@ -19,7 +19,7 @@ import ImageIcon from '@mui/icons-material/Image';
 import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
 import AudioFileIcon from '@mui/icons-material/AudioFile';
 import FolderZipIcon from '@mui/icons-material/FolderZip';
-import { jmapService } from '../../../data/jmapClient';
+import { downloadBlob } from '../data/message';
 
 export interface Attachment {
     blobId: string;
@@ -93,7 +93,7 @@ async function downloadAttachment(
     t: (key: string, options?: any) => string
 ): Promise<void> {
     try {
-        const response = await jmapService.downloadBlob(accountId, blobId, mimeType);
+        const response = await downloadBlob(accountId, blobId, mimeType);
         const blob = await response.blob();
 
         // Create a download link
@@ -121,7 +121,7 @@ async function openAttachment(
     t: (key: string, options?: any) => string
 ): Promise<void> {
     try {
-        const response = await jmapService.downloadBlob(accountId, blobId, mimeType);
+        const response = await downloadBlob(accountId, blobId, mimeType);
         const blob = await response.blob();
 
         // Create a URL for the blob and open in new tab

@@ -24,10 +24,10 @@ import {
     type Invite,
     type Attachment,
 } from '../../../utils/calendarInviteParser';
-import { jmapService } from '../../../data/jmapClient';
 import {
     fetchMessage as apiFetchMessage,
     deleteMessage as apiDeleteMessage,
+    downloadBlob,
     markAsRead as apiMarkAsRead,
     markAsAnswered as apiMarkAsAnswered,
     type MessageDetail,
@@ -103,11 +103,7 @@ export default function MessageViewer({
         // Download and parse the ICS attachment
         (async () => {
             try {
-                const response = await jmapService.downloadBlob(
-                    accountId,
-                    attachment.blobId,
-                    attachment.type
-                );
+                const response = await downloadBlob(accountId, attachment.blobId, attachment.type);
                 const icsContent = await response.text();
                 const parsed = parseICS(icsContent);
                 setParsedInvite(parsed);

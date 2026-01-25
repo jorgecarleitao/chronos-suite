@@ -1,4 +1,5 @@
-import { jmapService } from './jmapClient';
+import { jmapClient } from './jmapClient';
+import { getAuthenticatedClient } from '../utils/authHandling';
 
 export interface Account {
     id: string;
@@ -11,11 +12,8 @@ export interface Account {
  * Get the primary account ID
  */
 export async function getPrimaryAccountId(): Promise<string> {
-    if (!jmapService.isInitialized()) {
-        throw new Error('JMAP client not initialized. Please log in first.');
-    }
-
-    return await jmapService.getPrimaryAccountId();
+    getAuthenticatedClient(); // Validates client is initialized
+    return await jmapClient.getPrimaryAccountId();
 }
 
 /**
@@ -24,9 +22,7 @@ export async function getPrimaryAccountId(): Promise<string> {
  * so this returns minimal information based on the account ID
  */
 export async function getAccount(accountId: string): Promise<Account> {
-    if (!jmapService.isInitialized()) {
-        throw new Error('JMAP client not initialized. Please log in first.');
-    }
+    getAuthenticatedClient(); // Validates client is initialized
 
     // For now, return basic account info
     // In the future, this could be enhanced if the API exposes more account details
@@ -42,11 +38,7 @@ export async function getAccount(accountId: string): Promise<Account> {
  * Get all accounts accessible to the user (including shared accounts)
  */
 export async function getAllAccounts(): Promise<Account[]> {
-    if (!jmapService.isInitialized()) {
-        throw new Error('JMAP client not initialized. Please log in first.');
-    }
-
-    const client = jmapService.getClient();
+    const client = getAuthenticatedClient();
     const session = await client.session;
 
     const primaryAccountId = session.primaryAccounts['urn:ietf:params:jmap:mail'];

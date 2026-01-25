@@ -2,7 +2,15 @@
  * UI-friendly Contact interface and conversion utilities
  */
 
-import type { ContactCard, NameComponent, EmailAddress, Phone, Address, Organization, Title } from './jmap';
+import type {
+    ContactCard,
+    NameComponent,
+    EmailAddress,
+    Phone,
+    Address,
+    Organization,
+    Title,
+} from './jmap';
 
 /**
  * UI-friendly contact (client representation)
@@ -68,14 +76,14 @@ export function fromJmap(jmapContact: ContactCard): UIContact {
     // Extract organization and title
     let company: string | undefined;
     let jobTitle: string | undefined;
-    
+
     if (jmapContact.organizations) {
         const orgKeys = Object.keys(jmapContact.organizations);
         if (orgKeys.length > 0) {
             company = jmapContact.organizations[orgKeys[0]]?.name;
         }
     }
-    
+
     if (jmapContact.titles) {
         const titleKeys = Object.keys(jmapContact.titles);
         if (titleKeys.length > 0) {

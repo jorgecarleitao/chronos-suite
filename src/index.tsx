@@ -18,7 +18,7 @@ import { MailPage } from './features/mail';
 import { ContactsPage } from './features/contacts';
 import { CalendarPage } from './features/calendar';
 import { oauthService } from './data/authService';
-import { jmapService } from './data/jmapClient';
+import { jmapClient } from './data/jmapClient';
 
 import './i18n';
 
@@ -27,7 +27,7 @@ const initializeFromStorage = async () => {
     const accessToken = oauthService.getAccessToken();
     if (accessToken && !oauthService.isTokenExpired()) {
         try {
-            await jmapService.initialize(accessToken);
+            await jmapClient.initialize(accessToken);
         } catch (error) {
             console.error('Failed to initialize JMAP client:', error);
             oauthService.logout();

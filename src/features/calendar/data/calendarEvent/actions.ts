@@ -3,8 +3,8 @@
  * Handles all server interactions for calendar events
  */
 
-import { jmapService } from '../../../../data/jmapClient';
-import { withAuthHandling } from '../../../../utils/authHandling';
+import { jmapClient } from '../../../../data/jmapClient';
+import { withAuthHandling, getAuthenticatedClient } from '../../../../utils/authHandling';
 import { Invite } from '../../../../utils/calendarInviteParser';
 import { UI as RecurrenceUI } from '../recurrenceRule';
 import { UI as ParticipantUI } from '../participant';
@@ -12,16 +12,6 @@ import { generateOccurrences, calculateEventDuration } from '../../utils/recurre
 import type { UICalendarEvent, UICalendarEventFormData } from './ui';
 import * as CalendarEventUI from './ui';
 import type { Participant } from '../participant/jmap';
-
-/**
- * Get authenticated JMAP client
- */
-function getAuthenticatedClient() {
-    if (!jmapService.isInitialized()) {
-        throw new Error('JMAP client not initialized. Please log in first.');
-    }
-    return jmapService.getClient();
-}
 
 /**
  * Fetch calendar events within a date range

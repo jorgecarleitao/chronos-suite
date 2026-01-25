@@ -5,7 +5,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
 import { oauthService } from '../data/authService';
-import { jmapService } from '../data/jmapClient';
+import { jmapClient } from '../data/jmapClient';
 import { useTranslation } from 'react-i18next';
 
 interface AuthCallbackProps {
@@ -39,7 +39,7 @@ export default function AuthCallback({ path }: AuthCallbackProps) {
                     throw new Error('No access token received');
                 }
 
-                await jmapService.initialize(accessToken);
+                await jmapClient.initialize(accessToken);
 
                 // Redirect to mail page
                 setTimeout(() => route('/mail'), 500);

@@ -3,8 +3,8 @@
  * Used by multiple features (mail for calendar invites, calendar feature itself)
  */
 
-import { jmapService } from './jmapClient';
-import { withAuthHandling } from '../utils/authHandling';
+import { jmapClient } from './jmapClient';
+import { withAuthHandling, getAuthenticatedClient } from '../utils/authHandling';
 import type { Invite } from '../utils/calendarInviteParser';
 
 /**
@@ -25,16 +25,6 @@ export interface EventInfo {
     start: Date;
     end: Date;
     calendarId?: string;
-}
-
-/**
- * Get authenticated JMAP client
- */
-function getAuthenticatedClient() {
-    if (!jmapService.isInitialized()) {
-        throw new Error('JMAP client not initialized. Please log in first.');
-    }
-    return jmapService.getClient();
 }
 
 /**

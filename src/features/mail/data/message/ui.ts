@@ -3,7 +3,7 @@
  */
 
 import type { Email as JmapEmail } from './jmap';
-import { Attachment, type EmailData } from '../../../../data/jmapClient';
+import type { Attachment, EmailData } from './jmapTypes';
 
 export type MessageFlag = 'seen' | 'flagged' | 'draft' | 'answered';
 
