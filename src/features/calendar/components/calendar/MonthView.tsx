@@ -1,8 +1,10 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+import Chip from '@mui/material/Chip';
 import { CalendarEvent } from '../../data/calendarEvents';
 import { getDaysInMonth, getFirstDayOfMonth, isSameDay } from '../../../../utils/dateHelpers';
 import { useTranslation } from 'react-i18next';
+import RepeatIcon from '@mui/icons-material/Repeat';
 
 interface MonthViewProps {
     currentDate: Date;
@@ -66,6 +68,10 @@ export default function MonthView({
             const today = isSameDay(dayDate, new Date());
             const selected = isSelected(day);
 
+            // Get events for this day
+            const dayEvents = events.filter(event => isSameDay(event.start, dayDate));
+            const hasRecurringEvents = dayEvents.some(e => e.recurrenceRule);
+
             days.push(
                 <Box
                     key={day}
@@ -81,7 +87,7 @@ export default function MonthView({
                         borderRadius: 1,
                         display: 'flex',
                         flexDirection: 'column',
-                        alignItems: 'center',
+                        alignItems: 'flex-start',
                         justifyContent: 'flex-start',
                         bgcolor: selected ? 'primary.main' : today ? 'action.hover' : 'transparent',
                         color: selected ? 'primary.contrastText' : 'inherit',
@@ -93,6 +99,19 @@ export default function MonthView({
                     <Typography variant="body2" fontWeight={today ? 'bold' : 'normal'}>
                         {day}
                     </Typography>
+                    {dayEvents.length > 0 && (
+                        <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, alignItems: 'center', fontSize: '0.7rem' }}>
+                            <Chip
+                                size="small"
+                                label={`${dayEvents.length}`}
+                                variant="outlined"
+                                sx={{ height: 18, fontSize: '0.7rem' }}
+                            />
+                            {hasRecurringEvents && (
+                                <RepeatIcon sx={{ fontSize: '0.9rem' }} />
+                            )}
+                        </Box>
+                    )}
                 </Box>
             );
         }

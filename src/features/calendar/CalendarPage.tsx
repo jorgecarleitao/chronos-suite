@@ -12,6 +12,7 @@ import {
     updateCalendarEvent,
     deleteCalendarEvent,
     fetchCalendars,
+    expandRecurringEvents,
     CalendarEvent,
 } from './data/calendarEvents';
 import { UICalendarEventFormData } from './types';
@@ -111,7 +112,10 @@ export default function Calendar({ path }: CalendarProps) {
             const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
             const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
             const evts = await fetchCalendarEvents(accId, calId, startOfMonth, endOfMonth);
-            setEvents(evts);
+            
+            // Expand recurring events to individual occurrences
+            const expandedEvents = expandRecurringEvents(evts, startOfMonth, endOfMonth);
+            setEvents(expandedEvents);
         } catch (error) {
             console.error('Failed to load events:', error);
             setError(t('calendar.failedToLoadEvents'));

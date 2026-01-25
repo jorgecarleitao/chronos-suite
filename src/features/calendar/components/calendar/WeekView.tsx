@@ -4,6 +4,7 @@ import Tooltip from '@mui/material/Tooltip';
 import Link from '@mui/material/Link';
 import PersonIcon from '@mui/icons-material/Person';
 import VideocamIcon from '@mui/icons-material/Videocam';
+import RepeatIcon from '@mui/icons-material/Repeat';
 import { CalendarEvent } from '../../data/calendarEvents';
 import { isSameDay } from '../../../../utils/dateHelpers';
 import { getLocalTimezone } from '../../../../utils/timezoneHelpers';
@@ -385,14 +386,30 @@ export default function WeekView({
                                                             onEventClick(event);
                                                         }}
                                                     >
-                                                        <Typography
-                                                            variant="caption"
-                                                            display="block"
-                                                            noWrap
-                                                            sx={{ fontWeight: 'bold' }}
+                                                        <Box
+                                                            sx={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: 0.25,
+                                                            }}
                                                         >
-                                                            {event.title}
-                                                        </Typography>
+                                                            <Typography
+                                                                variant="caption"
+                                                                display="block"
+                                                                noWrap
+                                                                sx={{ fontWeight: 'bold', flex: 1 }}
+                                                            >
+                                                                {event.title}
+                                                            </Typography>
+                                                            {event.recurrenceRule && (
+                                                                <RepeatIcon
+                                                                    sx={{
+                                                                        fontSize: '0.75rem',
+                                                                        flexShrink: 0,
+                                                                    }}
+                                                                />
+                                                            )}
+                                                        </Box>
                                                         {participantCount > 0 && (
                                                             <Box
                                                                 sx={{

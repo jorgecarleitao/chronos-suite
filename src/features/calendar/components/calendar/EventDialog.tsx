@@ -17,11 +17,16 @@ import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
+import FormGroup from '@mui/material/FormGroup';
+import Checkbox from '@mui/material/Checkbox';
+import RadioGroup from '@mui/material/RadioGroup';
+import Radio from '@mui/material/Radio';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { CalendarEvent } from '../../data/calendarEvents';
-import { UICalendarEventFormData, UIParticipant } from '../../types';
+import { UICalendarEventFormData, UIParticipant, UIRecurrencePattern } from '../../types';
 import { participantsToArray } from '../../../../utils/participantUtils';
+import { generateRRuleString, parseRRule } from '../../../../utils/recurrenceHelpers';
 import {
     getCommonTimezones,
     getLocalTimezone,
@@ -126,6 +131,170 @@ function ParticipantSection({
     );
 }
 
+interface RecurrenceSectionProps {
+    recurrence: UIRecurrencePattern;
+    startDate: Date;
+    onRecurrenceChange: (pattern: UIRecurrencePattern) => void;
+}
+
+function RecurrenceSection({ recurrence, startDate, onRecurrenceChange }: RecurrenceSectionProps) {
+    const { t } = useTranslation();
+
+    const daysOfWeek = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
+    const dayLabels = ['calendar.monday', 'calendar.tuesday', 'calendar.wednesday', 'calendar.thursday', 'calendar.friday', 'calendar.saturday', 'calendar.sunday'];
+
+    return (
+        <Box>
+            <Typography variant="subtitle2" gutterBottom>
+                {t('calendar.recurrence')}
+            </Typography>
+
+            {/* Frequency Selection */}
+            <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+                <InputLabel>{t('calendar.recurrence')}</InputLabel>
+                <Select
+                    value={recurrence.frequency}
+                    label={t('calendar.recurrence')}
+                    onChange={(e) =>
+                        onRecurrenceChange({
+                            ...recurrence,
+                            frequency: e.target.value as any,
+                        })
+                    }
+                >
+                    <MenuItem value="none">{t('calendar.noRecurrence')}</MenuItem>
+                    <MenuItem value="daily">{t('calendar.frequency.daily')}</MenuItem>
+                    <MenuItem value="weekly">{t('calendar.frequency.weekly')}</MenuItem>
+                    <MenuItem value="monthly">{t('calendar.frequency.monthly')}</MenuItem>
+                    <MenuItem value="yearly">{t('calendar.frequency.yearly')}</MenuItem>
+                </Select>
+            </FormControl>
+
+            {recurrence.frequency !== 'none' && (
+                <>
+                    {/* Interval */}
+                    <Stack direction="row" spacing={1} sx={{ mb: 2, alignItems: 'center' }}>
+                        <Typography variant="body2">{t('calendar.interval')}</Typography>
+                        <TextField
+                            type="number"
+                            size="small"
+                            inputProps={{ min: 1, max: 365 }}
+                            value={recurrence.interval || 1}
+                            onChange={(e: JSX.TargetedEvent<HTMLInputElement>) =>
+                                onRecurrenceChange({
+                                    ...recurrence,
+                                    interval: parseInt(e.currentTarget.value) || 1,
+                                })
+                            }
+                            sx={{ width: 80 }}
+                        />
+                        <Typography variant="body2">
+                            {recurrence.frequency === 'daily' && t('calendar.intervalDays')}
+                            {recurrence.frequency === 'weekly' && t('calendar.intervalWeeks')}
+                            {recurrence.frequency === 'monthly' && t('calendar.intervalMonths')}
+                            {recurrence.frequency === 'yearly' && t('calendar.intervalYears')}
+                        </Typography>
+                    </Stack>
+
+                    {/* Days of week for weekly recurrence */}
+                    {recurrence.frequency === 'weekly' && (
+                        <Box sx={{ mb: 2 }}>
+                            <Typography variant="body2" sx={{ mb: 1 }}>
+                                {t('calendar.recurrence.byDayOfWeek')}
+                            </Typography>
+                            <FormGroup row>
+                                {daysOfWeek.map((day, idx) => (
+                                    <FormControlLabel
+                                        key={day}
+                                        control={
+                                            <Checkbox
+                                                size="small"
+                                                checked={(recurrence.byDayOfWeek || []).includes(day)}
+                                                onChange={(e: JSX.TargetedEvent<HTMLInputElement>) => {
+                                                    const newDays = e.currentTarget.checked
+                                                        ? [...(recurrence.byDayOfWeek || []), day]
+                                                        : (recurrence.byDayOfWeek || []).filter(d => d !== day);
+                                                    onRecurrenceChange({
+                                                        ...recurrence,
+                                                        byDayOfWeek: newDays.length > 0 ? newDays : undefined,
+                                                    });
+                                                }}
+                                            />
+                                        }
+                                        label={
+                                            <Typography variant="caption">{t(dayLabels[idx])}</Typography>
+                                        }
+                                    />
+                                ))}
+                            </FormGroup>
+                        </Box>
+                    )}
+
+                    {/* End condition */}
+                    <Stack direction="row" spacing={2} sx={{ mb: 2, alignItems: 'center' }}>
+                        <Typography variant="body2">{t('calendar.recurrence.endType')}</Typography>
+                        <Select
+                            size="small"
+                            value={recurrence.endType}
+                            onChange={(e) =>
+                                onRecurrenceChange({
+                                    ...recurrence,
+                                    endType: e.target.value as any,
+                                    endCount: undefined,
+                                    endDate: undefined,
+                                })
+                            }
+                            sx={{ width: 120 }}
+                        >
+                            <MenuItem value="never">{t('calendar.recurrence.endType.never')}</MenuItem>
+                            <MenuItem value="after">{t('calendar.recurrence.endType.after')}</MenuItem>
+                            <MenuItem value="until">{t('calendar.recurrence.endType.until')}</MenuItem>
+                        </Select>
+
+                        {recurrence.endType === 'after' && (
+                            <>
+                                <TextField
+                                    type="number"
+                                    size="small"
+                                    inputProps={{ min: 1, max: 999 }}
+                                    value={recurrence.endCount || 1}
+                                    onChange={(e: JSX.TargetedEvent<HTMLInputElement>) =>
+                                        onRecurrenceChange({
+                                            ...recurrence,
+                                            endCount: parseInt(e.currentTarget.value) || 1,
+                                        })
+                                    }
+                                    sx={{ width: 80 }}
+                                />
+                                <Typography variant="caption">{t('calendar.recurrence.occurrences')}</Typography>
+                            </>
+                        )}
+
+                        {recurrence.endType === 'until' && (
+                            <TextField
+                                type="date"
+                                size="small"
+                                InputLabelProps={{ shrink: true }}
+                                value={
+                                    recurrence.endDate
+                                        ? recurrence.endDate.toISOString().split('T')[0]
+                                        : ''
+                                }
+                                onChange={(e: JSX.TargetedEvent<HTMLInputElement>) =>
+                                    onRecurrenceChange({
+                                        ...recurrence,
+                                        endDate: e.currentTarget.value ? new Date(e.currentTarget.value) : undefined,
+                                    })
+                                }
+                            />
+                        )}
+                    </Stack>
+                </>
+            )}
+        </Box>
+    );
+}
+
 interface EventDialogProps {
     event: CalendarEvent | null;
     initialDate: Date;
@@ -133,6 +302,89 @@ interface EventDialogProps {
     onCreate: (data: UICalendarEventFormData) => void;
     onUpdate: (eventId: string, data: UICalendarEventFormData) => void;
     onDelete: (eventId: string) => void;
+}
+
+interface RecurrenceModificationChoice {
+    thisOnly: boolean;
+}
+
+/**
+ * Dialog for choosing whether to modify a single occurrence or entire series
+ */
+function RecurrenceModificationDialog({
+    open,
+    onClose,
+    onConfirm,
+    action,
+}: {
+    open: boolean;
+    onClose: () => void;
+    onConfirm: (choice: RecurrenceModificationChoice) => void;
+    action: 'edit' | 'delete';
+}) {
+    const { t } = useTranslation();
+    const [choice, setChoice] = useState(true); // true = this event only, false = entire series
+
+    return (
+        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+            <DialogTitle>
+                {action === 'edit'
+                    ? t('calendar.recurrence.editChoice')
+                    : t('calendar.recurrence.deleteChoice')}
+            </DialogTitle>
+            <DialogContent>
+                <FormControl component="fieldset" sx={{ mt: 2 }}>
+                    <RadioGroup
+                        value={choice ? 'this' : 'series'}
+                        onChange={(e) => setChoice(e.target.value === 'this')}
+                    >
+                        <FormControlLabel
+                            value="this"
+                            control={<Radio />}
+                            label={
+                                <Box>
+                                    <Typography variant="body2">
+                                        {action === 'edit'
+                                            ? t('calendar.recurrence.editThisEvent')
+                                            : t('calendar.recurrence.deleteThisEvent')}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        {action === 'edit'
+                                            ? t('calendar.recurrence.editThisEventDesc')
+                                            : t('calendar.recurrence.deleteThisEventDesc')}
+                                    </Typography>
+                                </Box>
+                            }
+                        />
+                        <FormControlLabel
+                            value="series"
+                            control={<Radio />}
+                            label={
+                                <Box>
+                                    <Typography variant="body2">
+                                        {action === 'edit'
+                                            ? t('calendar.recurrence.editAllEvents')
+                                            : t('calendar.recurrence.deleteAllEvents')}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        {action === 'edit'
+                                            ? t('calendar.recurrence.editAllEventsDesc')
+                                            : t('calendar.recurrence.deleteAllEventsDesc')}
+                                    </Typography>
+                                </Box>
+                            }
+                        />
+                    </RadioGroup>
+                </FormControl>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={onClose}>{t('common.cancel')}</Button>
+                <Button onClick={() => onConfirm({ thisOnly: choice })} variant="contained">
+                    {t('common.confirm')}
+                </Button>
+            </DialogActions>
+        </Dialog>
+    );
 }
 
 export default function EventDialog({
@@ -156,10 +408,20 @@ export default function EventDialog({
         virtualLocation: '',
         allDay: false,
         timezone: getLocalTimezone(),
+        recurrence: {
+            frequency: 'none' as const,
+            interval: 1,
+            endType: 'never' as const,
+        } as UIRecurrencePattern,
     });
     const [participantRows, setParticipantRows] = useState<ParticipantRow[]>([
         { email: '', name: '', required: true },
     ]);
+    const [modificationDialogOpen, setModificationDialogOpen] = useState(false);
+    const [pendingModification, setPendingModification] = useState<{
+        action: 'edit' | 'delete';
+        callback: (choice: RecurrenceModificationChoice) => void;
+    } | null>(null);
 
     // Initialize form data when dialog mounts
     useEffect(() => {
@@ -169,6 +431,18 @@ export default function EventDialog({
             const virtualLocation = event.virtualLocations
                 ? Object.values(event.virtualLocations)[0]?.uri || ''
                 : '';
+            
+            // Parse recurrence if present
+            let recurrence: UIRecurrencePattern = {
+                frequency: 'none',
+                interval: 1,
+                endType: 'never',
+            };
+            if (event.recurrenceRule) {
+                const parsed = parseRRule(event.recurrenceRule, event.start);
+                if (parsed) recurrence = parsed;
+            }
+
             setFormData({
                 title: event.title,
                 startDate: event.start.toISOString().split('T')[0],
@@ -180,6 +454,7 @@ export default function EventDialog({
                 virtualLocation,
                 allDay: isAllDay,
                 timezone: event.timeZone || getLocalTimezone(),
+                recurrence,
             });
 
             // Convert participants to rows
@@ -208,6 +483,11 @@ export default function EventDialog({
                 virtualLocation: '',
                 allDay: false,
                 timezone: getLocalTimezone(),
+                recurrence: {
+                    frequency: 'none',
+                    interval: 1,
+                    endType: 'never',
+                },
             });
         }
     }, []);
@@ -271,12 +551,57 @@ export default function EventDialog({
             participants,
             timeZone: formData.timezone,
             showWithoutTime: formData.allDay,
+            recurrence: formData.recurrence,
         };
 
         if (mode === 'edit' && event) {
-            onUpdate(event.id, data);
+            // If editing a recurring event instance, ask if they want to modify just this or all
+            if (event.isRecurringEventInstance && event.recurrenceRule) {
+                setPendingModification({
+                    action: 'edit',
+                    callback: (choice) => {
+                        if (choice.thisOnly) {
+                            // For now, update the entire series
+                            // TODO: In future, implement instance-specific modifications
+                            onUpdate(event.id, data);
+                        } else {
+                            onUpdate(event.id, data);
+                        }
+                        setModificationDialogOpen(false);
+                        setPendingModification(null);
+                    },
+                });
+                setModificationDialogOpen(true);
+            } else {
+                onUpdate(event.id, data);
+            }
         } else {
             onCreate(data);
+        }
+    };
+
+    const handleDelete = () => {
+        if (!event) return;
+
+        // If deleting a recurring event instance, ask if they want to delete just this or all
+        if (event.isRecurringEventInstance && event.recurrenceRule) {
+            setPendingModification({
+                action: 'delete',
+                callback: (choice) => {
+                    if (choice.thisOnly) {
+                        // For now, delete the entire series
+                        // TODO: In future, implement instance-specific deletion with exception dates
+                        onDelete(event.id);
+                    } else {
+                        onDelete(event.id);
+                    }
+                    setModificationDialogOpen(false);
+                    setPendingModification(null);
+                },
+            });
+            setModificationDialogOpen(true);
+        } else {
+            onDelete(event.id);
         }
     };
 
@@ -438,12 +763,23 @@ export default function EventDialog({
                         onParticipantChange={handleParticipantChange}
                         onRemoveParticipant={handleRemoveParticipant}
                     />
+
+                    <RecurrenceSection
+                        recurrence={formData.recurrence}
+                        startDate={new Date(`${formData.startDate}T${formData.startTime}`)}
+                        onRecurrenceChange={(pattern) =>
+                            setFormData({
+                                ...formData,
+                                recurrence: pattern,
+                            })
+                        }
+                    />
                 </Stack>
             </DialogContent>
             <DialogActions>
                 {mode === 'edit' && event && (
                     <Button
-                        onClick={() => onDelete(event.id)}
+                        onClick={handleDelete}
                         color="error"
                         startIcon={<DeleteIcon />}
                         sx={{ mr: 'auto' }}
@@ -456,6 +792,21 @@ export default function EventDialog({
                     {mode === 'create' ? t('calendar.createAndSendInvites') : t('calendar.saveAndUpdateInvites')}
                 </Button>
             </DialogActions>
+
+            {/* Recurrence modification choice dialog */}
+            {pendingModification && (
+                <RecurrenceModificationDialog
+                    open={modificationDialogOpen}
+                    onClose={() => {
+                        setModificationDialogOpen(false);
+                        setPendingModification(null);
+                    }}
+                    onConfirm={(choice) => {
+                        pendingModification.callback(choice);
+                    }}
+                    action={pendingModification.action}
+                />
+            )}
         </Dialog>
     );
 }

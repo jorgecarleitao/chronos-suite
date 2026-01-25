@@ -2,6 +2,7 @@ import { jmapService } from '../../../data/jmapClient';
 import { Invite } from '../../../utils/calendarInviteParser';
 import { withAuthHandling } from '../../../utils/authHandling';
 import { parseJmapParticipants, createJmapParticipant } from '../../../utils/participantUtils';
+import { generateRRuleString, generateOccurrences, calculateEventDuration } from '../../../utils/recurrenceHelpers';
 import type { Participant, CalendarEvent } from '../../../types/calendar';
 import type { UIParticipant, UICalendarEventFormData } from '../types';
 
@@ -123,6 +124,8 @@ export async function fetchCalendarEvents(
                 userParticipationStatus,
                 timeZone: event.timeZone,
                 showWithoutTime: event.showWithoutTime || false,
+                recurrenceRule: event.recurrenceRule,
+                recurrenceOverrides: event.recurrenceOverrides,
             };
         });
 
@@ -230,6 +233,14 @@ export async function createCalendarEvent(
             };
         }
 
+        // Add recurrence rule if provided
+        if (eventData.recurrence && eventData.recurrence.frequency !== 'none') {
+            const rruleString = generateRRuleString(eventData.recurrence, eventData.start);
+            if (rruleString) {
+                calendarEvent.recurrenceRule = rruleString;
+            }
+        }
+
         // Add participants if provided
         if (eventData.participants && eventData.participants.length > 0) {
             const jmapParticipants = convertUIParticipantsToJmap(eventData.participants);
@@ -285,6 +296,8 @@ export async function createCalendarEvent(
             timeZone: createdEvent?.timeZone || eventData.timeZone,
             showWithoutTime: createdEvent?.showWithoutTime || eventData.showWithoutTime || false,
             virtualLocations: createdEvent?.virtualLocations,
+            recurrenceRule: createdEvent?.recurrenceRule,
+            recurrenceOverrides: createdEvent?.recurrenceOverrides,
         };
     });
 }
@@ -364,6 +377,19 @@ export async function updateCalendarEvent(
             } else {
                 // Clear virtual location if empty string
                 patch.virtualLocations = null;
+            }
+        }
+
+        // Update recurrence rule if provided
+        if (updates.recurrence !== undefined) {
+            if (updates.recurrence && updates.recurrence.frequency !== 'none') {
+                const rruleString = generateRRuleString(updates.recurrence, updates.start);
+                if (rruleString) {
+                    patch.recurrenceRule = rruleString;
+                }
+            } else {
+                // Clear recurrence if set to 'none'
+                patch.recurrenceRule = null;
             }
         }
 
@@ -687,3 +713,55 @@ export async function importCalendarInvite(
         };
     });
 }
+
+/**
+ * Expand recurring events to individual occurrences within a date range
+ * For each recurring event, generates instances for the given date range
+ */
+export function expandRecurringEvents(
+    events: CalendarEvent[],
+    startDate: Date,
+    endDate: Date
+): CalendarEvent[] {
+    const expandedEvents: CalendarEvent[] = [];
+
+    for (const event of events) {
+        if (event.recurrenceRule) {
+            // Calculate event duration
+            const duration = calculateEventDuration(event.start, event.end);
+
+            // Generate occurrences
+            try {
+                const occurrences = generateOccurrences(
+                    event.recurrenceRule,
+                    event.start,
+                    endDate,
+                    duration
+                );
+
+                // Filter occurrences to be within range and create event instances
+                for (const occurrence of occurrences) {
+                    if (occurrence.start >= startDate && occurrence.start <= endDate) {
+                        expandedEvents.push({
+                            ...event,
+                            id: `${event.id}#${occurrence.start.toISOString()}`, // Unique ID for each occurrence
+                            start: occurrence.start,
+                            end: occurrence.end,
+                            isRecurringEventInstance: true, // Mark as instance of recurring event
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to expand recurring event:', event.id, error);
+                // Fallback: show just the base event
+                expandedEvents.push(event);
+            }
+        } else {
+            // Non-recurring event - add as is
+            expandedEvents.push(event);
+        }
+    }
+
+    return expandedEvents;
+}
+

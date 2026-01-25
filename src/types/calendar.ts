@@ -53,6 +53,10 @@ export interface CalendarEvent {
     userParticipationStatus?: ParticipationStatus;
     timeZone?: string; // IANA timezone identifier (e.g., 'America/New_York')
     showWithoutTime?: boolean; // All-day event flag
+    // Recurrence fields following iCalendar RFC 5545 RRULE format
+    recurrenceRule?: string; // RRULE string (e.g., 'FREQ=WEEKLY;BYDAY=MO,WE,FR;UNTIL=2026-12-31')
+    recurrenceOverrides?: Record<string, Partial<CalendarEvent>>; // Exceptions to recurrence pattern
+    isRecurringEventInstance?: boolean; // Indicates if this is an instance of a recurring event
 }
 
 /**
