@@ -58,7 +58,9 @@ export default function SharedMailboxList({
                                     <ListItemIcon>
                                         <FolderSharedIcon />
                                     </ListItemIcon>
-                                    <ListItemText primary={accountName || t('mailSidebar.sharedMailboxes')} />
+                                    <ListItemText
+                                        primary={accountName || t('mailSidebar.sharedMailboxes')}
+                                    />
                                     {isAccountExpanded ? <ExpandLess /> : <ExpandMore />}
                                 </ListItemButton>
                             </ListItem>

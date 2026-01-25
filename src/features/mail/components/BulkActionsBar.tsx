@@ -62,7 +62,10 @@ export default function BulkActionsBar({
                     <IconButton onClick={onMarkAsFlagged} title={t('bulkActions.markAsFlagged')}>
                         <StarIcon />
                     </IconButton>
-                    <IconButton onClick={onMarkAsUnflagged} title={t('bulkActions.markAsUnflagged')}>
+                    <IconButton
+                        onClick={onMarkAsUnflagged}
+                        title={t('bulkActions.markAsUnflagged')}
+                    >
                         <StarBorderIcon />
                     </IconButton>
                     <IconButton onClick={onDelete} color="error" title={t('bulkActions.delete')}>

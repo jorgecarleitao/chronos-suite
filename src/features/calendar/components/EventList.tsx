@@ -10,15 +10,15 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PersonIcon from '@mui/icons-material/Person';
 import VideocamIcon from '@mui/icons-material/Videocam';
-import { CalendarEvent } from '../../data/calendarEvents';
-import { formatDateWithTimezone, getLocalTimezone } from '../../../../utils/timezoneHelpers';
+import type { UICalendarEvent } from '../data/calendarEvent';
+import { formatDateWithTimezone, getLocalTimezone } from '../../../utils/timezoneHelpers';
 import { useTranslation } from 'react-i18next';
 
 interface EventListProps {
     selectedDate: Date;
-    events: CalendarEvent[];
+    events: UICalendarEvent[];
     error: string | null;
-    onEditEvent: (event: CalendarEvent) => void;
+    onEditEvent: (event: UICalendarEvent) => void;
     onDeleteEvent: (eventId: string) => void;
     onClearError: () => void;
 }
@@ -122,8 +122,11 @@ export default function EventList({
                                                 <VideocamIcon fontSize="small" color="primary" />
                                                 <Link
                                                     href={
-                                                        Object.values(event.virtualLocations)[0]
-                                                            ?.uri
+                                                        (
+                                                            Object.values(
+                                                                event.virtualLocations
+                                                            )[0] as { uri: string }
+                                                        )?.uri
                                                     }
                                                     target="_blank"
                                                     rel="noopener noreferrer"
@@ -150,8 +153,8 @@ export default function EventList({
                                                         <Chip
                                                             key={idx}
                                                             label={
-                                                                participant.name ||
-                                                                participant.email
+                                                                (participant as any).name ||
+                                                                (participant as any).email
                                                             }
                                                             size="small"
                                                             variant="outlined"

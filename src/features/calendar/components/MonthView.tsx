@@ -1,8 +1,8 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
-import { CalendarEvent } from '../../data/calendarEvents';
-import { getDaysInMonth, getFirstDayOfMonth, isSameDay } from '../../../../utils/dateHelpers';
+import type { CalendarEvent } from '../data/calendarEvent';
+import { getDaysInMonth, getFirstDayOfMonth, isSameDay } from '../../../utils/dateHelpers';
 import { useTranslation } from 'react-i18next';
 import RepeatIcon from '@mui/icons-material/Repeat';
 
@@ -22,20 +22,28 @@ export default function MonthView({
     onDateSelect,
 }: MonthViewProps) {
     const { t } = useTranslation();
-    
+
     const getDayName = (day: string) => {
         switch (day) {
-            case 'Sun': return t('calendar.sunday');
-            case 'Mon': return t('calendar.monday');
-            case 'Tue': return t('calendar.tuesday');
-            case 'Wed': return t('calendar.wednesday');
-            case 'Thu': return t('calendar.thursday');
-            case 'Fri': return t('calendar.friday');
-            case 'Sat': return t('calendar.saturday');
-            default: return day;
+            case 'Sun':
+                return t('calendar.sunday');
+            case 'Mon':
+                return t('calendar.monday');
+            case 'Tue':
+                return t('calendar.tuesday');
+            case 'Wed':
+                return t('calendar.wednesday');
+            case 'Thu':
+                return t('calendar.thursday');
+            case 'Fri':
+                return t('calendar.friday');
+            case 'Sat':
+                return t('calendar.saturday');
+            default:
+                return day;
         }
     };
-    
+
     const isSelected = (day: number) => {
         return (
             day === selectedDate.getDate() &&
@@ -69,8 +77,8 @@ export default function MonthView({
             const selected = isSelected(day);
 
             // Get events for this day
-            const dayEvents = events.filter(event => isSameDay(event.start, dayDate));
-            const hasRecurringEvents = dayEvents.some(e => e.recurrenceRules?.length);
+            const dayEvents = events.filter((event) => isSameDay(event.start, dayDate));
+            const hasRecurringEvents = dayEvents.some((e) => e.recurrenceRules?.length);
 
             days.push(
                 <Box
@@ -100,16 +108,22 @@ export default function MonthView({
                         {day}
                     </Typography>
                     {dayEvents.length > 0 && (
-                        <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, alignItems: 'center', fontSize: '0.7rem' }}>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                gap: 0.5,
+                                mt: 0.5,
+                                alignItems: 'center',
+                                fontSize: '0.7rem',
+                            }}
+                        >
                             <Chip
                                 size="small"
                                 label={`${dayEvents.length}`}
                                 variant="outlined"
                                 sx={{ height: 18, fontSize: '0.7rem' }}
                             />
-                            {hasRecurringEvents && (
-                                <RepeatIcon sx={{ fontSize: '0.9rem' }} />
-                            )}
+                            {hasRecurringEvents && <RepeatIcon sx={{ fontSize: '0.9rem' }} />}
                         </Box>
                     )}
                 </Box>

@@ -275,9 +275,7 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
             <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
                 <DialogTitle>{t('messageList.deleteMessage')}</DialogTitle>
                 <DialogContent>
-                    <DialogContentText>
-                        {t('messageList.deleteMessageConfirm')}
-                    </DialogContentText>
+                    <DialogContentText>{t('messageList.deleteMessageConfirm')}</DialogContentText>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleDeleteCancel}>{t('common.cancel')}</Button>
@@ -292,7 +290,9 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
                 <DialogTitle>{t('messageList.deleteMessages')}</DialogTitle>
                 <DialogContent>
                     <DialogContentText>
-                        {t('messageList.deleteMessagesConfirm', { count: operations.selectedIds.size })}
+                        {t('messageList.deleteMessagesConfirm', {
+                            count: operations.selectedIds.size,
+                        })}
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>

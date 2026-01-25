@@ -23,15 +23,16 @@ import RadioGroup from '@mui/material/RadioGroup';
 import Radio from '@mui/material/Radio';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { CalendarEvent } from '../../data/calendarEvents';
-import { UICalendarEventFormData, UIParticipant, UIRecurrencePattern } from '../../types';
-import { participantsToArray } from '../../../../utils/participantUtils';
-import { parseRecurrenceRule } from '../../utils/recurrenceHelpers';
+import type { UICalendarEvent } from '../data/calendarEvent';
+import type { UICalendarEventFormData } from '../data/calendarEvent/ui';
+import type { UIParticipant } from '../data/participant/ui';
+import { UI as RecurrenceUI } from '../data/recurrenceRule';
+import type { UIRecurrencePattern } from '../data/recurrenceRule/ui';
 import {
     getCommonTimezones,
     getLocalTimezone,
     formatTimezoneDisplay,
-} from '../../../../utils/timezoneHelpers';
+} from '../../../utils/timezoneHelpers';
 
 interface ParticipantRow {
     email: string;
@@ -141,7 +142,15 @@ function RecurrenceSection({ recurrence, startDate, onRecurrenceChange }: Recurr
     const { t } = useTranslation();
 
     const daysOfWeek = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
-    const dayLabels = ['calendar.monday', 'calendar.tuesday', 'calendar.wednesday', 'calendar.thursday', 'calendar.friday', 'calendar.saturday', 'calendar.sunday'];
+    const dayLabels = [
+        'calendar.monday',
+        'calendar.tuesday',
+        'calendar.wednesday',
+        'calendar.thursday',
+        'calendar.friday',
+        'calendar.saturday',
+        'calendar.sunday',
+    ];
 
     return (
         <Box>
@@ -158,7 +167,7 @@ function RecurrenceSection({ recurrence, startDate, onRecurrenceChange }: Recurr
                     onChange={(e) =>
                         onRecurrenceChange({
                             ...recurrence,
-                            frequency: e.target.value as any,
+                            frequency: (e.target as HTMLSelectElement).value as any,
                         })
                     }
                 >
@@ -209,20 +218,31 @@ function RecurrenceSection({ recurrence, startDate, onRecurrenceChange }: Recurr
                                         control={
                                             <Checkbox
                                                 size="small"
-                                                checked={(recurrence.byDayOfWeek || []).includes(day)}
-                                                onChange={(e: JSX.TargetedEvent<HTMLInputElement>) => {
+                                                checked={(recurrence.byDayOfWeek || []).includes(
+                                                    day
+                                                )}
+                                                onChange={(
+                                                    e: JSX.TargetedEvent<HTMLInputElement>
+                                                ) => {
                                                     const newDays = e.currentTarget.checked
                                                         ? [...(recurrence.byDayOfWeek || []), day]
-                                                        : (recurrence.byDayOfWeek || []).filter(d => d !== day);
+                                                        : (recurrence.byDayOfWeek || []).filter(
+                                                              (d) => d !== day
+                                                          );
                                                     onRecurrenceChange({
                                                         ...recurrence,
-                                                        byDayOfWeek: newDays.length > 0 ? newDays : undefined,
+                                                        byDayOfWeek:
+                                                            newDays.length > 0
+                                                                ? newDays
+                                                                : undefined,
                                                     });
                                                 }}
                                             />
                                         }
                                         label={
-                                            <Typography variant="caption">{t(dayLabels[idx])}</Typography>
+                                            <Typography variant="caption">
+                                                {t(dayLabels[idx])}
+                                            </Typography>
                                         }
                                     />
                                 ))}
@@ -239,16 +259,22 @@ function RecurrenceSection({ recurrence, startDate, onRecurrenceChange }: Recurr
                             onChange={(e) =>
                                 onRecurrenceChange({
                                     ...recurrence,
-                                    endType: e.target.value as any,
+                                    endType: (e.target as HTMLSelectElement).value as any,
                                     endCount: undefined,
                                     endDate: undefined,
                                 })
                             }
                             sx={{ width: 120 }}
                         >
-                            <MenuItem value="never">{t('calendar.recurrence.endType.never')}</MenuItem>
-                            <MenuItem value="after">{t('calendar.recurrence.endType.after')}</MenuItem>
-                            <MenuItem value="until">{t('calendar.recurrence.endType.until')}</MenuItem>
+                            <MenuItem value="never">
+                                {t('calendar.recurrence.endType.never')}
+                            </MenuItem>
+                            <MenuItem value="after">
+                                {t('calendar.recurrence.endType.after')}
+                            </MenuItem>
+                            <MenuItem value="until">
+                                {t('calendar.recurrence.endType.until')}
+                            </MenuItem>
                         </Select>
 
                         {recurrence.endType === 'after' && (
@@ -266,7 +292,9 @@ function RecurrenceSection({ recurrence, startDate, onRecurrenceChange }: Recurr
                                     }
                                     sx={{ width: 80 }}
                                 />
-                                <Typography variant="caption">{t('calendar.recurrence.occurrences')}</Typography>
+                                <Typography variant="caption">
+                                    {t('calendar.recurrence.occurrences')}
+                                </Typography>
                             </>
                         )}
 
@@ -283,7 +311,9 @@ function RecurrenceSection({ recurrence, startDate, onRecurrenceChange }: Recurr
                                 onChange={(e: JSX.TargetedEvent<HTMLInputElement>) =>
                                     onRecurrenceChange({
                                         ...recurrence,
-                                        endDate: e.currentTarget.value ? new Date(e.currentTarget.value) : undefined,
+                                        endDate: e.currentTarget.value
+                                            ? new Date(e.currentTarget.value)
+                                            : undefined,
                                     })
                                 }
                             />
@@ -296,7 +326,7 @@ function RecurrenceSection({ recurrence, startDate, onRecurrenceChange }: Recurr
 }
 
 interface EventDialogProps {
-    event: CalendarEvent | null;
+    event: UICalendarEvent | null;
     initialDate: Date;
     onClose: () => void;
     onCreate: (data: UICalendarEventFormData) => void;
@@ -336,7 +366,7 @@ function RecurrenceModificationDialog({
                 <FormControl component="fieldset" sx={{ mt: 2 }}>
                     <RadioGroup
                         value={choice ? 'this' : 'series'}
-                        onChange={(e) => setChoice(e.target.value === 'this')}
+                        onChange={(e) => setChoice((e.target as HTMLInputElement).value === 'this')}
                     >
                         <FormControlLabel
                             value="this"
@@ -429,9 +459,9 @@ export default function EventDialog({
             const isAllDay = event.showWithoutTime || false;
             // Extract virtual location from virtualLocations
             const virtualLocation = event.virtualLocations
-                ? Object.values(event.virtualLocations)[0]?.uri || ''
+                ? (Object.values(event.virtualLocations)[0] as { uri: string })?.uri || ''
                 : '';
-            
+
             // Parse recurrence if present
             let recurrence: UIRecurrencePattern = {
                 frequency: 'none',
@@ -439,7 +469,7 @@ export default function EventDialog({
                 endType: 'never',
             };
             if (event.recurrenceRules?.[0]) {
-                const parsed = parseRecurrenceRule(event.recurrenceRules[0]);
+                const parsed = RecurrenceUI.fromJmap(event.recurrenceRules[0]);
                 if (parsed) recurrence = parsed;
             }
 
@@ -458,7 +488,9 @@ export default function EventDialog({
             });
 
             // Convert participants to rows
-            const existingParticipants = participantsToArray(event.participants);
+            const existingParticipants = event.participants
+                ? Object.values(event.participants)
+                : [];
             const rows: ParticipantRow[] = existingParticipants.map((p) => ({
                 email: p.email || '',
                 name: p.name || '',
@@ -607,7 +639,9 @@ export default function EventDialog({
 
     return (
         <Dialog open={true} onClose={onClose} maxWidth="sm" fullWidth>
-            <DialogTitle>{mode === 'create' ? t('calendar.create') : t('calendar.edit')}</DialogTitle>
+            <DialogTitle>
+                {mode === 'create' ? t('calendar.create') : t('calendar.edit')}
+            </DialogTitle>
             <DialogContent>
                 <Stack spacing={2} sx={{ mt: 1 }}>
                     <TextField
@@ -705,7 +739,7 @@ export default function EventDialog({
                                 onChange={(e) =>
                                     setFormData({
                                         ...formData,
-                                        timezone: e.target.value as string,
+                                        timezone: (e.target as HTMLSelectElement).value as string,
                                     })
                                 }
                                 disabled={formData.allDay}
@@ -789,7 +823,9 @@ export default function EventDialog({
                 )}
                 <Button onClick={onClose}>{t('common.cancel')}</Button>
                 <Button onClick={handleSubmit} variant="contained" disabled={!formData.title}>
-                    {mode === 'create' ? t('calendar.createAndSendInvites') : t('calendar.saveAndUpdateInvites')}
+                    {mode === 'create'
+                        ? t('calendar.createAndSendInvites')
+                        : t('calendar.saveAndUpdateInvites')}
                 </Button>
             </DialogActions>
 

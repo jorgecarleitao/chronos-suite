@@ -183,7 +183,12 @@ function mapJmapToMessageMetadata(jmapEmail: any): MessageMetadata {
     };
 }
 
-export async function fetchMessages(accountId: string, mailbox: string, limit = 50, offset = 0): Promise<Messages> {
+export async function fetchMessages(
+    accountId: string,
+    mailbox: string,
+    limit = 50,
+    offset = 0
+): Promise<Messages> {
     return withAuthHandling(async () => {
         if (!jmapService.isInitialized()) {
             throw new Error('JMAP client not initialized. Please log in first.');

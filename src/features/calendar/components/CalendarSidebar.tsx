@@ -8,7 +8,7 @@ import Typography from '@mui/material/Typography';
 import Stack from '@mui/material/Stack';
 import CircularProgress from '@mui/material/CircularProgress';
 import AddIcon from '@mui/icons-material/Add';
-import Sidebar from '../../../../components/Sidebar';
+import Sidebar from '../../../components/Sidebar';
 import { useTranslation } from 'react-i18next';
 
 interface CalendarSidebarProps {

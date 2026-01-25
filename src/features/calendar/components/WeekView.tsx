@@ -5,9 +5,9 @@ import Link from '@mui/material/Link';
 import PersonIcon from '@mui/icons-material/Person';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import RepeatIcon from '@mui/icons-material/Repeat';
-import { CalendarEvent } from '../../data/calendarEvents';
-import { isSameDay } from '../../../../utils/dateHelpers';
-import { getLocalTimezone } from '../../../../utils/timezoneHelpers';
+import type { CalendarEvent } from '../data/calendarEvent';
+import { isSameDay } from '../../../utils/dateHelpers';
+import { getLocalTimezone } from '../../../utils/timezoneHelpers';
 import { useTranslation } from 'react-i18next';
 
 interface WeekViewProps {
@@ -208,7 +208,7 @@ function EventTooltipContent({ event }: EventTooltipContentProps) {
                 <Box sx={{ mt: 0.5, display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <VideocamIcon fontSize="small" />
                     <Link
-                        href={Object.values(event.virtualLocations)[0]?.uri}
+                        href={(Object.values(event.virtualLocations)[0] as { uri: string })?.uri}
                         target="_blank"
                         rel="noopener noreferrer"
                         variant="caption"
@@ -238,14 +238,22 @@ export default function WeekView({
 
     const getDayName = (day: string) => {
         switch (day) {
-            case 'Mon': return t('calendar.monday');
-            case 'Tue': return t('calendar.tuesday');
-            case 'Wed': return t('calendar.wednesday');
-            case 'Thu': return t('calendar.thursday');
-            case 'Fri': return t('calendar.friday');
-            case 'Sat': return t('calendar.saturday');
-            case 'Sun': return t('calendar.sunday');
-            default: return day;
+            case 'Mon':
+                return t('calendar.monday');
+            case 'Tue':
+                return t('calendar.tuesday');
+            case 'Wed':
+                return t('calendar.wednesday');
+            case 'Thu':
+                return t('calendar.thursday');
+            case 'Fri':
+                return t('calendar.friday');
+            case 'Sat':
+                return t('calendar.saturday');
+            case 'Sun':
+                return t('calendar.sunday');
+            default:
+                return day;
         }
     };
 

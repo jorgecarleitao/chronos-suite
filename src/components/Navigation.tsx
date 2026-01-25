@@ -151,7 +151,11 @@ export default function Navigation({ mode, toggleTheme }: NavigationProps) {
                         </Stack>
                     )}
                     {isAuthenticated && (
-                        <IconButton onClick={handleLogout} color="inherit" title={t('navigation.logout')}>
+                        <IconButton
+                            onClick={handleLogout}
+                            color="inherit"
+                            title={t('navigation.logout')}
+                        >
                             <LogoutIcon />
                         </IconButton>
                     )}

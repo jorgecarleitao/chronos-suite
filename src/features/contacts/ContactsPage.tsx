@@ -281,7 +281,11 @@ export default function Contacts({ path }: ContactsProps) {
                                             >
                                                 <ListItemText
                                                     primary={ab.name}
-                                                    secondary={ab.isDefault ? t('contacts.default') : undefined}
+                                                    secondary={
+                                                        ab.isDefault
+                                                            ? t('contacts.default')
+                                                            : undefined
+                                                    }
                                                 />
                                             </ListItemButton>
                                         </ListItem>
@@ -419,14 +423,18 @@ export default function Contacts({ path }: ContactsProps) {
                                 />
 
                                 <Stack direction="row" spacing={2} justifyContent="flex-end">
-                                    <Button onClick={handleCancelCreate}>{t('common.cancel')}</Button>
+                                    <Button onClick={handleCancelCreate}>
+                                        {t('common.cancel')}
+                                    </Button>
                                     <Button
                                         variant="contained"
                                         startIcon={<SaveIcon />}
                                         onClick={handleSaveContact}
                                         disabled={loading}
                                     >
-                                        {editingContact ? t('contacts.updateContact') : t('contacts.saveContact')}
+                                        {editingContact
+                                            ? t('contacts.updateContact')
+                                            : t('contacts.saveContact')}
                                     </Button>
                                 </Stack>
                             </Stack>

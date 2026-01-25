@@ -50,7 +50,11 @@ export default function PaginationBar({
             }}
         >
             <Typography variant="body2" color="text.secondary">
-                {t('pagination.showing', { start: startMessage, end: endMessage, total: totalMessages })}
+                {t('pagination.showing', {
+                    start: startMessage,
+                    end: endMessage,
+                    total: totalMessages,
+                })}
             </Typography>
 
             <Stack direction="row" alignItems="center" spacing={1}>

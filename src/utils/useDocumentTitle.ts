@@ -9,7 +9,7 @@ export function useDocumentTitle(title: string | null) {
         if (title) {
             document.title = title;
         }
-        
+
         // Cleanup: restore default title on unmount
         return () => {
             document.title = 'Chronos Suite';

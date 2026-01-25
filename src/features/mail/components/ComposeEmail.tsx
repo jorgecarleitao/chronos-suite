@@ -128,7 +128,11 @@ function ComposerHeader({
                     />
                 )}
                 {autoSaveStatus === 'saved' && (
-                    <Chip size="small" label={t('compose.saved')} icon={<CheckCircleIcon fontSize="small" />} />
+                    <Chip
+                        size="small"
+                        label={t('compose.saved')}
+                        icon={<CheckCircleIcon fontSize="small" />}
+                    />
                 )}
             </Stack>
             <Stack direction="row" spacing={0.5}>
@@ -418,10 +422,20 @@ function ActionsBar({ saving, onSend, onAttach, onDelete }: ActionsBarProps) {
 
             <Box flex={1} />
 
-            <IconButton size="small" onClick={onAttach} disabled={saving} title={t('compose.attachFiles')}>
+            <IconButton
+                size="small"
+                onClick={onAttach}
+                disabled={saving}
+                title={t('compose.attachFiles')}
+            >
                 <AttachFileIcon fontSize="small" />
             </IconButton>
-            <IconButton size="small" onClick={onDelete} disabled={saving} title={t('compose.deleteDraft')}>
+            <IconButton
+                size="small"
+                onClick={onDelete}
+                disabled={saving}
+                title={t('compose.deleteDraft')}
+            >
                 <DeleteIcon fontSize="small" />
             </IconButton>
         </Stack>

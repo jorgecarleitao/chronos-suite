@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import TodayIcon from '@mui/icons-material/Today';
-import { getWeekDisplayText } from '../../../../utils/dateHelpers';
+import { getWeekDisplayText } from '../../../utils/dateHelpers';
 
 interface CalendarHeaderProps {
     view: 'month' | 'week';
@@ -36,7 +36,10 @@ export default function CalendarHeader({
                 </IconButton>
                 <Typography variant="h5">
                     {view === 'month'
-                        ? currentDate.toLocaleDateString(i18n.language, { month: 'long', year: 'numeric' })
+                        ? currentDate.toLocaleDateString(i18n.language, {
+                              month: 'long',
+                              year: 'numeric',
+                          })
                         : getWeekDisplayText(currentDate, i18n.language)}
                 </Typography>
                 <IconButton onClick={onNext}>

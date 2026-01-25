@@ -43,7 +43,9 @@ export default function MailboxDialogs({
             {/* Create Mailbox Dialog */}
             <Dialog open={createDialogOpen} onClose={onCreateClose}>
                 <DialogTitle>
-                    {selectedMailboxForAction ? t('mailbox.createSubfolderTitle') : t('mailbox.createMailbox')}
+                    {selectedMailboxForAction
+                        ? t('mailbox.createSubfolderTitle')
+                        : t('mailbox.createMailbox')}
                 </DialogTitle>
                 <DialogContent>
                     <TextField
@@ -99,7 +101,9 @@ export default function MailboxDialogs({
                 <DialogTitle>{t('mailbox.deleteMailbox')}</DialogTitle>
                 <DialogContent>
                     <Typography>
-                        {t('mailbox.confirmDelete', { name: selectedMailboxForAction?.displayName || '' })}
+                        {t('mailbox.confirmDelete', {
+                            name: selectedMailboxForAction?.displayName || '',
+                        })}
                     </Typography>
                 </DialogContent>
                 <DialogActions>

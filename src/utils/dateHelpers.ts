@@ -67,14 +67,18 @@ export function getWeekDisplayText(currentDate: Date, locale: string): string {
     const weekStart = getWeekStart(currentDate);
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
-    
+
     // If week spans two months
     if (weekStart.getMonth() !== weekEnd.getMonth()) {
         const startStr = weekStart.toLocaleDateString(locale, { month: 'long', day: 'numeric' });
-        const endStr = weekEnd.toLocaleDateString(locale, { month: 'long', day: 'numeric', year: 'numeric' });
+        const endStr = weekEnd.toLocaleDateString(locale, {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric',
+        });
         return `${startStr} - ${endStr}`;
     }
-    
+
     // Same month
     const monthYear = weekStart.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
     return `${monthYear} ${weekStart.getDate()} - ${weekEnd.getDate()}`;

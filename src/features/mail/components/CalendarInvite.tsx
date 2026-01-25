@@ -149,7 +149,7 @@ export default function CalendarInvite({
                             onClick={() => handleResponse('accepted')}
                             disabled={responding || alreadyExists || checkingExists}
                             sx={{ minWidth: 'auto', px: 1 }}
-                        title={t('calendarInvite.accept')}
+                            title={t('calendarInvite.accept')}
                         >
                             <CheckCircleIcon fontSize="small" />
                         </Button>
@@ -160,7 +160,7 @@ export default function CalendarInvite({
                             onClick={() => handleResponse('tentative')}
                             disabled={responding || alreadyExists || checkingExists}
                             sx={{ minWidth: 'auto', px: 1 }}
-                        title={t('calendarInvite.tentative')}
+                            title={t('calendarInvite.tentative')}
                         >
                             <HelpOutlineIcon fontSize="small" />
                         </Button>
@@ -171,7 +171,7 @@ export default function CalendarInvite({
                             onClick={() => handleResponse('declined')}
                             disabled={responding || alreadyExists || checkingExists}
                             sx={{ minWidth: 'auto', px: 1 }}
-                        title={t('calendarInvite.decline')}
+                            title={t('calendarInvite.decline')}
                         >
                             <CancelIcon fontSize="small" />
                         </Button>

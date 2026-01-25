@@ -6,22 +6,23 @@ import Paper from '@mui/material/Paper';
 import CircularProgress from '@mui/material/CircularProgress';
 import Stack from '@mui/material/Stack';
 import { getPrimaryAccountId } from '../../data/accounts';
-import {
+import { actions, type UICalendarEvent } from './data/calendarEvent';
+
+const {
     fetchCalendarEvents,
     createCalendarEvent,
     updateCalendarEvent,
     deleteCalendarEvent,
     fetchCalendars,
     expandRecurringEvents,
-    CalendarEvent,
-} from './data/calendarEvents';
-import { UICalendarEventFormData } from './types';
-import CalendarHeader from './components/calendar/CalendarHeader';
-import MonthView from './components/calendar/MonthView';
-import WeekView from './components/calendar/WeekView';
-import EventList from './components/calendar/EventList';
-import EventDialog from './components/calendar/EventDialog';
-import CalendarSidebar from './components/calendar/CalendarSidebar';
+} = actions;
+import type { UICalendarEventFormData } from './data/calendarEvent/ui';
+import CalendarHeader from './components/CalendarHeader';
+import MonthView from './components/MonthView';
+import WeekView from './components/WeekView';
+import EventList from './components/EventList';
+import EventDialog from './components/EventDialog';
+import CalendarSidebar from './components/CalendarSidebar';
 import { useDocumentTitle } from '../../utils/useDocumentTitle';
 import { useTranslation } from 'react-i18next';
 
@@ -36,16 +37,16 @@ export default function Calendar({ path }: CalendarProps) {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [view, setView] = useState<'month' | 'week'>('week');
-    const [events, setEvents] = useState<CalendarEvent[]>([]);
+    const [events, setEvents] = useState<UICalendarEvent[]>([]);
     const [calendars, setCalendars] = useState<Array<{ id: string; name: string }>>([]);
     const [selectedCalendar, setSelectedCalendar] = useState<string | null>(null);
-    const [dialogEvent, setDialogEvent] = useState<CalendarEvent | null | undefined>(undefined);
+    const [dialogEvent, setDialogEvent] = useState<UICalendarEvent | null | undefined>(undefined);
     const [error, setError] = useState<string | null>(null);
 
     // Update document title with next event time/date
     const now = new Date();
     const upcomingEvents = events
-        .filter(e => new Date(e.start) > now)
+        .filter((e) => new Date(e.start) > now)
         .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
 
     const nextEvent = upcomingEvents[0];
@@ -56,22 +57,33 @@ export default function Calendar({ path }: CalendarProps) {
         const today = new Date();
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
-        
+
         const isToday = eventDate.toDateString() === today.toDateString();
         const isTomorrow = eventDate.toDateString() === tomorrow.toDateString();
-        
+
         if (isToday) {
-            const timeStr = eventDate.toLocaleTimeString(i18n.language, { hour: 'numeric', minute: '2-digit', hour12: true });
+            const timeStr = eventDate.toLocaleTimeString(i18n.language, {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true,
+            });
             title = t('calendar.nextEventToday', { time: timeStr });
         } else if (isTomorrow) {
-            const timeStr = eventDate.toLocaleTimeString(i18n.language, { hour: 'numeric', minute: '2-digit', hour12: true });
+            const timeStr = eventDate.toLocaleTimeString(i18n.language, {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true,
+            });
             title = t('calendar.nextEventTomorrow', { time: timeStr });
         } else {
-            const dateStr = eventDate.toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' });
+            const dateStr = eventDate.toLocaleDateString(i18n.language, {
+                month: 'short',
+                day: 'numeric',
+            });
             title = t('calendar.nextEventDate', { date: dateStr });
         }
     }
-    
+
     useDocumentTitle(title);
 
     useEffect(() => {
@@ -112,7 +124,7 @@ export default function Calendar({ path }: CalendarProps) {
             const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
             const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
             const evts = await fetchCalendarEvents(accId, calId, startOfMonth, endOfMonth);
-            
+
             // Expand recurring events to individual occurrences
             const expandedEvents = expandRecurringEvents(evts, startOfMonth, endOfMonth);
             setEvents(expandedEvents);
@@ -166,7 +178,7 @@ export default function Calendar({ path }: CalendarProps) {
         setDialogEvent(null);
     };
 
-    const openEditDialog = (event: CalendarEvent) => {
+    const openEditDialog = (event: UICalendarEvent) => {
         setDialogEvent(event);
     };
 
@@ -188,7 +200,8 @@ export default function Calendar({ path }: CalendarProps) {
         if (!accountId) return;
 
         try {
-            await updateCalendarEvent(accountId, eventId, data);
+            const calendarId = dialogEvent?.calendarId || calendars[0]?.id;
+            await updateCalendarEvent(accountId, calendarId, eventId, data);
 
             setDialogEvent(undefined);
             if (selectedCalendar) {
