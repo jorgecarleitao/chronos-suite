@@ -26,14 +26,10 @@ import ContactsIcon from '@mui/icons-material/Contacts';
 import CloseIcon from '@mui/icons-material/Close';
 import SaveIcon from '@mui/icons-material/Save';
 import Sidebar, { drawerWidth } from '../../components/Sidebar';
-import {
-    fetchContacts,
-    deleteContact,
-    updateContact,
-    createContact,
-    Contact,
-} from './data/contacts';
-import { fetchAddressBooks, AddressBook } from './data/addressBook';
+// Contact data modules
+import { actions as contactActions, type UIContact } from './data/contact';
+import { actions as addressBookActions, type UIAddressBook } from './data/addressBook';
+import type { UIContactFormData } from './data/contact/ui';
 import { getPrimaryAccountId } from '../../data/accounts';
 import { useTranslation } from 'react-i18next';
 
@@ -43,16 +39,16 @@ interface ContactsProps {
 
 export default function Contacts({ path }: ContactsProps) {
     const { t } = useTranslation();
-    const [contacts, setContacts] = useState<Contact[]>([]);
-    const [addressBooks, setAddressBooks] = useState<AddressBook[]>([]);
+    const [contacts, setContacts] = useState<UIContact[]>([]);
+    const [addressBooks, setAddressBooks] = useState<UIAddressBook[]>([]);
     const [selectedAddressBook, setSelectedAddressBook] = useState<string | undefined>(undefined);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [accountId, setAccountId] = useState<string | null>(null);
     const [isCreating, setIsCreating] = useState(false);
-    const [editingContact, setEditingContact] = useState<Contact | null>(null);
-    const [originalFormData, setOriginalFormData] = useState<Partial<Contact>>({});
-    const [formData, setFormData] = useState<Partial<Contact>>({
+    const [editingContact, setEditingContact] = useState<UIContact | null>(null);
+    const [originalFormData, setOriginalFormData] = useState<Partial<UIContact>>({});
+    const [formData, setFormData] = useState<Partial<UIContact>>({
         firstName: '',
         lastName: '',
         email: '',
@@ -82,7 +78,7 @@ export default function Contacts({ path }: ContactsProps) {
 
     const loadAddressBooks = async (accId: string) => {
         try {
-            const data = await fetchAddressBooks(accId);
+            const data = await addressBookActions.fetchAddressBooks(accId);
             setAddressBooks(data);
         } catch (err) {
             console.error('Failed to load address books:', err);
@@ -93,7 +89,7 @@ export default function Contacts({ path }: ContactsProps) {
         setLoading(true);
         setError(null);
         try {
-            const data = await fetchContacts(accId, addressBookId);
+            const data = await contactActions.fetchContacts(accId, addressBookId);
             setContacts(data);
         } catch (err) {
             setError(err instanceof Error ? err.message : t('contacts.failedToLoadContacts'));
@@ -115,31 +111,31 @@ export default function Contacts({ path }: ContactsProps) {
         if (!confirm(t('contacts.confirmDelete'))) return;
 
         try {
-            await deleteContact(accountId, contactId);
+            await contactActions.deleteContact(accountId, contactId);
             loadContacts(accountId, selectedAddressBook);
         } catch (err) {
             setError(err instanceof Error ? err.message : t('contacts.failedToDeleteContact'));
         }
     };
 
-    const handleToggleFavorite = async (contact: Contact) => {
+    const handleToggleFavorite = async (contact: UIContact) => {
         if (!accountId) return;
 
         try {
-            await updateContact(accountId, contact.id, { isFavorite: !contact.isFavorite });
+            await contactActions.updateContact(accountId, contact.id, { isFavorite: !contact.isFavorite });
             loadContacts(accountId, selectedAddressBook);
         } catch (err) {
             setError(err instanceof Error ? err.message : t('contacts.failedToUpdateContact'));
         }
     };
 
-    const getInitials = (contact: Contact) => {
+    const getInitials = (contact: UIContact) => {
         const first = contact.firstName?.[0] || '';
         const last = contact.lastName?.[0] || '';
         return (first + last).toUpperCase() || '?';
     };
 
-    const getDisplayName = (contact: Contact) => {
+    const getDisplayName = (contact: UIContact) => {
         if (contact.firstName || contact.lastName) {
             return `${contact.firstName || ''} ${contact.lastName || ''}`.trim();
         }
@@ -163,7 +159,7 @@ export default function Contacts({ path }: ContactsProps) {
         setOriginalFormData(emptyForm);
     };
 
-    const handleEditClick = (contact: Contact) => {
+    const handleEditClick = (contact: UIContact) => {
         setIsCreating(true);
         setEditingContact(contact);
         const contactForm = {
@@ -193,7 +189,7 @@ export default function Contacts({ path }: ContactsProps) {
 
             if (editingContact) {
                 // Update existing contact
-                await updateContact(accountId, editingContact.id, formData);
+                await contactActions.updateContact(accountId, editingContact.id, formData);
             } else {
                 // Create new contact
                 const targetAddressBook =
@@ -202,7 +198,7 @@ export default function Contacts({ path }: ContactsProps) {
                     setError('No address book available. Please create an address book first.');
                     return;
                 }
-                await createContact(accountId, targetAddressBook.id, formData);
+                await contactActions.createContact(accountId, targetAddressBook.id, formData);
             }
 
             setIsCreating(false);
@@ -220,11 +216,11 @@ export default function Contacts({ path }: ContactsProps) {
         }
     };
 
-    const handleFormChange = (field: keyof Contact, value: any) => {
+    const handleFormChange = (field: keyof UIContact, value: any) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
     };
 
-    const isFieldModified = (field: keyof Contact): boolean => {
+    const isFieldModified = (field: keyof UIContact): boolean => {
         return formData[field] !== originalFormData[field];
     };
 

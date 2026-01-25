@@ -7,8 +7,8 @@ import Chip from '@mui/material/Chip';
 import Tooltip from '@mui/material/Tooltip';
 import Box from '@mui/material/Box';
 import PersonIcon from '@mui/icons-material/Person';
-import { fetchContacts, Contact } from '../../contacts/data/contacts';
 import { getPrimaryAccountId } from '../../../data/accounts';
+import { findContactByEmail, type ContactInfo } from '../../../data/contactService';
 
 interface MessageMetadataProps {
     fromName: string;
@@ -26,7 +26,7 @@ export default function MessageMetadata({
     date,
 }: MessageMetadataProps) {
     const { t } = useTranslation();
-    const [contact, setContact] = useState<Contact | null>(null);
+    const [contact, setContact] = useState<ContactInfo | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -36,13 +36,10 @@ export default function MessageMetadata({
     const loadContact = async () => {
         try {
             const accountId = await getPrimaryAccountId();
-            const contacts = await fetchContacts(accountId);
-            const matchingContact = contacts.find(
-                (c) => c.email?.toLowerCase() === fromEmail.toLowerCase()
-            );
-            setContact(matchingContact || null);
+            const matchingContact = await findContactByEmail(accountId, fromEmail);
+            setContact(matchingContact);
         } catch (err) {
-            console.error('Failed to load contacts:', err);
+            console.error('Failed to load contact:', err);
         } finally {
             setLoading(false);
         }

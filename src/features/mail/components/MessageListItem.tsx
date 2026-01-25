@@ -18,8 +18,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import PersonIcon from '@mui/icons-material/Person';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import { MessageMetadata } from '../data/messages';
-import { fetchContacts, Contact } from '../../contacts/data/contacts';
 import { getPrimaryAccountId } from '../../../data/accounts';
+import { findContactByEmail, type ContactInfo } from '../../../data/contactService';
 
 interface MessageListItemProps {
     message: MessageMetadata;
@@ -57,7 +57,7 @@ export default function MessageListItem({
     onToggleStar,
 }: MessageListItemProps) {
     const { t } = useTranslation();
-    const [contact, setContact] = useState<Contact | null>(null);
+    const [contact, setContact] = useState<ContactInfo | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -71,13 +71,10 @@ export default function MessageListItem({
         }
         try {
             const accountId = await getPrimaryAccountId();
-            const contacts = await fetchContacts(accountId);
-            const matchingContact = contacts.find(
-                (c) => c.email?.toLowerCase() === message.from_email?.toLowerCase()
-            );
-            setContact(matchingContact || null);
+            const matchingContact = await findContactByEmail(accountId, message.from_email);
+            setContact(matchingContact);
         } catch (err) {
-            console.error('Failed to load contacts:', err);
+            console.error('Failed to load contact:', err);
         } finally {
             setLoading(false);
         }
@@ -94,9 +91,9 @@ export default function MessageListItem({
         }
 
         const contactInfo = [
-            contact.company && `Company: ${contact.company}`,
-            contact.jobTitle && `Title: ${contact.jobTitle}`,
-            contact.email && `Email: ${contact.email}`,
+            contact.company && `${t('contacts.company')}: ${contact.company}`,
+            contact.jobTitle && `${t('contacts.title')}: ${contact.jobTitle}`,
+            contact.email && `${t('contacts.email')}: ${contact.email}`,
         ]
             .filter(Boolean)
             .join('\n');
@@ -105,7 +102,7 @@ export default function MessageListItem({
             <Tooltip
                 title={
                     <Box sx={{ whiteSpace: 'pre-line' }}>
-                        {contactInfo || 'Contact in address book'}
+                        {contactInfo || t('message.contactInAddressBook')}
                     </Box>
                 }
                 arrow
