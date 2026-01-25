@@ -171,7 +171,7 @@ class JmapService {
     /**
      * Get emails from a mailbox
      */
-    async getEmails(accountId: string, mailboxId?: string, limit = 50) {
+    async getEmails(accountId: string, mailboxId?: string, limit = 50, offset = 0) {
         const client = this.getClient();
 
         const filter: any = {};
@@ -185,6 +185,8 @@ class JmapService {
                 filter,
                 sort: [{ property: 'receivedAt', isAscending: false }],
                 limit,
+                position: offset,
+                calculateTotal: true,
             });
 
             const get = ref.Email.get({
@@ -208,7 +210,10 @@ class JmapService {
             return { query, get };
         });
 
-        return response.get.list;
+        return {
+            emails: response.get.list,
+            total: response.query.total || 0,
+        };
     }
 
     /**

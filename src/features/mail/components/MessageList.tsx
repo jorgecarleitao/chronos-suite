@@ -18,6 +18,7 @@ import ComposeEmail, { DraftMessage } from './ComposeEmail';
 import MessageListItem from './MessageListItem';
 import MessageActionsBar from './MessageActionsBar';
 import BulkActionsBar from './BulkActionsBar';
+import PaginationBar from './PaginationBar';
 import { fetchMessages, fetchMessage, MessageMetadata } from '../data/messages';
 import useMessageOperations from '../useMessageOperations';
 
@@ -26,6 +27,8 @@ interface MessageListProps {
     accountId: string;
     onMailboxChange?: () => void;
 }
+
+const PAGE_SIZE = 50;
 
 export default function MessageList({ mailbox, accountId, onMailboxChange }: MessageListProps) {
     const [messages, setMessages] = useState<MessageMetadata[]>([]);
@@ -39,6 +42,7 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
     const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
     const [messageActions, setMessageActions] = useState<{
         onReply: () => void;
         onReplyAll: () => void;
@@ -54,7 +58,7 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
         mailboxId: accountId,
         messages,
         onMessagesChange: () => {
-            loadMessages();
+            loadMessages(currentPage);
             if (onMailboxChange) {
                 onMailboxChange();
             }
@@ -62,16 +66,19 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
     });
 
     useEffect(() => {
+        setCurrentPage(1);
         loadMessages();
     }, [mailbox]);
 
-    async function loadMessages() {
+    async function loadMessages(page = 1) {
         setLoading(true);
         setError(null);
         try {
-            const data = await fetchMessages(accountId, mailbox);
+            const offset = (page - 1) * PAGE_SIZE;
+            const data = await fetchMessages(accountId, mailbox, PAGE_SIZE, offset);
             setMessages(data.messages);
             setTotal(data.total);
+            setCurrentPage(page);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load messages');
         } finally {
@@ -96,7 +103,7 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
 
     const handleViewerClose = () => {
         setViewerOpen(false);
-        loadMessages();
+        loadMessages(currentPage);
     };
 
     const handleDeleteClick = (message: MessageMetadata, event: Event) => {
@@ -190,7 +197,7 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
                         onMarkAsFlagged={operations.bulkMarkAsFlagged}
                         onMarkAsUnflagged={operations.bulkMarkAsUnflagged}
                         onDelete={handleBulkDeleteClick}
-                        onRefresh={loadMessages}
+                        onRefresh={() => loadMessages(currentPage)}
                     />
                 )}
                 <Divider />
@@ -199,7 +206,7 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
             {viewerOpen && selectedMessage ? (
                 <MessageViewer
                     onClose={handleViewerClose}
-                    onDelete={loadMessages}
+                    onDelete={() => loadMessages(currentPage)}
                     mailbox={mailbox}
                     emailId={selectedMessage}
                     accountId={accountId}
@@ -209,23 +216,34 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
                     }}
                 />
             ) : (
-                <List style={{ flexGrow: 1, overflow: 'auto' }}>
-                    {messages.map((message) => (
-                        <MessageListItem
-                            key={message.id}
-                            message={message}
-                            isSelected={selectedMessage === message.id}
-                            isChecked={operations.selectedIds.has(message.id)}
-                            onSelect={handleMessageClick}
-                            onCheckboxChange={operations.toggleSelection}
-                            onDelete={handleDeleteClick}
-                            onToggleStar={(messageId, isFlagged, event) => {
-                                event.stopPropagation();
-                                operations.toggleStar(messageId, isFlagged);
-                            }}
+                <>
+                    <List style={{ flexGrow: 1, overflow: 'auto' }}>
+                        {messages.map((message) => (
+                            <MessageListItem
+                                key={message.id}
+                                message={message}
+                                isSelected={selectedMessage === message.id}
+                                isChecked={operations.selectedIds.has(message.id)}
+                                onSelect={handleMessageClick}
+                                onCheckboxChange={operations.toggleSelection}
+                                onDelete={handleDeleteClick}
+                                onToggleStar={(messageId, isFlagged, event) => {
+                                    event.stopPropagation();
+                                    operations.toggleStar(messageId, isFlagged);
+                                }}
+                            />
+                        ))}
+                    </List>
+                    {total > 0 && (
+                        <PaginationBar
+                            currentPage={currentPage}
+                            totalPages={Math.ceil(total / PAGE_SIZE)}
+                            totalMessages={total}
+                            pageSize={PAGE_SIZE}
+                            onPageChange={(page) => loadMessages(page)}
                         />
-                    ))}
-                </List>
+                    )}
+                </>
             )}
 
             {/* Compose Email for Drafts */}

@@ -183,7 +183,7 @@ function mapJmapToMessageMetadata(jmapEmail: any): MessageMetadata {
     };
 }
 
-export async function fetchMessages(accountId: string, mailbox: string): Promise<Messages> {
+export async function fetchMessages(accountId: string, mailbox: string, limit = 50, offset = 0): Promise<Messages> {
     return withAuthHandling(async () => {
         if (!jmapService.isInitialized()) {
             throw new Error('JMAP client not initialized. Please log in first.');
@@ -193,11 +193,11 @@ export async function fetchMessages(accountId: string, mailbox: string): Promise
         const mailboxObj = await getMailboxByName(accountId, mailbox);
         const mailboxId = mailboxObj?.id;
 
-        const emails = await jmapService.getEmails(accountId, mailboxId, 50);
+        const result = await jmapService.getEmails(accountId, mailboxId, limit, offset);
 
         return {
-            messages: emails.map(mapJmapToMessageMetadata),
-            total: emails.length, // JMAP query response has totalCount, but we'd need to modify getEmails
+            messages: result.emails.map(mapJmapToMessageMetadata),
+            total: result.total,
         };
     });
 }
