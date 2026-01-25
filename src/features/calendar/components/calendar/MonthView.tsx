@@ -2,6 +2,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { CalendarEvent } from '../../data/calendarEvents';
 import { getDaysInMonth, getFirstDayOfMonth, isSameDay } from '../../../../utils/dateHelpers';
+import { useTranslation } from 'react-i18next';
 
 interface MonthViewProps {
     currentDate: Date;
@@ -18,6 +19,21 @@ export default function MonthView({
     events,
     onDateSelect,
 }: MonthViewProps) {
+    const { t } = useTranslation();
+    
+    const getDayName = (day: string) => {
+        switch (day) {
+            case 'Sun': return t('calendar.sunday');
+            case 'Mon': return t('calendar.monday');
+            case 'Tue': return t('calendar.tuesday');
+            case 'Wed': return t('calendar.wednesday');
+            case 'Thu': return t('calendar.thursday');
+            case 'Fri': return t('calendar.friday');
+            case 'Sat': return t('calendar.saturday');
+            default: return day;
+        }
+    };
+    
     const isSelected = (day: number) => {
         return (
             day === selectedDate.getDate() &&
@@ -97,7 +113,7 @@ export default function MonthView({
                         borderColor: 'divider',
                     }}
                 >
-                    {day}
+                    {getDayName(day)}
                 </Box>
             ))}
             {renderCalendar()}

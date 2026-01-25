@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'preact/hooks';
 import type { JSX } from 'preact';
+import { useTranslation } from 'react-i18next';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -48,6 +49,7 @@ function ParticipantSection({
     onParticipantChange,
     onRemoveParticipant,
 }: ParticipantSectionProps) {
+    const { t } = useTranslation();
     return (
         <Box>
             <Typography
@@ -56,7 +58,7 @@ function ParticipantSection({
                 sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
             >
                 <PersonAddIcon fontSize="small" />
-                Invite Participants
+                {t('calendar.inviteParticipants')}
             </Typography>
 
             {/* Participant rows */}
@@ -65,9 +67,9 @@ function ParticipantSection({
                     <Stack key={index} direction="row" spacing={1} alignItems="center">
                         <TextField
                             size="small"
-                            label="Email"
+                            label={t('calendar.email')}
                             type="email"
-                            placeholder="attendee@example.com"
+                            placeholder={t('calendar.emailPlaceholder')}
                             value={row.email}
                             onChange={(e: JSX.TargetedEvent<HTMLInputElement>) =>
                                 onParticipantChange(index, 'email', e.currentTarget.value)
@@ -76,8 +78,8 @@ function ParticipantSection({
                         />
                         <TextField
                             size="small"
-                            label="Name (optional)"
-                            placeholder="John Doe"
+                            label={t('calendar.name')}
+                            placeholder={t('calendar.namePlaceholder')}
                             value={row.name}
                             onChange={(e: JSX.TargetedEvent<HTMLInputElement>) =>
                                 onParticipantChange(index, 'name', e.currentTarget.value)
@@ -100,7 +102,7 @@ function ParticipantSection({
                             }
                             label={
                                 <Typography variant="caption" sx={{ whiteSpace: 'nowrap' }}>
-                                    Required
+                                    {t('calendar.required')}
                                 </Typography>
                             }
                             sx={{ minWidth: 110, mr: 0 }}
@@ -118,8 +120,7 @@ function ParticipantSection({
                 ))}
             </Stack>
             <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                Participants will receive email invitations. Toggle "Required" to mark attendance as
-                optional.
+                {t('calendar.participantHelper')}
             </Typography>
         </Box>
     );
@@ -142,6 +143,7 @@ export default function EventDialog({
     onUpdate,
     onDelete,
 }: EventDialogProps) {
+    const { t } = useTranslation();
     const mode = event ? 'edit' : 'create';
     const [formData, setFormData] = useState({
         title: '',
@@ -280,11 +282,11 @@ export default function EventDialog({
 
     return (
         <Dialog open={true} onClose={onClose} maxWidth="sm" fullWidth>
-            <DialogTitle>{mode === 'create' ? 'Create Event' : 'Edit Event'}</DialogTitle>
+            <DialogTitle>{mode === 'create' ? t('calendar.create') : t('calendar.edit')}</DialogTitle>
             <DialogContent>
                 <Stack spacing={2} sx={{ mt: 1 }}>
                     <TextField
-                        label="Title"
+                        label={t('calendar.title')}
                         fullWidth
                         value={formData.title}
                         onChange={(e: JSX.TargetedEvent<HTMLInputElement>) =>
@@ -296,7 +298,7 @@ export default function EventDialog({
                     />
                     <Stack direction="row" spacing={2}>
                         <TextField
-                            label="Start Date"
+                            label={t('calendar.startDate')}
                             type="date"
                             fullWidth
                             InputLabelProps={{ shrink: true }}
@@ -309,7 +311,7 @@ export default function EventDialog({
                             }
                         />
                         <TextField
-                            label="Start Time"
+                            label={t('calendar.startTime')}
                             type="time"
                             fullWidth
                             InputLabelProps={{ shrink: true }}
@@ -325,7 +327,7 @@ export default function EventDialog({
                     </Stack>
                     <Stack direction="row" spacing={2}>
                         <TextField
-                            label="End Date"
+                            label={t('calendar.endDate')}
                             type="date"
                             fullWidth
                             InputLabelProps={{ shrink: true }}
@@ -338,7 +340,7 @@ export default function EventDialog({
                             }
                         />
                         <TextField
-                            label="End Time"
+                            label={t('calendar.endTime')}
                             type="time"
                             fullWidth
                             InputLabelProps={{ shrink: true }}
@@ -367,14 +369,14 @@ export default function EventDialog({
                                     }
                                 />
                             }
-                            label="All-day event"
+                            label={t('calendar.allDay')}
                         />
                         <FormControl fullWidth>
-                            <InputLabel id="timezone-label">Timezone</InputLabel>
+                            <InputLabel id="timezone-label">{t('calendar.timezone')}</InputLabel>
                             <Select
                                 labelId="timezone-label"
                                 value={formData.timezone}
-                                label="Timezone"
+                                label={t('calendar.timezone')}
                                 onChange={(e) =>
                                     setFormData({
                                         ...formData,
@@ -393,7 +395,7 @@ export default function EventDialog({
                     </Stack>
 
                     <TextField
-                        label="Description"
+                        label={t('calendar.description')}
                         fullWidth
                         multiline
                         rows={3}
@@ -406,9 +408,9 @@ export default function EventDialog({
                         }
                     />
                     <TextField
-                        label="Location"
+                        label={t('calendar.location')}
                         fullWidth
-                        placeholder="Enter event location"
+                        placeholder={t('calendar.locationPlaceholder')}
                         value={formData.location}
                         onChange={(e: JSX.TargetedEvent<HTMLInputElement>) =>
                             setFormData({
@@ -418,9 +420,9 @@ export default function EventDialog({
                         }
                     />
                     <TextField
-                        label="Virtual Location (Meeting Link)"
+                        label={t('calendar.virtualLocation')}
                         fullWidth
-                        placeholder="e.g., https://zoom.us/j/123456789 or https://teams.microsoft.com/..."
+                        placeholder={t('calendar.virtualLocationPlaceholder')}
                         value={formData.virtualLocation}
                         onChange={(e: JSX.TargetedEvent<HTMLInputElement>) =>
                             setFormData({
@@ -428,7 +430,7 @@ export default function EventDialog({
                                 virtualLocation: e.currentTarget.value,
                             })
                         }
-                        helperText="Add a video conference or online meeting link"
+                        helperText={t('calendar.helperText')}
                     />
 
                     <ParticipantSection
@@ -446,12 +448,12 @@ export default function EventDialog({
                         startIcon={<DeleteIcon />}
                         sx={{ mr: 'auto' }}
                     >
-                        Delete
+                        {t('common.delete')}
                     </Button>
                 )}
-                <Button onClick={onClose}>Cancel</Button>
+                <Button onClick={onClose}>{t('common.cancel')}</Button>
                 <Button onClick={handleSubmit} variant="contained" disabled={!formData.title}>
-                    {mode === 'create' ? 'Create & Send Invites' : 'Save & Update Invites'}
+                    {mode === 'create' ? t('calendar.createAndSendInvites') : t('calendar.saveAndUpdateInvites')}
                 </Button>
             </DialogActions>
         </Dialog>

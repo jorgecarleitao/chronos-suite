@@ -1,4 +1,5 @@
 import { useState } from 'preact/hooks';
+import { useTranslation } from 'react-i18next';
 import Stack from '@mui/material/Stack';
 import List from '@mui/material/List';
 import Typography from '@mui/material/Typography';
@@ -52,6 +53,7 @@ export default function MailSidebar({
     onDragOver,
     onCreateMailbox,
 }: MailSidebarProps) {
+    const { t } = useTranslation();
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [newMailboxName, setNewMailboxName] = useState('');
     const [parentMailboxId, setParentMailboxId] = useState<string>('');
@@ -104,7 +106,7 @@ export default function MailSidebar({
                 <Stack justifyContent="center" padding={3}>
                     <CircularProgress />
                     <Typography variant="body2" color="text.secondary" textAlign="center" mt={2}>
-                        Loading account...
+                        {t('mailSidebar.loadingAccount')}
                     </Typography>
                 </Stack>
             </Sidebar>
@@ -114,7 +116,7 @@ export default function MailSidebar({
     return (
         <Sidebar>
             <Button variant="contained" fullWidth onClick={onComposeClick} startIcon={<EditIcon />}>
-                Compose Email
+                {t('mailSidebar.composeEmail')}
             </Button>
 
             <Divider sx={{ my: 2 }} />
@@ -123,13 +125,13 @@ export default function MailSidebar({
                 <Stack justifyContent="center" padding={3}>
                     <CircularProgress />
                     <Typography variant="body2" color="text.secondary" textAlign="center" mt={2}>
-                        Loading mailboxes...
+                        {t('mailSidebar.loadingMailboxes')}
                     </Typography>
                 </Stack>
             ) : mailboxTree.length === 0 ? (
                 <Stack justifyContent="center" padding={3}>
                     <Typography variant="body2" color="text.secondary" textAlign="center">
-                        No mailboxes found
+                        {t('mailSidebar.noMailboxes')}
                     </Typography>
                 </Stack>
             ) : (
@@ -158,7 +160,7 @@ export default function MailSidebar({
                             startIcon={<CreateNewFolderIcon />}
                             size="small"
                         >
-                            New Folder
+                            {t('mailSidebar.newFolder')}
                         </Button>
                     </Stack>
 
@@ -166,7 +168,7 @@ export default function MailSidebar({
                         <>
                             <Divider />
                             <Typography variant="subtitle2" padding={2} color="text.secondary">
-                                Shared Mailboxes
+                                {t('mailSidebar.sharedMailboxes')}
                             </Typography>
                             <SharedMailboxList
                                 sharedMailboxes={sharedMailboxes}
@@ -190,7 +192,7 @@ export default function MailSidebar({
                 maxWidth="sm"
                 fullWidth
             >
-                <DialogTitle>Create New Folder</DialogTitle>
+                <DialogTitle>{t('mailSidebar.createNewFolder')}</DialogTitle>
                 <DialogContent>
                     <Stack spacing={2} pt={1}>
                         {error && (
@@ -200,7 +202,7 @@ export default function MailSidebar({
                         )}
 
                         <TextField
-                            label="Folder Name"
+                            label={t('mailSidebar.folderName')}
                             fullWidth
                             value={newMailboxName}
                             onChange={(e) =>
@@ -212,7 +214,7 @@ export default function MailSidebar({
                         />
 
                         <TextField
-                            label="Parent Folder (Optional)"
+                            label={t('mailSidebar.parentFolder')}
                             fullWidth
                             select
                             value={parentMailboxId}
@@ -220,9 +222,9 @@ export default function MailSidebar({
                                 setParentMailboxId((e.target as HTMLSelectElement).value)
                             }
                             disabled={creating}
-                            helperText="Leave empty to create a top-level folder"
+                            helperText={t('mailSidebar.leaveEmptyForTopLevel')}
                         >
-                            <MenuItem value="">None (Top Level)</MenuItem>
+                            <MenuItem value="">{t('mailbox.noneTopLevel')}</MenuItem>
                             {getAllMailboxes(mailboxTree).map((mailbox) => (
                                 <MenuItem key={mailbox.id} value={mailbox.id}>
                                     {mailbox.name}
@@ -233,14 +235,14 @@ export default function MailSidebar({
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setCreateDialogOpen(false)} disabled={creating}>
-                        Cancel
+                        {t('common.cancel')}
                     </Button>
                     <Button
                         onClick={handleCreateSubmit}
                         variant="contained"
                         disabled={creating || !newMailboxName.trim()}
                     >
-                        {creating ? 'Creating...' : 'Create'}
+                        {creating ? t('mailbox.creating') : t('common.create')}
                     </Button>
                 </DialogActions>
             </Dialog>

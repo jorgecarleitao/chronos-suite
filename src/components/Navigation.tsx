@@ -40,7 +40,7 @@ export default function Navigation({ mode, toggleTheme }: NavigationProps) {
     const [mobileOpen, setMobileOpen] = useState(false);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-    const brandLabel = 'Mail Client';
+    const brandLabel = t('navigation.brandLabel');
     const languages = Object.keys(i18n.options.resources ?? {});
 
     useEffect(() => {
@@ -77,11 +77,11 @@ export default function Navigation({ mode, toggleTheme }: NavigationProps) {
 
     const navItems = isAuthenticated
         ? [
-              { path: '/mail', label: 'Mail' },
-              { path: '/contacts', label: 'Contacts' },
-              { path: '/calendar', label: 'Calendar' },
+              { path: '/mail', label: t('navigation.mail') },
+              { path: '/contacts', label: t('navigation.contacts') },
+              { path: '/calendar', label: t('navigation.calendar') },
           ]
-        : [{ path: '/login', label: 'Login' }];
+        : [{ path: '/login', label: t('navigation.login') }];
 
     const drawerContent = (
         <Box onClick={handleDrawerToggle} textAlign="center">
@@ -151,7 +151,7 @@ export default function Navigation({ mode, toggleTheme }: NavigationProps) {
                         </Stack>
                     )}
                     {isAuthenticated && (
-                        <IconButton onClick={handleLogout} color="inherit" title="Logout">
+                        <IconButton onClick={handleLogout} color="inherit" title={t('navigation.logout')}>
                             <LogoutIcon />
                         </IconButton>
                     )}

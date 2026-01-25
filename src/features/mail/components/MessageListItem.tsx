@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'preact/hooks';
+import { useTranslation } from 'react-i18next';
 import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
@@ -55,6 +56,7 @@ export default function MessageListItem({
     onDelete,
     onToggleStar,
 }: MessageListItemProps) {
+    const { t } = useTranslation();
     const [contact, setContact] = useState<Contact | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -81,7 +83,7 @@ export default function MessageListItem({
         }
     };
 
-    const displayName = message.from_name || message.from_email || 'Unknown Sender';
+    const displayName = message.from_name || message.from_email || t('message.unknownSender');
     const formattedDate = formatDate(message.date);
     const unread = isUnread(message.flags);
     const flagged = isFlagged(message.flags);
@@ -143,7 +145,7 @@ export default function MessageListItem({
                 <Stack direction="row" spacing={0.5}>
                     <IconButton
                         edge="end"
-                        aria-label="star"
+                        aria-label={t('messageList.toggleStar')}
                         onClick={(e) => onToggleStar(message.id, flagged, e)}
                         size="small"
                     >
@@ -151,7 +153,7 @@ export default function MessageListItem({
                     </IconButton>
                     <IconButton
                         edge="end"
-                        aria-label="delete"
+                        aria-label={t('common.delete')}
                         onClick={(e) => onDelete(message, e)}
                         size="small"
                     >
@@ -166,7 +168,7 @@ export default function MessageListItem({
                     {unread ? <MailIcon color="primary" /> : <DraftsIcon />}
                     <ListItemText
                         primary={renderFromField()}
-                        secondary={message.subject || '(No subject)'}
+                        secondary={message.subject || t('messageHeader.noSubject')}
                         primaryTypographyProps={{
                             fontWeight: unread ? 'bold' : 'normal',
                         }}
@@ -174,7 +176,7 @@ export default function MessageListItem({
                     />
                     <Stack direction="row" spacing={0.5} alignItems="center" sx={{ flexShrink: 0 }}>
                         {message.hasAttachment && (
-                            <Tooltip title="Has attachments">
+                            <Tooltip title={t('attachments.attachments')}>
                                 <AttachFileIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
                             </Tooltip>
                         )}

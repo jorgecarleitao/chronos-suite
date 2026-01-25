@@ -9,12 +9,14 @@ import Container from '@mui/material/Container';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import { oauthService } from '../data/authService';
+import { useTranslation } from 'react-i18next';
 
 interface LoginProps {
     path: string;
 }
 
 export default function Login({ path }: LoginProps) {
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -27,7 +29,7 @@ export default function Login({ path }: LoginProps) {
             await oauthService.login();
         } catch (err) {
             console.error('Login error:', err);
-            setError(err instanceof Error ? err.message : 'Failed to initiate login');
+            setError(err instanceof Error ? err.message : t('login.loginFailed'));
             setLoading(false);
         }
     };
@@ -38,7 +40,7 @@ export default function Login({ path }: LoginProps) {
                 <Card style={{ minWidth: 400 }}>
                     <CardContent>
                         <Typography variant="h5" component="h1" gutterBottom align="center">
-                            Mail Client Login
+                            {t('login.pleaseLogIn')}
                         </Typography>
                         <Typography
                             variant="body2"
@@ -47,7 +49,7 @@ export default function Login({ path }: LoginProps) {
                             align="center"
                             marginBottom={3}
                         >
-                            Sign in to access your email
+                            {t('login.description')}
                         </Typography>
 
                         {error && (
@@ -69,8 +71,7 @@ export default function Login({ path }: LoginProps) {
                                 gutterBottom
                                 marginBottom={2}
                             >
-                                Click the button below to sign in using your OAuth2 identity
-                                provider.
+                                {t('login.instructions')}
                             </Typography>
 
                             <Button
@@ -80,7 +81,7 @@ export default function Login({ path }: LoginProps) {
                                 style={{ marginTop: 24, marginBottom: 16 }}
                                 disabled={loading}
                             >
-                                {loading ? 'Redirecting to login...' : 'Sign In with OAuth2'}
+                                {loading ? t('login.buttonLoading') : t('login.loginWithOAuth')}
                             </Button>
                         </Box>
                     </CardContent>

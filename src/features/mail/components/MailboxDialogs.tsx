@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -36,18 +37,19 @@ export default function MailboxDialogs({
     onRenameSubmit,
     onDeleteSubmit,
 }: MailboxDialogsProps) {
+    const { t } = useTranslation();
     return (
         <>
             {/* Create Mailbox Dialog */}
             <Dialog open={createDialogOpen} onClose={onCreateClose}>
                 <DialogTitle>
-                    {selectedMailboxForAction ? 'Create Subfolder' : 'Create Mailbox'}
+                    {selectedMailboxForAction ? t('mailbox.createSubfolderTitle') : t('mailbox.createMailbox')}
                 </DialogTitle>
                 <DialogContent>
                     <TextField
                         autoFocus
                         margin="dense"
-                        label="Mailbox Name"
+                        label={t('mailbox.mailboxName')}
                         fullWidth
                         value={newMailboxName}
                         onChange={(e) => onNameChange((e.target as HTMLInputElement).value)}
@@ -59,21 +61,21 @@ export default function MailboxDialogs({
                     />
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={onCreateClose}>Cancel</Button>
+                    <Button onClick={onCreateClose}>{t('common.cancel')}</Button>
                     <Button onClick={onCreateSubmit} variant="contained">
-                        Create
+                        {t('common.create')}
                     </Button>
                 </DialogActions>
             </Dialog>
 
             {/* Rename Mailbox Dialog */}
             <Dialog open={renameDialogOpen} onClose={onRenameClose}>
-                <DialogTitle>Rename Mailbox</DialogTitle>
+                <DialogTitle>{t('mailbox.renameMailbox')}</DialogTitle>
                 <DialogContent>
                     <TextField
                         autoFocus
                         margin="dense"
-                        label="New Name"
+                        label={t('mailbox.newName')}
                         fullWidth
                         value={newMailboxName}
                         onChange={(e) => onNameChange((e.target as HTMLInputElement).value)}
@@ -85,26 +87,25 @@ export default function MailboxDialogs({
                     />
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={onRenameClose}>Cancel</Button>
+                    <Button onClick={onRenameClose}>{t('common.cancel')}</Button>
                     <Button onClick={onRenameSubmit} variant="contained">
-                        Rename
+                        {t('common.rename')}
                     </Button>
                 </DialogActions>
             </Dialog>
 
             {/* Delete Mailbox Dialog */}
             <Dialog open={deleteDialogOpen} onClose={onDeleteClose}>
-                <DialogTitle>Delete Mailbox</DialogTitle>
+                <DialogTitle>{t('mailbox.deleteMailbox')}</DialogTitle>
                 <DialogContent>
                     <Typography>
-                        Are you sure you want to delete "{selectedMailboxForAction?.displayName}"?
-                        This will permanently delete the mailbox and all its contents.
+                        {t('mailbox.confirmDelete', { name: selectedMailboxForAction?.displayName || '' })}
                     </Typography>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={onDeleteClose}>Cancel</Button>
+                    <Button onClick={onDeleteClose}>{t('common.cancel')}</Button>
                     <Button onClick={onDeleteSubmit} color="error" variant="contained">
-                        Delete
+                        {t('common.delete')}
                     </Button>
                 </DialogActions>
             </Dialog>

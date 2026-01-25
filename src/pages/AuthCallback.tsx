@@ -6,12 +6,14 @@ import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
 import { oauthService } from '../data/authService';
 import { jmapService } from '../data/jmapClient';
+import { useTranslation } from 'react-i18next';
 
 interface AuthCallbackProps {
     path: string;
 }
 
 export default function AuthCallback({ path }: AuthCallbackProps) {
+    const { t } = useTranslation();
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -57,13 +59,13 @@ export default function AuthCallback({ path }: AuthCallbackProps) {
                 <>
                     <Alert severity="error">{error}</Alert>
                     <Typography variant="body2" color="text.secondary">
-                        Redirecting to login...
+                        {t('authCallback.redirecting')}
                     </Typography>
                 </>
             ) : (
                 <>
                     <CircularProgress />
-                    <Typography variant="body1">Completing authentication...</Typography>
+                    <Typography variant="body1">{t('authCallback.completing')}</Typography>
                 </>
             )}
         </Stack>

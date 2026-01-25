@@ -9,6 +9,7 @@ import Stack from '@mui/material/Stack';
 import CircularProgress from '@mui/material/CircularProgress';
 import AddIcon from '@mui/icons-material/Add';
 import Sidebar from '../../../../components/Sidebar';
+import { useTranslation } from 'react-i18next';
 
 interface CalendarSidebarProps {
     loading: boolean;
@@ -25,6 +26,7 @@ export default function CalendarSidebar({
     onCalendarSelect,
     onCreateEvent,
 }: CalendarSidebarProps) {
+    const { t } = useTranslation();
     return (
         <Sidebar>
             {loading ? (
@@ -40,13 +42,13 @@ export default function CalendarSidebar({
                         onClick={onCreateEvent}
                         startIcon={<AddIcon />}
                     >
-                        Create Event
+                        {t('calendar.createEvent')}
                     </Button>
 
                     <Divider sx={{ my: 2 }} />
 
                     <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                        My Calendars
+                        {t('calendar.myCalendars')}
                     </Typography>
                     <List>
                         {calendars.map((cal) => (

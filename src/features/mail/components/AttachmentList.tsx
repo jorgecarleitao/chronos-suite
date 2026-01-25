@@ -1,4 +1,5 @@
 import { JSX } from 'preact';
+import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import List from '@mui/material/List';
@@ -88,7 +89,8 @@ async function downloadAttachment(
     accountId: string,
     blobId: string,
     fileName: string,
-    mimeType: string
+    mimeType: string,
+    t: (key: string, options?: any) => string
 ): Promise<void> {
     try {
         const response = await jmapService.downloadBlob(accountId, blobId, mimeType);
@@ -105,14 +107,19 @@ async function downloadAttachment(
         URL.revokeObjectURL(url);
     } catch (error) {
         console.error('Failed to download attachment:', error);
-        alert('Failed to download attachment');
+        alert(t('attachments.failedToDownload'));
     }
 }
 
 /**
  * Open attachment in new tab (for PDFs, images, etc.)
  */
-async function openAttachment(accountId: string, blobId: string, mimeType: string): Promise<void> {
+async function openAttachment(
+    accountId: string,
+    blobId: string,
+    mimeType: string,
+    t: (key: string, options?: any) => string
+): Promise<void> {
     try {
         const response = await jmapService.downloadBlob(accountId, blobId, mimeType);
         const blob = await response.blob();
@@ -126,15 +133,16 @@ async function openAttachment(accountId: string, blobId: string, mimeType: strin
             setTimeout(() => URL.revokeObjectURL(url), 60000); // Clean up after 1 minute
         } else {
             URL.revokeObjectURL(url);
-            alert('Pop-up blocked. Please allow pop-ups to open attachments.');
+            alert(t('attachments.popUpBlocked'));
         }
     } catch (error) {
         console.error('Failed to open attachment:', error);
-        alert('Failed to open attachment');
+        alert(t('attachments.failedToOpen'));
     }
 }
 
 export default function AttachmentList({ attachments, accountId }: AttachmentListProps) {
+    const { t } = useTranslation();
     if (!attachments || attachments.length === 0) {
         return null;
     }
@@ -152,7 +160,7 @@ export default function AttachmentList({ attachments, accountId }: AttachmentLis
         <Paper sx={{ mb: 2 }} elevation={1}>
             <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
                 <Typography variant="subtitle2" color="text.secondary">
-                    Attachments ({regularAttachments.length})
+                    {t('attachments.attachments', { count: regularAttachments.length })}
                 </Typography>
             </Box>
             <List disablePadding>
@@ -160,7 +168,7 @@ export default function AttachmentList({ attachments, accountId }: AttachmentLis
                     const fileName = attachment.name || `attachment-${index + 1}`;
                     const fileSize = attachment.size
                         ? formatFileSize(attachment.size)
-                        : 'Unknown size';
+                        : t('attachments.unknownSize');
                     const canPreview = canPreviewInBrowser(attachment.type);
 
                     return (
@@ -170,15 +178,16 @@ export default function AttachmentList({ attachments, accountId }: AttachmentLis
                             secondaryAction={
                                 <Box>
                                     {canPreview && (
-                                        <Tooltip title="Open in new tab">
+                                        <Tooltip title={t('attachments.openInNewTab')}>
                                             <IconButton
                                                 edge="end"
-                                                aria-label="open"
+                                                aria-label={t('attachments.openInNewTab')}
                                                 onClick={() =>
                                                     openAttachment(
                                                         accountId,
                                                         attachment.blobId,
-                                                        attachment.type
+                                                        attachment.type,
+                                                        t
                                                     )
                                                 }
                                                 sx={{ mr: 1 }}
@@ -187,16 +196,17 @@ export default function AttachmentList({ attachments, accountId }: AttachmentLis
                                             </IconButton>
                                         </Tooltip>
                                     )}
-                                    <Tooltip title="Download">
+                                    <Tooltip title={t('attachments.download')}>
                                         <IconButton
                                             edge="end"
-                                            aria-label="download"
+                                            aria-label={t('attachments.download')}
                                             onClick={() =>
                                                 downloadAttachment(
                                                     accountId,
                                                     attachment.blobId,
                                                     fileName,
-                                                    attachment.type
+                                                    attachment.type,
+                                                    t
                                                 )
                                             }
                                         >
@@ -212,14 +222,16 @@ export default function AttachmentList({ attachments, accountId }: AttachmentLis
                                         openAttachment(
                                             accountId,
                                             attachment.blobId,
-                                            attachment.type
+                                            attachment.type,
+                                            t
                                         );
                                     } else {
                                         downloadAttachment(
                                             accountId,
                                             attachment.blobId,
                                             fileName,
-                                            attachment.type
+                                            attachment.type,
+                                            t
                                         );
                                     }
                                 }}

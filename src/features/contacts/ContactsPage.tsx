@@ -35,12 +35,14 @@ import {
 } from './data/contacts';
 import { fetchAddressBooks, AddressBook } from './data/addressBook';
 import { getPrimaryAccountId } from '../../data/accounts';
+import { useTranslation } from 'react-i18next';
 
 interface ContactsProps {
     path: string;
 }
 
 export default function Contacts({ path }: ContactsProps) {
+    const { t } = useTranslation();
     const [contacts, setContacts] = useState<Contact[]>([]);
     const [addressBooks, setAddressBooks] = useState<AddressBook[]>([]);
     const [selectedAddressBook, setSelectedAddressBook] = useState<string | undefined>(undefined);
@@ -94,7 +96,7 @@ export default function Contacts({ path }: ContactsProps) {
             const data = await fetchContacts(accId, addressBookId);
             setContacts(data);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load contacts');
+            setError(err instanceof Error ? err.message : t('contacts.failedToLoadContacts'));
             console.error('Failed to load contacts:', err);
         } finally {
             setLoading(false);
@@ -110,13 +112,13 @@ export default function Contacts({ path }: ContactsProps) {
 
     const handleDeleteContact = async (contactId: string) => {
         if (!accountId) return;
-        if (!confirm('Are you sure you want to delete this contact?')) return;
+        if (!confirm(t('contacts.confirmDelete'))) return;
 
         try {
             await deleteContact(accountId, contactId);
             loadContacts(accountId, selectedAddressBook);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to delete contact');
+            setError(err instanceof Error ? err.message : t('contacts.failedToDeleteContact'));
         }
     };
 
@@ -127,7 +129,7 @@ export default function Contacts({ path }: ContactsProps) {
             await updateContact(accountId, contact.id, { isFavorite: !contact.isFavorite });
             loadContacts(accountId, selectedAddressBook);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to update contact');
+            setError(err instanceof Error ? err.message : t('contacts.failedToUpdateContact'));
         }
     };
 
@@ -141,7 +143,7 @@ export default function Contacts({ path }: ContactsProps) {
         if (contact.firstName || contact.lastName) {
             return `${contact.firstName || ''} ${contact.lastName || ''}`.trim();
         }
-        return contact.email || 'Unknown';
+        return contact.email || t('messageMetadata.unknown');
     };
 
     const handleCreateClick = () => {
@@ -243,7 +245,7 @@ export default function Contacts({ path }: ContactsProps) {
                             onClick={handleCreateClick}
                             startIcon={<AddIcon />}
                         >
-                            Create Contact
+                            {t('contacts.addContact')}
                         </Button>
 
                         <Divider sx={{ my: 2 }} />
@@ -255,7 +257,7 @@ export default function Contacts({ path }: ContactsProps) {
                                     onClick={() => handleAddressBookClick(undefined)}
                                 >
                                     <ListItemText
-                                        primary="All Contacts"
+                                        primary={t('contacts.contactsAll')}
                                         primaryTypographyProps={{ fontWeight: 'bold' }}
                                     />
                                 </ListItemButton>
@@ -268,7 +270,7 @@ export default function Contacts({ path }: ContactsProps) {
                                     variant="overline"
                                     sx={{ px: 2, py: 1, display: 'block' }}
                                 >
-                                    Address Books
+                                    {t('contacts.addressBooks')}
                                 </Typography>
                                 <List>
                                     {addressBooks.map((ab) => (
@@ -279,7 +281,7 @@ export default function Contacts({ path }: ContactsProps) {
                                             >
                                                 <ListItemText
                                                     primary={ab.name}
-                                                    secondary={ab.isDefault ? 'Default' : undefined}
+                                                    secondary={ab.isDefault ? t('contacts.default') : undefined}
                                                 />
                                             </ListItemButton>
                                         </ListItem>
@@ -417,14 +419,14 @@ export default function Contacts({ path }: ContactsProps) {
                                 />
 
                                 <Stack direction="row" spacing={2} justifyContent="flex-end">
-                                    <Button onClick={handleCancelCreate}>Cancel</Button>
+                                    <Button onClick={handleCancelCreate}>{t('common.cancel')}</Button>
                                     <Button
                                         variant="contained"
                                         startIcon={<SaveIcon />}
                                         onClick={handleSaveContact}
                                         disabled={loading}
                                     >
-                                        {editingContact ? 'Update' : 'Save'} Contact
+                                        {editingContact ? t('contacts.updateContact') : t('contacts.saveContact')}
                                     </Button>
                                 </Stack>
                             </Stack>
@@ -437,10 +439,10 @@ export default function Contacts({ path }: ContactsProps) {
                         <Paper sx={{ p: 4, textAlign: 'center' }}>
                             <ContactsIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                             <Typography variant="h6" color="text.secondary" gutterBottom>
-                                No contacts yet
+                                {t('contacts.noContactsYet')}
                             </Typography>
                             <Typography variant="body2" color="text.secondary" mb={2}>
-                                Add your first contact to get started
+                                {t('contacts.addFirstContact')}
                             </Typography>
                         </Paper>
                     ) : (

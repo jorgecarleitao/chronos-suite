@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'preact/hooks';
+import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import List from '@mui/material/List';
 import Typography from '@mui/material/Typography';
@@ -31,6 +32,7 @@ interface MessageListProps {
 const PAGE_SIZE = 50;
 
 export default function MessageList({ mailbox, accountId, onMailboxChange }: MessageListProps) {
+    const { t } = useTranslation();
     const [messages, setMessages] = useState<MessageMetadata[]>([]);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -80,7 +82,7 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
             setTotal(data.total);
             setCurrentPage(page);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load messages');
+            setError(err instanceof Error ? err.message : t('messageList.failedToLoadMessages'));
         } finally {
             setLoading(false);
         }
@@ -93,7 +95,7 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
                 setDraftMessage(data);
                 setComposeOpen(true);
             } catch (err) {
-                setError('Failed to load draft for editing');
+                setError(t('messageList.failedToLoadDraft'));
             }
         } else {
             setSelectedMessage(message.id);
@@ -117,7 +119,7 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
         try {
             await operations.deleteOne(messageToDelete);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to delete message');
+            setError(err instanceof Error ? err.message : t('messageList.failedToDelete'));
         } finally {
             setDeleteDialogOpen(false);
             setMessageToDelete(null);
@@ -139,7 +141,7 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
         try {
             await operations.bulkDelete();
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to delete messages');
+            setError(err instanceof Error ? err.message : t('messageList.failedToDeleteMultiple'));
         } finally {
             setBulkDeleteDialogOpen(false);
         }
@@ -168,7 +170,7 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
     if (messages.length === 0) {
         return (
             <Stack justifyContent="center" alignItems="center" height="100%">
-                <Typography color="text.secondary">No messages in this mailbox</Typography>
+                <Typography color="text.secondary">{t('messageList.noMessages')}</Typography>
             </Stack>
         );
     }
@@ -271,32 +273,32 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
 
             {/* Delete Confirmation Dialog */}
             <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
-                <DialogTitle>Delete Message</DialogTitle>
+                <DialogTitle>{t('messageList.deleteMessage')}</DialogTitle>
                 <DialogContent>
                     <DialogContentText>
-                        Are you sure you want to delete this message?
+                        {t('messageList.deleteMessageConfirm')}
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleDeleteCancel}>Cancel</Button>
+                    <Button onClick={handleDeleteCancel}>{t('common.cancel')}</Button>
                     <Button onClick={handleDeleteConfirm} color="error" variant="contained">
-                        Delete
+                        {t('common.delete')}
                     </Button>
                 </DialogActions>
             </Dialog>
 
             {/* Bulk Delete Confirmation Dialog */}
             <Dialog open={bulkDeleteDialogOpen} onClose={handleBulkDeleteCancel}>
-                <DialogTitle>Delete Messages</DialogTitle>
+                <DialogTitle>{t('messageList.deleteMessages')}</DialogTitle>
                 <DialogContent>
                     <DialogContentText>
-                        Are you sure you want to delete {operations.selectedIds.size} message(s)?
+                        {t('messageList.deleteMessagesConfirm', { count: operations.selectedIds.size })}
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleBulkDeleteCancel}>Cancel</Button>
+                    <Button onClick={handleBulkDeleteCancel}>{t('common.cancel')}</Button>
                     <Button onClick={handleBulkDeleteConfirm} color="error" variant="contained">
-                        Delete
+                        {t('common.delete')}
                     </Button>
                 </DialogActions>
             </Dialog>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'preact/hooks';
+import { useTranslation } from 'react-i18next';
 import { JSX } from 'preact';
 import Box from '@mui/material/Box';
 import Dialog from '@mui/material/Dialog';

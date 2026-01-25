@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
@@ -37,6 +38,7 @@ export default function SharedMailboxList({
     onDrop,
     onDragOver,
 }: SharedMailboxListProps) {
+    const { t } = useTranslation();
     const groupedMailboxes = groupSharedMailboxesByAccount(sharedMailboxes);
 
     return (
@@ -56,7 +58,7 @@ export default function SharedMailboxList({
                                     <ListItemIcon>
                                         <FolderSharedIcon />
                                     </ListItemIcon>
-                                    <ListItemText primary={accountName} />
+                                    <ListItemText primary={accountName || t('mailSidebar.sharedMailboxes')} />
                                     {isAccountExpanded ? <ExpandLess /> : <ExpandMore />}
                                 </ListItemButton>
                             </ListItem>

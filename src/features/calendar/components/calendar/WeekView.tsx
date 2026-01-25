@@ -7,6 +7,7 @@ import VideocamIcon from '@mui/icons-material/Videocam';
 import { CalendarEvent } from '../../data/calendarEvents';
 import { isSameDay } from '../../../../utils/dateHelpers';
 import { getLocalTimezone } from '../../../../utils/timezoneHelpers';
+import { useTranslation } from 'react-i18next';
 
 interface WeekViewProps {
     currentDate: Date;
@@ -156,6 +157,7 @@ interface EventTooltipContentProps {
 }
 
 function EventTooltipContent({ event }: EventTooltipContentProps) {
+    const { t } = useTranslation();
     const participants = event.participants ? Object.values(event.participants) : [];
     const participantCount = participants.length;
     const participantNames = participants.map((p) => p.name || p.email).join(', ') || '';
@@ -167,7 +169,7 @@ function EventTooltipContent({ event }: EventTooltipContentProps) {
             </Typography>
             {event.showWithoutTime ? (
                 <Typography variant="caption" display="block">
-                    All-day event
+                    {t('calendar.allDayEvent')}
                 </Typography>
             ) : (
                 <Typography variant="caption" display="block">
@@ -211,7 +213,7 @@ function EventTooltipContent({ event }: EventTooltipContentProps) {
                         variant="caption"
                         sx={{ color: 'inherit' }}
                     >
-                        Virtual Meeting
+                        {t('calendar.virtualMeeting')}
                     </Link>
                 </Box>
             )}
@@ -230,7 +232,21 @@ export default function WeekView({
     onTimeSlotClick,
     onEventClick,
 }: WeekViewProps) {
+    const { t } = useTranslation();
     const weekDays = getWeekDays(getWeekStart(currentDate));
+
+    const getDayName = (day: string) => {
+        switch (day) {
+            case 'Mon': return t('calendar.monday');
+            case 'Tue': return t('calendar.tuesday');
+            case 'Wed': return t('calendar.wednesday');
+            case 'Thu': return t('calendar.thursday');
+            case 'Fri': return t('calendar.friday');
+            case 'Sat': return t('calendar.saturday');
+            case 'Sun': return t('calendar.sunday');
+            default: return day;
+        }
+    };
 
     return (
         <Box sx={{ overflowX: 'auto' }}>
@@ -255,7 +271,7 @@ export default function WeekView({
                             }}
                         >
                             <Typography variant="caption" display="block">
-                                {DAYS[idx]}
+                                {getDayName(DAYS[idx])}
                             </Typography>
                             <Typography variant="h6">{day.getDate()}</Typography>
                         </Box>

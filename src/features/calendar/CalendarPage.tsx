@@ -22,12 +22,14 @@ import EventList from './components/calendar/EventList';
 import EventDialog from './components/calendar/EventDialog';
 import CalendarSidebar from './components/calendar/CalendarSidebar';
 import { useDocumentTitle } from '../../utils/useDocumentTitle';
+import { useTranslation } from 'react-i18next';
 
 interface CalendarProps {
     path: string;
 }
 
 export default function Calendar({ path }: CalendarProps) {
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(true);
     const [accountId, setAccountId] = useState<string | null>(null);
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -46,7 +48,7 @@ export default function Calendar({ path }: CalendarProps) {
         .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
 
     const nextEvent = upcomingEvents[0];
-    let title = 'Chronos Suite - Calendar';
+    let title = t('calendar.title');
 
     if (nextEvent) {
         const eventDate = new Date(nextEvent.start);
@@ -59,13 +61,13 @@ export default function Calendar({ path }: CalendarProps) {
         
         if (isToday) {
             const timeStr = eventDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-            title = `Next: ${timeStr} - Calendar`;
+            title = t('calendar.nextEventToday', { time: timeStr });
         } else if (isTomorrow) {
             const timeStr = eventDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-            title = `Next: Tomorrow ${timeStr} - Calendar`;
+            title = t('calendar.nextEventTomorrow', { time: timeStr });
         } else {
             const dateStr = eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            title = `Next: ${dateStr} - Calendar`;
+            title = t('calendar.nextEventDate', { date: dateStr });
         }
     }
     
@@ -100,7 +102,7 @@ export default function Calendar({ path }: CalendarProps) {
             }
         } catch (error) {
             console.error('Failed to load calendars:', error);
-            setError('Failed to load calendars');
+            setError(t('calendar.failedToLoadCalendars'));
         }
     };
 
@@ -112,7 +114,7 @@ export default function Calendar({ path }: CalendarProps) {
             setEvents(evts);
         } catch (error) {
             console.error('Failed to load events:', error);
-            setError('Failed to load events');
+            setError(t('calendar.failedToLoadEvents'));
         }
     };
 
@@ -174,7 +176,7 @@ export default function Calendar({ path }: CalendarProps) {
             await loadEvents(accountId, selectedCalendar);
         } catch (error) {
             console.error('Failed to create event:', error);
-            setError('Failed to create event');
+            setError(t('calendar.failedToCreateEvent'));
         }
     };
 
@@ -190,7 +192,7 @@ export default function Calendar({ path }: CalendarProps) {
             }
         } catch (error) {
             console.error('Failed to update event:', error);
-            setError('Failed to update event');
+            setError(t('calendar.failedToUpdateEvent'));
         }
     };
 
@@ -203,7 +205,7 @@ export default function Calendar({ path }: CalendarProps) {
             await loadEvents(accountId, selectedCalendar);
         } catch (error) {
             console.error('Failed to delete event:', error);
-            setError('Failed to delete event');
+            setError(t('calendar.failedToDeleteEvent'));
         }
     };
 

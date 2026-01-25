@@ -12,6 +12,7 @@ import Divider from '@mui/material/Divider';
 import Collapse from '@mui/material/Collapse';
 import Chip from '@mui/material/Chip';
 import { useTheme } from '@mui/material/styles';
+import { useTranslation } from 'react-i18next';
 
 import CloseIcon from '@mui/icons-material/Close';
 import SendIcon from '@mui/icons-material/Send';
@@ -103,6 +104,7 @@ function ComposerHeader({
     onClose,
     onExpandClick,
 }: ComposerHeaderProps) {
+    const { t } = useTranslation();
     return (
         <Stack
             direction="row"
@@ -116,17 +118,17 @@ function ComposerHeader({
         >
             <Stack direction="row" alignItems="center" spacing={1}>
                 <Typography variant="subtitle1" fontWeight="medium">
-                    New Message
+                    {t('compose.newMessage')}
                 </Typography>
                 {autoSaveStatus === 'saving' && (
                     <Chip
                         size="small"
-                        label="Saving..."
+                        label={t('compose.saving')}
                         icon={<CircularProgress size={12} color="inherit" />}
                     />
                 )}
                 {autoSaveStatus === 'saved' && (
-                    <Chip size="small" label="Saved" icon={<CheckCircleIcon fontSize="small" />} />
+                    <Chip size="small" label={t('compose.saved')} icon={<CheckCircleIcon fontSize="small" />} />
                 )}
             </Stack>
             <Stack direction="row" spacing={0.5}>
@@ -193,6 +195,7 @@ function EmailFields({
     onToggleCc,
     onToggleBcc,
 }: EmailFieldsProps) {
+    const { t } = useTranslation();
     return (
         <Stack spacing={0} divider={<Divider />}>
             <Stack direction="row" alignItems="center" spacing={1} py={1} px={2}>
@@ -202,15 +205,15 @@ function EmailFields({
                     fullWidth
                     value={to}
                     onChange={(e) => onToChange((e.target as HTMLInputElement).value)}
-                    placeholder="Recipients"
+                    placeholder={t('compose.recipients')}
                     InputProps={{ disableUnderline: true }}
                     autoComplete="off"
                 />
                 <Button size="small" onClick={onToggleCc}>
-                    Cc
+                    {t('compose.cc')}
                 </Button>
                 <Button size="small" onClick={onToggleBcc}>
-                    Bcc
+                    {t('compose.bcc')}
                 </Button>
             </Stack>
 
@@ -222,7 +225,7 @@ function EmailFields({
                         fullWidth
                         value={cc}
                         onChange={(e) => onCcChange((e.target as HTMLInputElement).value)}
-                        placeholder="Cc"
+                        placeholder={t('compose.cc')}
                         InputProps={{ disableUnderline: true }}
                         autoComplete="off"
                     />
@@ -237,7 +240,7 @@ function EmailFields({
                         fullWidth
                         value={bcc}
                         onChange={(e) => onBccChange((e.target as HTMLInputElement).value)}
-                        placeholder="Bcc"
+                        placeholder={t('compose.bcc')}
                         InputProps={{ disableUnderline: true }}
                         autoComplete="off"
                     />
@@ -251,7 +254,7 @@ function EmailFields({
                     fullWidth
                     value={subject}
                     onChange={(e) => onSubjectChange((e.target as HTMLInputElement).value)}
-                    placeholder="Subject"
+                    placeholder={t('compose.subject')}
                     InputProps={{ disableUnderline: true }}
                     autoComplete="off"
                 />
@@ -271,6 +274,7 @@ interface BodyEditorProps {
 function BodyEditor({ body, onBodyChange, onImageUpload, inlineImages }: BodyEditorProps) {
     const [showPreview, setShowPreview] = useState(false);
     const theme = useTheme();
+    const { t } = useTranslation();
 
     const handlePaste = async (event: ClipboardEvent) => {
         const items = event.clipboardData?.items;
@@ -307,14 +311,14 @@ function BodyEditor({ body, onBodyChange, onImageUpload, inlineImages }: BodyEdi
                     variant={!showPreview ? 'contained' : 'outlined'}
                     onClick={() => setShowPreview(false)}
                 >
-                    Edit
+                    {t('compose.edit')}
                 </Button>
                 <Button
                     size="small"
                     variant={showPreview ? 'contained' : 'outlined'}
                     onClick={() => setShowPreview(true)}
                 >
-                    Preview
+                    {t('compose.preview')}
                 </Button>
             </Stack>
 
@@ -323,7 +327,7 @@ function BodyEditor({ body, onBodyChange, onImageUpload, inlineImages }: BodyEdi
                     value={body}
                     onChange={(e) => onBodyChange((e.target as HTMLTextAreaElement).value)}
                     onPaste={handlePaste}
-                    placeholder="Write your message in Markdown..."
+                    placeholder={t('compose.writeMessageMarkdown')}
                     multiline
                     minRows={10}
                     maxRows={20}
@@ -399,6 +403,7 @@ interface ActionsBarProps {
 }
 
 function ActionsBar({ saving, onSend, onAttach, onDelete }: ActionsBarProps) {
+    const { t } = useTranslation();
     return (
         <Stack direction="row" spacing={0.5} px={2} py={1.5} borderTop={1} borderColor="divider">
             <Button
@@ -408,15 +413,15 @@ function ActionsBar({ saving, onSend, onAttach, onDelete }: ActionsBarProps) {
                 onClick={onSend}
                 disabled={saving}
             >
-                Send
+                {t('compose.send')}
             </Button>
 
             <Box flex={1} />
 
-            <IconButton size="small" onClick={onAttach} disabled={saving} title="Attach files">
+            <IconButton size="small" onClick={onAttach} disabled={saving} title={t('compose.attachFiles')}>
                 <AttachFileIcon fontSize="small" />
             </IconButton>
-            <IconButton size="small" onClick={onDelete} disabled={saving} title="Delete draft">
+            <IconButton size="small" onClick={onDelete} disabled={saving} title={t('compose.deleteDraft')}>
                 <DeleteIcon fontSize="small" />
             </IconButton>
         </Stack>
@@ -434,6 +439,7 @@ export default function ComposeEmail({
     draftEmailId,
     accountId,
 }: ComposeEmailProps) {
+    const { t } = useTranslation();
     const [to, setTo] = useState(message?.to || '');
     const [cc, setCc] = useState(message?.cc || '');
     const [bcc, setBcc] = useState(message?.bcc || '');
@@ -526,13 +532,13 @@ export default function ComposeEmail({
                     attachments: allAttachments.length > 0 ? allAttachments : undefined,
                 }
             );
-            setSuccess('Email sent successfully');
+            setSuccess(t('compose.emailSentSuccessfully'));
             setTimeout(() => {
                 handleClear();
                 onClose();
             }, 1500);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to send email');
+            setError(err instanceof Error ? err.message : t('compose.failedToSendEmail'));
         } finally {
             setSaving(false);
         }
@@ -700,7 +706,7 @@ export default function ComposeEmail({
             const imageMarkdown = `![${file.name}](${marker})`;
             setBody((prev) => prev + '\n' + imageMarkdown);
         } catch (err) {
-            setError('Failed to upload image');
+            setError(t('compose.failedToUploadImage'));
         } finally {
             setUploading(false);
         }
@@ -731,7 +737,7 @@ export default function ComposeEmail({
 
             setAttachments((prev) => [...prev, ...newAttachments]);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to upload attachments');
+            setError(err instanceof Error ? err.message : t('compose.failedToUploadAttachments'));
         } finally {
             setUploading(false);
             // Reset input so the same file can be selected again

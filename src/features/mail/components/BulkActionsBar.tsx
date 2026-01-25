@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import IconButton from '@mui/material/IconButton';
 import Checkbox from '@mui/material/Checkbox';
 import ListItemText from '@mui/material/ListItemText';
@@ -35,6 +36,7 @@ export default function BulkActionsBar({
     onDelete,
     onRefresh,
 }: BulkActionsBarProps) {
+    const { t } = useTranslation();
     const allSelected = selectedCount === totalCount && totalCount > 0;
     const someSelected = selectedCount > 0 && selectedCount < totalCount;
 
@@ -47,23 +49,23 @@ export default function BulkActionsBar({
                 checked={allSelected}
                 indeterminate={someSelected}
                 onChange={onSelectAll}
-                title="Select all"
+                title={t('bulkActions.selectAll')}
             />
             {selectedCount > 0 ? (
                 <>
-                    <IconButton onClick={onMarkAsRead} title="Mark as read">
+                    <IconButton onClick={onMarkAsRead} title={t('bulkActions.markAsRead')}>
                         <MarkEmailReadIcon />
                     </IconButton>
-                    <IconButton onClick={onMarkAsUnread} title="Mark as unread">
+                    <IconButton onClick={onMarkAsUnread} title={t('bulkActions.markAsUnread')}>
                         <MarkEmailUnreadIcon />
                     </IconButton>
-                    <IconButton onClick={onMarkAsFlagged} title="Star">
+                    <IconButton onClick={onMarkAsFlagged} title={t('bulkActions.markAsFlagged')}>
                         <StarIcon />
                     </IconButton>
-                    <IconButton onClick={onMarkAsUnflagged} title="Unstar">
+                    <IconButton onClick={onMarkAsUnflagged} title={t('bulkActions.markAsUnflagged')}>
                         <StarBorderIcon />
                     </IconButton>
-                    <IconButton onClick={onDelete} color="error" title="Delete">
+                    <IconButton onClick={onDelete} color="error" title={t('bulkActions.delete')}>
                         <DeleteIcon />
                     </IconButton>
                     <ListItemText
@@ -76,7 +78,7 @@ export default function BulkActionsBar({
                 </>
             ) : (
                 <>
-                    <IconButton onClick={onRefresh} title="Reload messages">
+                    <IconButton onClick={onRefresh} title={t('bulkActions.refresh')}>
                         <RefreshIcon />
                     </IconButton>
                     <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>

@@ -7,6 +7,7 @@ import ReplyAllIcon from '@mui/icons-material/ReplyAll';
 import ForwardIcon from '@mui/icons-material/Forward';
 import SendIcon from '@mui/icons-material/Send';
 import DeleteIcon from '@mui/icons-material/Delete';
+import { useTranslation } from 'react-i18next';
 
 interface MessageActionsBarProps {
     onClose: () => void;
@@ -29,20 +30,21 @@ export default function MessageActionsBar({
     isDraft,
     sending,
 }: MessageActionsBarProps) {
+    const { t } = useTranslation();
     return (
         <>
-            <IconButton onClick={onClose} title="Back to list">
+            <IconButton onClick={onClose} title={t('messageActions.backToList')}>
                 <CloseIcon />
             </IconButton>
             {!isDraft ? (
                 <>
-                    <IconButton onClick={onReply} title="Reply">
+                    <IconButton onClick={onReply} title={t('messageActions.reply')}>
                         <ReplyIcon />
                     </IconButton>
-                    <IconButton onClick={onReplyAll} title="Reply All">
+                    <IconButton onClick={onReplyAll} title={t('messageActions.replyAll')}>
                         <ReplyAllIcon />
                     </IconButton>
-                    <IconButton onClick={onForward} title="Forward">
+                    <IconButton onClick={onForward} title={t('messageActions.forward')}>
                         <ForwardIcon />
                     </IconButton>
                 </>
@@ -57,11 +59,11 @@ export default function MessageActionsBar({
                         disabled={sending}
                         size="small"
                     >
-                        {sending ? 'Sending...' : 'Send'}
+                        {sending ? t('messageActions.sending') : t('compose.send')}
                     </Button>
                 )
             )}
-            <IconButton onClick={onDelete} color="error" title="Delete">
+            <IconButton onClick={onDelete} color="error" title={t('common.delete')}>
                 <DeleteIcon />
             </IconButton>
         </>

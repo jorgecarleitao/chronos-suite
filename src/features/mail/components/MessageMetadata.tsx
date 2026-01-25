@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'preact/hooks';
+import { useTranslation } from 'react-i18next';
 import Typography from '@mui/material/Typography';
 import Stack from '@mui/material/Stack';
 import Divider from '@mui/material/Divider';
@@ -24,6 +25,7 @@ export default function MessageMetadata({
     toEmail,
     date,
 }: MessageMetadataProps) {
+    const { t } = useTranslation();
     const [contact, setContact] = useState<Contact | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -59,9 +61,9 @@ export default function MessageMetadata({
 
         if (contact) {
             const contactInfo = [
-                contact.company && `Company: ${contact.company}`,
-                contact.jobTitle && `Title: ${contact.jobTitle}`,
-                contact.email && `Email: ${contact.email}`,
+                contact.company && `${t('contacts.company')}: ${contact.company}`,
+                contact.jobTitle && `${t('contacts.title')}: ${contact.jobTitle}`,
+                contact.email && `${t('contacts.email')}: ${contact.email}`,
             ]
                 .filter(Boolean)
                 .join('\n');
@@ -70,7 +72,7 @@ export default function MessageMetadata({
                 <Tooltip
                     title={
                         <Box sx={{ whiteSpace: 'pre-line' }}>
-                            {contactInfo || 'Contact in address book'}
+                            {contactInfo || t('message.contactInAddressBook')}
                         </Box>
                     }
                     arrow
@@ -99,22 +101,22 @@ export default function MessageMetadata({
             <Stack spacing={1} mb={2}>
                 <Stack direction="row" spacing={1} alignItems="center">
                     <Typography variant="body2" color="text.secondary">
-                        From:
+                        {t('messageMetadata.from')}
                     </Typography>
                     {renderFromField()}
                 </Stack>
                 <Stack direction="row" spacing={1}>
                     <Typography variant="body2" color="text.secondary">
-                        To:
+                        {t('messageMetadata.to')}
                     </Typography>
                     <Typography variant="body2">{toDisplay}</Typography>
                 </Stack>
                 <Stack direction="row" spacing={1}>
                     <Typography variant="body2" color="text.secondary">
-                        Date:
+                        {t('messageMetadata.date')}
                     </Typography>
                     <Typography variant="body2">
-                        {date ? date.toLocaleString() : 'Unknown'}
+                        {date ? date.toLocaleString() : t('messageMetadata.unknown')}
                     </Typography>
                 </Stack>
             </Stack>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
@@ -19,6 +20,7 @@ export default function PaginationBar({
     pageSize,
     onPageChange,
 }: PaginationBarProps) {
+    const { t } = useTranslation();
     const startMessage = (currentPage - 1) * pageSize + 1;
     const endMessage = Math.min(currentPage * pageSize, totalMessages);
 
@@ -48,7 +50,7 @@ export default function PaginationBar({
             }}
         >
             <Typography variant="body2" color="text.secondary">
-                Showing {startMessage}-{endMessage} of {totalMessages} messages
+                {t('pagination.showing', { start: startMessage, end: endMessage, total: totalMessages })}
             </Typography>
 
             <Stack direction="row" alignItems="center" spacing={1}>
@@ -56,20 +58,20 @@ export default function PaginationBar({
                     size="small"
                     onClick={handlePrevious}
                     disabled={currentPage === 1}
-                    title="Previous page"
+                    title={t('pagination.previousPage')}
                 >
                     <NavigateBeforeIcon />
                 </IconButton>
 
                 <Typography variant="body2">
-                    Page {currentPage} of {totalPages}
+                    {t('pagination.page', { current: currentPage, total: totalPages })}
                 </Typography>
 
                 <IconButton
                     size="small"
                     onClick={handleNext}
                     disabled={currentPage >= totalPages}
-                    title="Next page"
+                    title={t('pagination.nextPage')}
                 >
                     <NavigateNextIcon />
                 </IconButton>

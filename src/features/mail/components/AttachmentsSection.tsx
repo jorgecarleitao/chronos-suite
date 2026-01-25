@@ -1,4 +1,5 @@
 import { RefObject } from 'preact';
+import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
@@ -38,6 +39,7 @@ export default function AttachmentsSection({
     onFileAttach,
     onRemoveAttachment,
 }: AttachmentsSectionProps) {
+    const { t } = useTranslation();
     return (
         <Box>
             <input
@@ -74,6 +76,7 @@ export default function AttachmentsSection({
                                     size="small"
                                     onClick={() => onRemoveAttachment(index)}
                                     disabled={uploading || saving}
+                                    aria-label={t('common.delete')}
                                 >
                                     <DeleteIcon fontSize="small" />
                                 </IconButton>

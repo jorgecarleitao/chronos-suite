@@ -12,6 +12,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import { CalendarEvent } from '../../data/calendarEvents';
 import { formatDateWithTimezone, getLocalTimezone } from '../../../../utils/timezoneHelpers';
+import { useTranslation } from 'react-i18next';
 
 interface EventListProps {
     selectedDate: Date;
@@ -30,6 +31,7 @@ export default function EventList({
     onDeleteEvent,
     onClearError,
 }: EventListProps) {
+    const { t } = useTranslation();
     const getEventsForDate = (date: Date) => {
         return events.filter((event) => {
             const eventDate = new Date(event.start);
@@ -46,7 +48,7 @@ export default function EventList({
     return (
         <Paper sx={{ p: 3 }}>
             <Typography variant="h6" mb={2}>
-                Events on {selectedDate.toLocaleDateString()}
+                {t('calendar.eventsOn', { date: selectedDate.toLocaleDateString() })}
             </Typography>
             {error && (
                 <Alert severity="error" sx={{ mb: 2 }} onClose={onClearError}>
@@ -55,7 +57,7 @@ export default function EventList({
             )}
             {selectedDateEvents.length === 0 ? (
                 <Typography variant="body2" color="text.secondary">
-                    No events scheduled
+                    {t('calendar.noEventsScheduled')}
                 </Typography>
             ) : (
                 <Stack spacing={2}>
@@ -72,7 +74,7 @@ export default function EventList({
                                     </Typography>
                                     {event.showWithoutTime ? (
                                         <Typography variant="body2" color="text.secondary">
-                                            All-day event
+                                            {t('calendar.allDayEvent')}
                                         </Typography>
                                     ) : (
                                         <Typography variant="body2" color="text.secondary">
@@ -127,7 +129,7 @@ export default function EventList({
                                                     rel="noopener noreferrer"
                                                     variant="body2"
                                                 >
-                                                    Join Virtual Meeting
+                                                    {t('calendar.joinVirtualMeeting')}
                                                 </Link>
                                             </Box>
                                         )}

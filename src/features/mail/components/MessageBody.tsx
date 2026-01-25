@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'preact/hooks';
+import { useTranslation } from 'react-i18next';
 import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
 import DOMPurify from 'dompurify';
@@ -9,6 +10,7 @@ interface MessageBodyProps {
 }
 
 export default function MessageBody({ htmlBody, textBody }: MessageBodyProps) {
+    const { t } = useTranslation();
     const iframeRef = useRef<HTMLIFrameElement>(null);
 
     // Sanitize HTML content
@@ -113,7 +115,7 @@ export default function MessageBody({ htmlBody, textBody }: MessageBodyProps) {
             <Paper sx={{ p: 0, overflow: 'hidden' }}>
                 <iframe
                     ref={iframeRef}
-                    title="Email Content"
+                    title={t('message.emailContent')}
                     sandbox="allow-same-origin"
                     style={{
                         width: '100%',
@@ -142,7 +144,7 @@ export default function MessageBody({ htmlBody, textBody }: MessageBodyProps) {
     return (
         <Paper sx={{ p: 2 }}>
             <Typography variant="body2" color="text.secondary">
-                No content available
+                {t('message.noContent')}
             </Typography>
         </Paper>
     );

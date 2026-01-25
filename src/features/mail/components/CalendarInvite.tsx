@@ -12,6 +12,7 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import EventIcon from '@mui/icons-material/Event';
 import { importCalendarInvite, checkEventExists } from '../../calendar/data/calendarEvents';
 import { type Invite } from '../../../utils/calendarInviteParser';
+import { useTranslation } from 'react-i18next';
 
 interface CalendarInviteProps {
     invite: Invite;
@@ -28,6 +29,7 @@ export default function CalendarInvite({
     currentStatus = 'needs-action',
     onResponse,
 }: CalendarInviteProps) {
+    const { t } = useTranslation();
     const [responding, setResponding] = useState(false);
     const [responseStatus, setResponseStatus] = useState(currentStatus);
     const [error, setError] = useState<string | null>(null);
@@ -60,7 +62,7 @@ export default function CalendarInvite({
             }
         } catch (err) {
             console.error('Failed to respond to invite:', err);
-            setError(err instanceof Error ? err.message : 'Failed to respond to invitation');
+            setError(err instanceof Error ? err.message : t('calendarInvite.failedToRespond'));
         } finally {
             setResponding(false);
         }
@@ -98,13 +100,13 @@ export default function CalendarInvite({
     const getStatusText = (status: string) => {
         switch (status) {
             case 'accepted':
-                return 'You accepted this invitation';
+                return t('calendarInvite.acceptedMessage');
             case 'declined':
-                return 'You declined this invitation';
+                return t('calendarInvite.declinedMessage');
             case 'tentative':
-                return 'You tentatively accepted this invitation';
+                return t('calendarInvite.tentativeMessage');
             default:
-                return 'Please respond to this invitation';
+                return t('calendarInvite.respondPrompt');
         }
     };
 
@@ -147,6 +149,7 @@ export default function CalendarInvite({
                             onClick={() => handleResponse('accepted')}
                             disabled={responding || alreadyExists || checkingExists}
                             sx={{ minWidth: 'auto', px: 1 }}
+                        title={t('calendarInvite.accept')}
                         >
                             <CheckCircleIcon fontSize="small" />
                         </Button>
@@ -157,6 +160,7 @@ export default function CalendarInvite({
                             onClick={() => handleResponse('tentative')}
                             disabled={responding || alreadyExists || checkingExists}
                             sx={{ minWidth: 'auto', px: 1 }}
+                        title={t('calendarInvite.tentative')}
                         >
                             <HelpOutlineIcon fontSize="small" />
                         </Button>
@@ -167,6 +171,7 @@ export default function CalendarInvite({
                             onClick={() => handleResponse('declined')}
                             disabled={responding || alreadyExists || checkingExists}
                             sx={{ minWidth: 'auto', px: 1 }}
+                        title={t('calendarInvite.decline')}
                         >
                             <CancelIcon fontSize="small" />
                         </Button>
@@ -193,7 +198,7 @@ export default function CalendarInvite({
                 {alreadyExists && (
                     <Alert severity="info" sx={{ py: 0.5 }}>
                         <Typography variant="caption">
-                            This event has already been added to your calendar.
+                            {t('calendarInvite.alreadyAdded')}
                         </Typography>
                     </Alert>
                 )}

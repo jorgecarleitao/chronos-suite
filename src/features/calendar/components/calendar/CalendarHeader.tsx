@@ -3,6 +3,7 @@ import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
 import Typography from '@mui/material/Typography';
+import { useTranslation } from 'react-i18next';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import TodayIcon from '@mui/icons-material/Today';
@@ -39,6 +40,7 @@ export default function CalendarHeader({
     onNext,
     onToday,
 }: CalendarHeaderProps) {
+    const { t } = useTranslation();
     const getWeekStart = (date: Date) => {
         const d = new Date(date);
         const day = d.getDay();
@@ -74,17 +76,17 @@ export default function CalendarHeader({
                         onClick={() => onViewChange('week')}
                         variant={view === 'week' ? 'contained' : 'outlined'}
                     >
-                        Week
+                        {t('calendar.week')}
                     </Button>
                     <Button
                         onClick={() => onViewChange('month')}
                         variant={view === 'month' ? 'contained' : 'outlined'}
                     >
-                        Month
+                        {t('calendar.month')}
                     </Button>
                 </ButtonGroup>
                 <Button variant="outlined" startIcon={<TodayIcon />} onClick={onToday}>
-                    Today
+                    {t('calendar.today')}
                 </Button>
             </Stack>
         </Stack>
