@@ -15,7 +15,7 @@ import type { RecurrenceRule } from '../data/recurrenceRule/jmap';
  * @param duration - Duration of event in milliseconds
  * @returns Array of event occurrences with start and end dates
  */
-function generateOccurrencesFromRule(
+export function generateOccurrencesFromRule(
     rule: RecurrenceRule,
     startDate: Date,
     endDate: Date,
@@ -145,44 +145,6 @@ function generateOccurrencesFromRule(
     }
 
     return occurrences;
-}
-
-/**
- * Generate occurrences from JMAP RecurrenceRule array (RFC 8984)
- * Implements recurrence expansion natively without external dependencies
- * @param rules - Array of JMAP RecurrenceRule objects
- * @param startDate - Start date of first occurrence
- * @param endDate - End date of occurrence search range
- * @param duration - Duration of event in milliseconds
- * @returns Array of event occurrences with start and end dates, sorted by start time
- */
-export function generateOccurrences(
-    rules: RecurrenceRule[],
-    startDate: Date,
-    endDate: Date,
-    duration: number
-): Array<{ start: Date; end: Date }> {
-    if (rules.length === 0) {
-        return [];
-    }
-
-    // Generate occurrences from all rules and combine
-    const allOccurrences = rules.flatMap((rule) =>
-        generateOccurrencesFromRule(rule, startDate, endDate, duration)
-    );
-
-    // Sort by start time and remove duplicates
-    const uniqueOccurrences = new Map<number, { start: Date; end: Date }>();
-    for (const occurrence of allOccurrences) {
-        const timestamp = occurrence.start.getTime();
-        if (!uniqueOccurrences.has(timestamp)) {
-            uniqueOccurrences.set(timestamp, occurrence);
-        }
-    }
-
-    return Array.from(uniqueOccurrences.values()).sort(
-        (a, b) => a.start.getTime() - b.start.getTime()
-    );
 }
 
 /**

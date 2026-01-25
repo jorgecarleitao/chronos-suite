@@ -46,7 +46,7 @@ export interface CalendarEvent {
     locations?: Record<string, Location>;
     virtualLocations?: Record<string, VirtualLocation>;
     participants?: Record<string, Participant>;
-    recurrenceRules?: RecurrenceRule[];
+    recurrenceRule?: RecurrenceRule;
     recurrenceOverrides?: Record<string, any>;
     status?: 'confirmed' | 'cancelled' | 'tentative';
     freeBusyStatus?: 'free' | 'busy' | 'tentative' | 'unavailable';

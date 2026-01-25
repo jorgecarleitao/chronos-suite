@@ -8,7 +8,7 @@ import { withAuthHandling, getAuthenticatedClient } from '../../../../utils/auth
 import { Invite } from '../../../../utils/calendarInviteParser';
 import { UI as RecurrenceUI } from '../recurrenceRule';
 import { UI as ParticipantUI } from '../participant';
-import { generateOccurrences, calculateEventDuration } from '../../utils/recurrenceHelpers';
+import { generateOccurrencesFromRule, calculateEventDuration } from '../../utils/recurrenceHelpers';
 import type { UICalendarEvent, UICalendarEventFormData } from './ui';
 import * as CalendarEventUI from './ui';
 import type { Participant } from '../participant/jmap';
@@ -81,9 +81,6 @@ export async function createCalendarEvent(
 
     const calendarEvent = CalendarEventUI.toJmap(eventData, calendarId);
 
-    // Log the event being created for debugging
-    console.log('Creating calendar event:', JSON.stringify(calendarEvent, null, 2));
-
     const [response] = await withAuthHandling(() =>
         client.request([
             'CalendarEvent/set' as any,
@@ -96,8 +93,6 @@ export async function createCalendarEvent(
             },
         ])
     );
-
-    console.log('Create response:', JSON.stringify(response, null, 2));
 
     const createdId = response.created?.['new-event']?.id;
     if (!createdId) {
@@ -416,13 +411,12 @@ export function expandRecurringEvents(
     const expandedEvents: UICalendarEvent[] = [];
 
     for (const event of events) {
-        if (event.recurrenceRules?.length) {
+        if (event.recurrenceRule) {
             // Calculate event duration
             const duration = calculateEventDuration(event.start, event.end);
 
-            // Generate occurrences from JMAP RecurrenceRule
-            const occurrences = generateOccurrences(
-                event.recurrenceRules,
+            const occurrences = generateOccurrencesFromRule(
+                event.recurrenceRule,
                 event.start,
                 endDate,
                 duration

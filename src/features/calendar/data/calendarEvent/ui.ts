@@ -31,7 +31,7 @@ export interface UICalendarEvent {
     userParticipationStatus?: ParticipationStatus;
     timeZone?: string;
     showWithoutTime?: boolean;
-    recurrenceRules?: RecurrenceRule[];
+    recurrenceRule?: RecurrenceRule;
     recurrenceOverrides?: Record<string, Partial<UICalendarEvent>>;
     isRecurringEventInstance?: boolean;
 }
@@ -93,7 +93,7 @@ export function fromJmap(jmapEvent: JmapCalendarEvent, userEmail?: string): UICa
         userParticipationStatus,
         timeZone: jmapEvent.timeZone,
         showWithoutTime: jmapEvent.showWithoutTime || false,
-        recurrenceRules: jmapEvent.recurrenceRules,
+        recurrenceRule: jmapEvent.recurrenceRule,
         recurrenceOverrides: jmapEvent.recurrenceOverrides,
     };
 }
@@ -176,7 +176,7 @@ export function toJmap(
     if (formData.recurrence && formData.recurrence.frequency !== 'none') {
         const recurrenceRule = RecurrenceUI.toJmap(formData.recurrence);
         if (recurrenceRule) {
-            event.recurrenceRules = [recurrenceRule];
+            event.recurrenceRule = recurrenceRule;
         }
     }
 
@@ -222,8 +222,8 @@ export function toFormData(event: UICalendarEvent, userEmail?: string): UICalend
     }
 
     // Convert recurrence
-    if (event.recurrenceRules && event.recurrenceRules.length > 0) {
-        formData.recurrence = RecurrenceUI.fromJmap(event.recurrenceRules[0]);
+    if (event.recurrenceRule) {
+        formData.recurrence = RecurrenceUI.fromJmap(event.recurrenceRule);
     }
 
     return formData;

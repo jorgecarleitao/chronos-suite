@@ -468,8 +468,8 @@ export default function EventDialog({
                 interval: 1,
                 endType: 'never',
             };
-            if (event.recurrenceRules?.[0]) {
-                const parsed = RecurrenceUI.fromJmap(event.recurrenceRules[0]);
+            if (event.recurrenceRule) {
+                const parsed = RecurrenceUI.fromJmap(event.recurrenceRule);
                 if (parsed) recurrence = parsed;
             }
 
@@ -588,7 +588,7 @@ export default function EventDialog({
 
         if (mode === 'edit' && event) {
             // If editing a recurring event instance, ask if they want to modify just this or all
-            if (event.isRecurringEventInstance && event.recurrenceRules?.length) {
+            if (event.isRecurringEventInstance && event.recurrenceRule) {
                 setPendingModification({
                     action: 'edit',
                     callback: (choice) => {
@@ -616,7 +616,7 @@ export default function EventDialog({
         if (!event) return;
 
         // If deleting a recurring event instance, ask if they want to delete just this or all
-        if (event.isRecurringEventInstance && event.recurrenceRules?.length) {
+        if (event.isRecurringEventInstance && event.recurrenceRule) {
             setPendingModification({
                 action: 'delete',
                 callback: (choice) => {
