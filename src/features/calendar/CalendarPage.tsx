@@ -29,7 +29,7 @@ interface CalendarProps {
 }
 
 export default function Calendar({ path }: CalendarProps) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [loading, setLoading] = useState(true);
     const [accountId, setAccountId] = useState<string | null>(null);
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -60,13 +60,13 @@ export default function Calendar({ path }: CalendarProps) {
         const isTomorrow = eventDate.toDateString() === tomorrow.toDateString();
         
         if (isToday) {
-            const timeStr = eventDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+            const timeStr = eventDate.toLocaleTimeString(i18n.language, { hour: 'numeric', minute: '2-digit', hour12: true });
             title = t('calendar.nextEventToday', { time: timeStr });
         } else if (isTomorrow) {
-            const timeStr = eventDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+            const timeStr = eventDate.toLocaleTimeString(i18n.language, { hour: 'numeric', minute: '2-digit', hour12: true });
             title = t('calendar.nextEventTomorrow', { time: timeStr });
         } else {
-            const dateStr = eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            const dateStr = eventDate.toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' });
             title = t('calendar.nextEventDate', { date: dateStr });
         }
     }

@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import TodayIcon from '@mui/icons-material/Today';
+import { getWeekDisplayText } from '../../../../utils/dateHelpers';
 
 interface CalendarHeaderProps {
     view: 'month' | 'week';
@@ -17,21 +18,6 @@ interface CalendarHeaderProps {
     onToday: () => void;
 }
 
-const MONTHS = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
-];
-
 export default function CalendarHeader({
     view,
     currentDate,
@@ -40,20 +26,7 @@ export default function CalendarHeader({
     onNext,
     onToday,
 }: CalendarHeaderProps) {
-    const { t } = useTranslation();
-    const getWeekStart = (date: Date) => {
-        const d = new Date(date);
-        const day = d.getDay();
-        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-        return new Date(d.setDate(diff));
-    };
-
-    const getWeekDisplayText = () => {
-        const weekStart = getWeekStart(currentDate);
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekStart.getDate() + 6);
-        return `${MONTHS[weekStart.getMonth()]} ${weekStart.getDate()} - ${weekEnd.getDate()}, ${weekStart.getFullYear()}`;
-    };
+    const { t, i18n } = useTranslation();
 
     return (
         <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
@@ -63,8 +36,8 @@ export default function CalendarHeader({
                 </IconButton>
                 <Typography variant="h5">
                     {view === 'month'
-                        ? `${MONTHS[currentDate.getMonth()]} ${currentDate.getFullYear()}`
-                        : getWeekDisplayText()}
+                        ? currentDate.toLocaleDateString(i18n.language, { month: 'long', year: 'numeric' })
+                        : getWeekDisplayText(currentDate, i18n.language)}
                 </Typography>
                 <IconButton onClick={onNext}>
                     <ChevronRightIcon />
