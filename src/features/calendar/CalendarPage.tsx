@@ -13,6 +13,8 @@ const {
     createCalendarEvent,
     updateCalendarEvent,
     deleteCalendarEvent,
+    deleteSingleOccurrence,
+    updateSingleOccurrence,
     fetchCalendars,
     expandRecurringEvents,
 } = actions;
@@ -196,12 +198,23 @@ export default function Calendar({ path }: CalendarProps) {
         }
     };
 
-    const handleUpdateEvent = async (eventId: string, data: UICalendarEventFormData) => {
+    const handleUpdateEvent = async (
+        eventId: string,
+        data: UICalendarEventFormData,
+        recurrenceId?: string
+    ) => {
         if (!accountId) return;
 
         try {
             const calendarId = dialogEvent?.calendarId || calendars[0]?.id;
-            await updateCalendarEvent(accountId, calendarId, eventId, data);
+            
+            if (recurrenceId) {
+                // Update single occurrence
+                await updateSingleOccurrence(accountId, calendarId, eventId, recurrenceId, data);
+            } else {
+                // Update entire event or series
+                await updateCalendarEvent(accountId, calendarId, eventId, data);
+            }
 
             setDialogEvent(undefined);
             if (selectedCalendar) {
@@ -213,11 +226,18 @@ export default function Calendar({ path }: CalendarProps) {
         }
     };
 
-    const handleDeleteEvent = async (eventId: string) => {
+    const handleDeleteEvent = async (eventId: string, recurrenceId?: string) => {
         if (!accountId || !selectedCalendar) return;
 
         try {
-            await deleteCalendarEvent(accountId, eventId);
+            if (recurrenceId) {
+                // Delete single occurrence
+                await deleteSingleOccurrence(accountId, eventId, recurrenceId);
+            } else {
+                // Delete entire event or series
+                await deleteCalendarEvent(accountId, eventId);
+            }
+            
             setDialogEvent(undefined);
             await loadEvents(accountId, selectedCalendar);
         } catch (error) {

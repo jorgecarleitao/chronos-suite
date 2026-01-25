@@ -1,3 +1,4 @@
+import { useState } from 'preact/hooks';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Box from '@mui/material/Box';
@@ -6,6 +7,15 @@ import IconButton from '@mui/material/IconButton';
 import Alert from '@mui/material/Alert';
 import Chip from '@mui/material/Chip';
 import Link from '@mui/material/Link';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import Button from '@mui/material/Button';
+import FormControl from '@mui/material/FormControl';
+import RadioGroup from '@mui/material/RadioGroup';
+import Radio from '@mui/material/Radio';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PersonIcon from '@mui/icons-material/Person';
@@ -19,7 +29,7 @@ interface EventListProps {
     events: UICalendarEvent[];
     error: string | null;
     onEditEvent: (event: UICalendarEvent) => void;
-    onDeleteEvent: (eventId: string) => void;
+    onDeleteEvent: (eventId: string, recurrenceId?: string) => void;
     onClearError: () => void;
 }
 
@@ -32,6 +42,39 @@ export default function EventList({
     onClearError,
 }: EventListProps) {
     const { t } = useTranslation();
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [eventToDelete, setEventToDelete] = useState<UICalendarEvent | null>(null);
+    const [deleteChoice, setDeleteChoice] = useState<'this' | 'series'>('this');
+
+    const handleDeleteClick = (event: UICalendarEvent) => {
+        // If it's a recurring event instance, show the choice dialog
+        if (event.isRecurringEventInstance && event.recurrenceRule && event.recurrenceId) {
+            setEventToDelete(event);
+            setDeleteChoice('this');
+            setDeleteDialogOpen(true);
+        } else {
+            // Non-recurring event, delete directly
+            onDeleteEvent(event.id);
+        }
+    };
+
+    const handleConfirmDelete = () => {
+        if (!eventToDelete) return;
+        
+        const baseEventId = eventToDelete.id.split('#')[0];
+        
+        if (deleteChoice === 'this') {
+            // Delete only this occurrence
+            onDeleteEvent(baseEventId, eventToDelete.recurrenceId!);
+        } else {
+            // Delete entire series
+            onDeleteEvent(baseEventId);
+        }
+        
+        setDeleteDialogOpen(false);
+        setEventToDelete(null);
+    };
+
     const getEventsForDate = (date: Date) => {
         return events.filter((event) => {
             const eventDate = new Date(event.start);
@@ -170,7 +213,7 @@ export default function EventList({
                                     </IconButton>
                                     <IconButton
                                         size="small"
-                                        onClick={() => onDeleteEvent(event.id)}
+                                        onClick={() => handleDeleteClick(event)}
                                     >
                                         <DeleteIcon fontSize="small" />
                                     </IconButton>
@@ -180,6 +223,54 @@ export default function EventList({
                     ))}
                 </Stack>
             )}
+
+            {/* Delete confirmation dialog */}
+            <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth="sm" fullWidth>
+                <DialogTitle>{t('calendar.recurrence.deleteChoice')}</DialogTitle>
+                <DialogContent>
+                    <FormControl component="fieldset" sx={{ mt: 2 }}>
+                        <RadioGroup
+                            value={deleteChoice}
+                            onChange={(e) => setDeleteChoice((e.target as HTMLInputElement).value as 'this' | 'series')}
+                        >
+                            <FormControlLabel
+                                value="this"
+                                control={<Radio />}
+                                label={
+                                    <Box>
+                                        <Typography variant="body2">
+                                            {t('calendar.recurrence.deleteThisEvent')}
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            {t('calendar.recurrence.deleteThisEventDesc')}
+                                        </Typography>
+                                    </Box>
+                                }
+                            />
+                            <FormControlLabel
+                                value="series"
+                                control={<Radio />}
+                                label={
+                                    <Box>
+                                        <Typography variant="body2">
+                                            {t('calendar.recurrence.deleteAllEvents')}
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            {t('calendar.recurrence.deleteAllEventsDesc')}
+                                        </Typography>
+                                    </Box>
+                                }
+                            />
+                        </RadioGroup>
+                    </FormControl>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setDeleteDialogOpen(false)}>{t('common.cancel')}</Button>
+                    <Button onClick={handleConfirmDelete} variant="contained" color="error">
+                        {t('common.delete')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Paper>
     );
 }

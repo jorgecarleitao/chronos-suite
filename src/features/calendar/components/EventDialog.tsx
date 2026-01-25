@@ -330,8 +330,8 @@ interface EventDialogProps {
     initialDate: Date;
     onClose: () => void;
     onCreate: (data: UICalendarEventFormData) => void;
-    onUpdate: (eventId: string, data: UICalendarEventFormData) => void;
-    onDelete: (eventId: string) => void;
+    onUpdate: (eventId: string, data: UICalendarEventFormData, recurrenceId?: string) => void;
+    onDelete: (eventId: string, recurrenceId?: string) => void;
 }
 
 interface RecurrenceModificationChoice {
@@ -588,16 +588,18 @@ export default function EventDialog({
 
         if (mode === 'edit' && event) {
             // If editing a recurring event instance, ask if they want to modify just this or all
-            if (event.isRecurringEventInstance && event.recurrenceRule) {
+            if (event.isRecurringEventInstance && event.recurrenceRule && event.recurrenceId) {
                 setPendingModification({
                     action: 'edit',
                     callback: (choice) => {
                         if (choice.thisOnly) {
-                            // For now, update the entire series
-                            // TODO: In future, implement instance-specific modifications
-                            onUpdate(event.id, data);
+                            // Extract base event ID (before the #)
+                            const baseEventId = event.id.split('#')[0];
+                            onUpdate(baseEventId, data, event.recurrenceId!);
                         } else {
-                            onUpdate(event.id, data);
+                            // Update the entire series
+                            const baseEventId = event.id.split('#')[0];
+                            onUpdate(baseEventId, data);
                         }
                         setModificationDialogOpen(false);
                         setPendingModification(null);
@@ -616,16 +618,18 @@ export default function EventDialog({
         if (!event) return;
 
         // If deleting a recurring event instance, ask if they want to delete just this or all
-        if (event.isRecurringEventInstance && event.recurrenceRule) {
+        if (event.isRecurringEventInstance && event.recurrenceRule && event.recurrenceId) {
             setPendingModification({
                 action: 'delete',
                 callback: (choice) => {
                     if (choice.thisOnly) {
-                        // For now, delete the entire series
-                        // TODO: In future, implement instance-specific deletion with exception dates
-                        onDelete(event.id);
+                        // Extract base event ID (before the #)
+                        const baseEventId = event.id.split('#')[0];
+                        onDelete(baseEventId, event.recurrenceId!);
                     } else {
-                        onDelete(event.id);
+                        // Delete the entire series
+                        const baseEventId = event.id.split('#')[0];
+                        onDelete(baseEventId);
                     }
                     setModificationDialogOpen(false);
                     setPendingModification(null);

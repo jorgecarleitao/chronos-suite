@@ -160,6 +160,124 @@ export async function deleteCalendarEvent(accountId: string, eventId: string): P
 }
 
 /**
+ * Delete a single occurrence of a recurring event by adding it to recurrenceOverrides
+ */
+export async function deleteSingleOccurrence(
+    accountId: string,
+    eventId: string,
+    recurrenceId: string
+): Promise<void> {
+    const client = getAuthenticatedClient();
+
+    // Fetch the current event to get existing recurrenceOverrides
+    const [getResponse] = await withAuthHandling(() =>
+        client.request([
+            'CalendarEvent/get' as any,
+            {
+                accountId,
+                ids: [eventId],
+            },
+        ])
+    );
+
+    if (!getResponse.list || getResponse.list.length === 0) {
+        throw new Error('Event not found');
+    }
+
+    const event = getResponse.list[0];
+    const existingOverrides = event.recurrenceOverrides || {};
+
+    // Add the excluded override for this occurrence
+    const updatedOverrides = {
+        ...existingOverrides,
+        [recurrenceId]: {
+            excluded: true,
+        },
+    };
+
+    // Update the event with the new override
+    await withAuthHandling(() =>
+        client.request([
+            'CalendarEvent/set' as any,
+            {
+                accountId,
+                update: {
+                    [eventId]: {
+                        recurrenceOverrides: updatedOverrides,
+                    },
+                },
+                sendSchedulingMessages: true,
+            },
+        ])
+    );
+}
+
+/**
+ * Update a single occurrence of a recurring event by adding it to recurrenceOverrides
+ */
+export async function updateSingleOccurrence(
+    accountId: string,
+    calendarId: string,
+    eventId: string,
+    recurrenceId: string,
+    updates: UICalendarEventFormData
+): Promise<void> {
+    const client = getAuthenticatedClient();
+
+    // Fetch the current event to get existing recurrenceOverrides
+    const [getResponse] = await withAuthHandling(() =>
+        client.request([
+            'CalendarEvent/get' as any,
+            {
+                accountId,
+                ids: [eventId],
+            },
+        ])
+    );
+
+    if (!getResponse.list || getResponse.list.length === 0) {
+        throw new Error('Event not found');
+    }
+
+    const event = getResponse.list[0];
+    const existingOverrides = event.recurrenceOverrides || {};
+
+    // Convert form data to JMAP and extract the override fields
+    const jmapEvent = CalendarEventUI.toJmap(updates, calendarId);
+    
+    // Build the override patch (only include fields that changed)
+    const overridePatch: any = {};
+    if (jmapEvent.title !== event.title) overridePatch.title = jmapEvent.title;
+    if (jmapEvent.start !== recurrenceId) overridePatch.start = jmapEvent.start;
+    if (jmapEvent.duration) overridePatch.duration = jmapEvent.duration;
+    if (jmapEvent.description) overridePatch.description = jmapEvent.description;
+    if (jmapEvent.locations) overridePatch.locations = jmapEvent.locations;
+    if (jmapEvent.virtualLocations) overridePatch.virtualLocations = jmapEvent.virtualLocations;
+
+    // Add the override for this occurrence
+    const updatedOverrides = {
+        ...existingOverrides,
+        [recurrenceId]: overridePatch,
+    };
+
+    // Update the event with the new override
+    await withAuthHandling(() =>
+        client.request([
+            'CalendarEvent/set' as any,
+            {
+                accountId,
+                update: {
+                    [eventId]: {
+                        recurrenceOverrides: updatedOverrides,
+                    },
+                },
+                sendSchedulingMessages: true,
+            },
+        ])
+    );
+}
+
+/**
  * Fetch calendars for the account
  */
 export async function fetchCalendars(
@@ -422,16 +540,55 @@ export function expandRecurringEvents(
                 duration
             );
 
+            const overrides = event.recurrenceOverrides || {};
+
             // Filter occurrences to be within range and create event instances
             for (const occurrence of occurrences) {
                 if (occurrence.start >= startDate && occurrence.start <= endDate) {
-                    expandedEvents.push({
+                    const recurrenceId = formatRecurrenceId(occurrence.start, event.timeZone);
+                    const override = overrides[recurrenceId];
+
+                    // Skip excluded occurrences
+                    if (override?.excluded) {
+                        continue;
+                    }
+
+                    // Create the instance with overrides applied
+                    const instance: UICalendarEvent = {
                         ...event,
-                        id: `${event.id}#${occurrence.start.toISOString()}`, // Unique ID for each occurrence
+                        id: `${event.id}#${recurrenceId}`, // Unique ID for each occurrence
                         start: occurrence.start,
                         end: occurrence.end,
                         isRecurringEventInstance: true, // Mark as instance of recurring event
-                    });
+                        recurrenceId, // Store the recurrence ID for later use
+                    };
+
+                    // Apply overrides if they exist
+                    if (override) {
+                        if (override.title !== undefined) instance.title = override.title;
+                        if (override.start !== undefined) {
+                            // Convert string date to Date object
+                            const newStart = typeof override.start === 'string' 
+                                ? new Date(override.start) 
+                                : override.start;
+                            instance.start = newStart;
+                            
+                            // Recalculate end date if duration is also overridden
+                            if ((override as any).duration) {
+                                const durationMs = parseDurationOverride((override as any).duration);
+                                instance.end = new Date(newStart.getTime() + durationMs);
+                            } else {
+                                // Maintain the same duration
+                                const originalDuration = occurrence.end.getTime() - occurrence.start.getTime();
+                                instance.end = new Date(newStart.getTime() + originalDuration);
+                            }
+                        }
+                        if (override.description !== undefined) instance.description = override.description;
+                        if (override.location !== undefined) instance.location = override.location;
+                        // Apply other override fields as needed
+                    }
+
+                    expandedEvents.push(instance);
                 }
             }
         } else {
@@ -441,4 +598,41 @@ export function expandRecurringEvents(
     }
 
     return expandedEvents;
+}
+
+/**
+ * Format a recurrence ID from a Date, matching the event's timezone format
+ */
+function formatRecurrenceId(date: Date, timeZone?: string): string {
+    if (timeZone) {
+        // Local time format: YYYY-MM-DDTHH:mm:ss
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+    } else {
+        // UTC format with Z
+        return date.toISOString();
+    }
+}
+
+/**
+ * Parse ISO 8601 duration string to milliseconds
+ */
+function parseDurationOverride(duration: string): number {
+    const regex = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/;
+    const matches = duration.match(regex);
+
+    if (!matches) {
+        return 3600000; // Default 1 hour
+    }
+
+    const hours = parseInt(matches[1] || '0', 10);
+    const minutes = parseInt(matches[2] || '0', 10);
+    const seconds = parseInt(matches[3] || '0', 10);
+
+    return (hours * 3600 + minutes * 60 + seconds) * 1000;
 }

@@ -15,6 +15,13 @@ import { UI as RecurrenceUI } from '../recurrenceRule';
 import { UI as ParticipantUI } from '../participant';
 
 /**
+ * Recurrence override can either exclude an occurrence or modify its properties
+ */
+export interface RecurrenceOverride extends Partial<UICalendarEvent> {
+    excluded?: boolean;
+}
+
+/**
  * UI-friendly calendar event (client representation with Date objects)
  */
 export interface UICalendarEvent {
@@ -32,8 +39,9 @@ export interface UICalendarEvent {
     timeZone?: string;
     showWithoutTime?: boolean;
     recurrenceRule?: RecurrenceRule;
-    recurrenceOverrides?: Record<string, Partial<UICalendarEvent>>;
+    recurrenceOverrides?: Record<string, RecurrenceOverride>;
     isRecurringEventInstance?: boolean;
+    recurrenceId?: string; // ISO 8601 date-time for the original occurrence this instance represents
 }
 
 /**
