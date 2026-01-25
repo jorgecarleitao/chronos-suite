@@ -401,7 +401,7 @@ export default function WeekView({
                                                             >
                                                                 {event.title}
                                                             </Typography>
-                                                            {event.recurrenceRule && (
+                                                            {event.recurrenceRules?.length && (
                                                                 <RepeatIcon
                                                                     sx={{
                                                                         fontSize: '0.75rem',

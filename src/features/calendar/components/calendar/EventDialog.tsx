@@ -26,7 +26,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { CalendarEvent } from '../../data/calendarEvents';
 import { UICalendarEventFormData, UIParticipant, UIRecurrencePattern } from '../../types';
 import { participantsToArray } from '../../../../utils/participantUtils';
-import { generateRRuleString, parseRRule } from '../../../../utils/recurrenceHelpers';
+import { parseRecurrenceRule } from '../../utils/recurrenceHelpers';
 import {
     getCommonTimezones,
     getLocalTimezone,
@@ -438,8 +438,8 @@ export default function EventDialog({
                 interval: 1,
                 endType: 'never',
             };
-            if (event.recurrenceRule) {
-                const parsed = parseRRule(event.recurrenceRule, event.start);
+            if (event.recurrenceRules?.[0]) {
+                const parsed = parseRecurrenceRule(event.recurrenceRules[0]);
                 if (parsed) recurrence = parsed;
             }
 
@@ -556,7 +556,7 @@ export default function EventDialog({
 
         if (mode === 'edit' && event) {
             // If editing a recurring event instance, ask if they want to modify just this or all
-            if (event.isRecurringEventInstance && event.recurrenceRule) {
+            if (event.isRecurringEventInstance && event.recurrenceRules?.length) {
                 setPendingModification({
                     action: 'edit',
                     callback: (choice) => {
@@ -584,7 +584,7 @@ export default function EventDialog({
         if (!event) return;
 
         // If deleting a recurring event instance, ask if they want to delete just this or all
-        if (event.isRecurringEventInstance && event.recurrenceRule) {
+        if (event.isRecurringEventInstance && event.recurrenceRules?.length) {
             setPendingModification({
                 action: 'delete',
                 callback: (choice) => {

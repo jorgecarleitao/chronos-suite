@@ -2,7 +2,7 @@ import { jmapService } from '../../../data/jmapClient';
 import { Invite } from '../../../utils/calendarInviteParser';
 import { withAuthHandling } from '../../../utils/authHandling';
 import { parseJmapParticipants, createJmapParticipant } from '../../../utils/participantUtils';
-import { generateRRuleString, generateOccurrences, calculateEventDuration } from '../../../utils/recurrenceHelpers';
+import { generateRecurrenceRule, generateOccurrences, calculateEventDuration } from '../utils/recurrenceHelpers';
 import type { Participant, CalendarEvent } from '../../../types/calendar';
 import type { UIParticipant, UICalendarEventFormData } from '../types';
 
@@ -124,7 +124,8 @@ export async function fetchCalendarEvents(
                 userParticipationStatus,
                 timeZone: event.timeZone,
                 showWithoutTime: event.showWithoutTime || false,
-                recurrenceRule: event.recurrenceRule,
+                // Store recurrence rule as-is (can be JMAP RecurrenceRule object or RRULE string)
+                recurrenceRules: event.recurrenceRules,
                 recurrenceOverrides: event.recurrenceOverrides,
             };
         });
@@ -235,9 +236,9 @@ export async function createCalendarEvent(
 
         // Add recurrence rule if provided
         if (eventData.recurrence && eventData.recurrence.frequency !== 'none') {
-            const rruleString = generateRRuleString(eventData.recurrence, eventData.start);
-            if (rruleString) {
-                calendarEvent.recurrenceRule = rruleString;
+            const recurrenceRule = generateRecurrenceRule(eventData.recurrence);
+            if (recurrenceRule) {
+                calendarEvent.recurrenceRules = [recurrenceRule];
             }
         }
 
@@ -296,7 +297,7 @@ export async function createCalendarEvent(
             timeZone: createdEvent?.timeZone || eventData.timeZone,
             showWithoutTime: createdEvent?.showWithoutTime || eventData.showWithoutTime || false,
             virtualLocations: createdEvent?.virtualLocations,
-            recurrenceRule: createdEvent?.recurrenceRule,
+            recurrenceRules: createdEvent?.recurrenceRules,
             recurrenceOverrides: createdEvent?.recurrenceOverrides,
         };
     });
@@ -383,13 +384,13 @@ export async function updateCalendarEvent(
         // Update recurrence rule if provided
         if (updates.recurrence !== undefined) {
             if (updates.recurrence && updates.recurrence.frequency !== 'none') {
-                const rruleString = generateRRuleString(updates.recurrence, updates.start);
-                if (rruleString) {
-                    patch.recurrenceRule = rruleString;
+                const recurrenceRule = generateRecurrenceRule(updates.recurrence);
+                if (recurrenceRule) {
+                    patch.recurrenceRules = [recurrenceRule];
                 }
             } else {
                 // Clear recurrence if set to 'none'
-                patch.recurrenceRule = null;
+                patch.recurrenceRules = null;
             }
         }
 
@@ -717,6 +718,7 @@ export async function importCalendarInvite(
 /**
  * Expand recurring events to individual occurrences within a date range
  * For each recurring event, generates instances for the given date range
+ * Only supports JMAP RecurrenceRule format
  */
 export function expandRecurringEvents(
     events: CalendarEvent[],
@@ -730,7 +732,7 @@ export function expandRecurringEvents(
             // Calculate event duration
             const duration = calculateEventDuration(event.start, event.end);
 
-            // Generate occurrences
+            // Generate occurrences from JMAP RecurrenceRule
             try {
                 const occurrences = generateOccurrences(
                     event.recurrenceRule,

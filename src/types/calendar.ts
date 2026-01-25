@@ -39,6 +39,38 @@ export interface VirtualLocation {
     description?: string; // Additional description
 }
 
+/**
+ * JMAP RecurrenceRule following JSCalendar RFC 8984
+ */
+export interface RecurrenceRule {
+    '@type': 'RecurrenceRule';
+    frequency: 'yearly' | 'monthly' | 'weekly' | 'daily' | 'hourly' | 'minutely' | 'secondly';
+    interval?: number; // Default is 1
+    rscale?: string; // Calendar system (default is 'gregorian')
+    skip?: 'omit' | 'backward' | 'forward'; // How to handle invalid dates
+    firstDayOfWeek?: 'mo' | 'tu' | 'we' | 'th' | 'fr' | 'sa' | 'su'; // Default is 'mo'
+    byDay?: Array<NDay | string>; // Days of week/month
+    byMonthDay?: number[]; // Days of month (1-31, negative for end of month)
+    byMonth?: string[]; // Months (1-12 as strings)
+    byYearDay?: number[]; // Days of year (1-366, negative for end of year)
+    byWeekNo?: number[]; // Week numbers (1-53, negative for end of year)
+    byHour?: number[]; // Hours (0-23)
+    byMinute?: number[]; // Minutes (0-59)
+    bySecond?: number[]; // Seconds (0-60 for leap seconds)
+    bySetPosition?: number[]; // Positions in the recurrence set
+    count?: number; // Maximum number of occurrences
+    until?: string; // ISO 8601 date-time or date
+}
+
+/**
+ * NDay object for byDay in RecurrenceRule (JSCalendar RFC 8984)
+ */
+export interface NDay {
+    '@type': 'NDay';
+    day: 'mo' | 'tu' | 'we' | 'th' | 'fr' | 'sa' | 'su';
+    nthOfPeriod?: number; // e.g., 1 for first Monday, -1 for last Monday
+}
+
 export interface CalendarEvent {
     id: string;
     title: string;
@@ -53,8 +85,8 @@ export interface CalendarEvent {
     userParticipationStatus?: ParticipationStatus;
     timeZone?: string; // IANA timezone identifier (e.g., 'America/New_York')
     showWithoutTime?: boolean; // All-day event flag
-    // Recurrence fields following iCalendar RFC 5545 RRULE format
-    recurrenceRule?: string; // RRULE string (e.g., 'FREQ=WEEKLY;BYDAY=MO,WE,FR;UNTIL=2026-12-31')
+    // Recurrence fields following JSCalendar RFC 8984 format (JMAP RecurrenceRule)
+    recurrenceRules?: RecurrenceRule[]; // Array of JMAP RecurrenceRule objects (standard JMAP format)
     recurrenceOverrides?: Record<string, Partial<CalendarEvent>>; // Exceptions to recurrence pattern
     isRecurringEventInstance?: boolean; // Indicates if this is an instance of a recurring event
 }

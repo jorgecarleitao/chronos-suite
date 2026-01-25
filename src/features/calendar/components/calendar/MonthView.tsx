@@ -70,7 +70,7 @@ export default function MonthView({
 
             // Get events for this day
             const dayEvents = events.filter(event => isSameDay(event.start, dayDate));
-            const hasRecurringEvents = dayEvents.some(e => e.recurrenceRule);
+            const hasRecurringEvents = dayEvents.some(e => e.recurrenceRules?.length);
 
             days.push(
                 <Box
