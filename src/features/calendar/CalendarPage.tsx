@@ -22,7 +22,6 @@ import type { UICalendarEventFormData } from './data/calendarEvent/ui';
 import CalendarHeader from './components/CalendarHeader';
 import MonthView from './components/MonthView';
 import WeekView from './components/WeekView';
-import EventList from './components/EventList';
 import EventDialog from './components/EventDialog';
 import CalendarSidebar from './components/CalendarSidebar';
 import { useDocumentTitle } from '../../utils/useDocumentTitle';
@@ -304,15 +303,6 @@ export default function Calendar({ path }: CalendarProps) {
                                     />
                                 )}
                             </Paper>
-
-                            <EventList
-                                selectedDate={selectedDate}
-                                events={events}
-                                error={error}
-                                onEditEvent={openEditDialog}
-                                onDeleteEvent={handleDeleteEvent}
-                                onClearError={() => setError(null)}
-                            />
                         </>
                     )}
                 </Box>
