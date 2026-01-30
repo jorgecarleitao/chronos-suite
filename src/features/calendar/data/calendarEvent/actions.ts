@@ -35,9 +35,11 @@ export async function fetchCalendarEvents(
     if (calendarId) {
         filter.inCalendar = calendarId;
     }
-    if (startDate || endDate) {
-        filter.before = endDate?.toISOString();
-        filter.after = startDate?.toISOString();
+    if (endDate) {
+        filter.before = endDate.toISOString().split('.')[0];
+    }
+    if (startDate) {
+        filter.after = startDate.toISOString().split('.')[0];
     }
 
     // Query for events
@@ -46,6 +48,7 @@ export async function fetchCalendarEvents(
             'CalendarEvent/query' as any,
             {
                 accountId,
+                timeZone: 'UTC',
                 filter: Object.keys(filter).length > 0 ? filter : undefined,
             },
         ])
@@ -244,7 +247,7 @@ export async function updateSingleOccurrence(
 
     // Convert form data to JMAP and extract the override fields
     const jmapEvent = CalendarEventUI.toJmap(updates, calendarId);
-    
+
     // Build the override patch (only include fields that changed)
     const overridePatch: any = {};
     if (jmapEvent.title !== event.title) overridePatch.title = jmapEvent.title;
@@ -568,22 +571,27 @@ export function expandRecurringEvents(
                         if (override.title !== undefined) instance.title = override.title;
                         if (override.start !== undefined) {
                             // Convert string date to Date object
-                            const newStart = typeof override.start === 'string' 
-                                ? new Date(override.start) 
-                                : override.start;
+                            const newStart =
+                                typeof override.start === 'string'
+                                    ? new Date(override.start)
+                                    : override.start;
                             instance.start = newStart;
-                            
+
                             // Recalculate end date if duration is also overridden
                             if ((override as any).duration) {
-                                const durationMs = parseDurationOverride((override as any).duration);
+                                const durationMs = parseDurationOverride(
+                                    (override as any).duration
+                                );
                                 instance.end = new Date(newStart.getTime() + durationMs);
                             } else {
                                 // Maintain the same duration
-                                const originalDuration = occurrence.end.getTime() - occurrence.start.getTime();
+                                const originalDuration =
+                                    occurrence.end.getTime() - occurrence.start.getTime();
                                 instance.end = new Date(newStart.getTime() + originalDuration);
                             }
                         }
-                        if (override.description !== undefined) instance.description = override.description;
+                        if (override.description !== undefined)
+                            instance.description = override.description;
                         if (override.location !== undefined) instance.location = override.location;
                         // Apply other override fields as needed
                     }

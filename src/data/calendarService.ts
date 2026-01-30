@@ -66,7 +66,7 @@ export async function checkEventExists(
             {
                 accountId,
                 filter: {
-                    inCalendars: [calendarId],
+                    inCalendar: calendarId,
                     uid: invite.eventId,
                 },
             },

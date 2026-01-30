@@ -122,12 +122,29 @@ export default function Calendar({ path }: CalendarProps) {
 
     const loadEvents = async (accId: string, calId: string) => {
         try {
-            const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-            const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-            const evts = await fetchCalendarEvents(accId, calId, startOfMonth, endOfMonth);
+            let startDate: Date;
+            let endDate: Date;
+
+            if (view === 'week') {
+                // For week view, fetch only the current week
+                const dayOfWeek = currentDate.getDay();
+                startDate = new Date(currentDate);
+                startDate.setDate(currentDate.getDate() - dayOfWeek); // Start of week (Sunday)
+                startDate.setHours(0, 0, 0, 0);
+
+                endDate = new Date(startDate);
+                endDate.setDate(startDate.getDate() + 7); // End of week
+                endDate.setHours(23, 59, 59, 999);
+            } else {
+                // For month view, fetch the entire month
+                startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+                endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+            }
+
+            const evts = await fetchCalendarEvents(accId, calId, startDate, endDate);
 
             // Expand recurring events to individual occurrences
-            const expandedEvents = expandRecurringEvents(evts, startOfMonth, endOfMonth);
+            const expandedEvents = expandRecurringEvents(evts, startDate, endDate);
             setEvents(expandedEvents);
         } catch (error) {
             console.error('Failed to load events:', error);
@@ -206,7 +223,7 @@ export default function Calendar({ path }: CalendarProps) {
 
         try {
             const calendarId = dialogEvent?.calendarId || calendars[0]?.id;
-            
+
             if (recurrenceId) {
                 // Update single occurrence
                 await updateSingleOccurrence(accountId, calendarId, eventId, recurrenceId, data);
@@ -236,7 +253,7 @@ export default function Calendar({ path }: CalendarProps) {
                 // Delete entire event or series
                 await deleteCalendarEvent(accountId, eventId);
             }
-            
+
             setDialogEvent(undefined);
             await loadEvents(accountId, selectedCalendar);
         } catch (error) {
