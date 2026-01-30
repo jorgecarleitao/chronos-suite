@@ -7,7 +7,8 @@
 		"preview": "vite preview",
 		"extract-i18n": "i18next -c i18next-parser.config.cjs",
 		"format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css}\"",
-		"format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css}\""
+		"format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css}\"",
+		"create-event": "tsx create-event-script.ts"
 	},
 	"dependencies": {
 		"@emotion/react": "^11.13.0",
@@ -31,6 +32,7 @@
 		"@preact/preset-vite": "^2.9.0",
 		"i18next-parser": "^9.3.0",
 		"prettier": "^3.8.0",
+		"tsx": "^4.21.0",
 		"typescript": "^5.5.4",
 		"vite": "^5.4.1"
 	}
