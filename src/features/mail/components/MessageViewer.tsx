@@ -26,7 +26,8 @@ import {
 } from '../../../utils/calendarInviteParser';
 import {
     fetchMessage as apiFetchMessage,
-    deleteMessage as apiDeleteMessage,
+    deleteMessages as apiDeleteMessages,
+    trashMessages as apiTrashMessages,
     downloadBlob,
     markAsRead as apiMarkAsRead,
     markAsAnswered as apiMarkAsAnswered,
@@ -162,7 +163,12 @@ export default function MessageViewer({
 
     const handleDeleteConfirm = async () => {
         try {
-            await apiDeleteMessage(accountId, emailId);
+            // If in Trash mailbox, permanently delete, otherwise move to trash
+            if (mailbox.toLowerCase() === 'trash') {
+                await apiDeleteMessages(accountId, [emailId]);
+            } else {
+                await apiTrashMessages(accountId, [emailId]);
+            }
             setDeleteDialogOpen(false);
             onClose();
             if (onDelete) {
@@ -340,13 +346,14 @@ export default function MessageViewer({
                 </DialogActions>
             </Dialog>
 
-            <ComposeEmail
-                open={composeOpen}
-                onClose={() => setComposeOpen(false)}
-                message={composeData}
-                draftEmailId={isDraft() ? emailId : undefined}
-                accountId={accountId}
-            />
+            {composeOpen && (
+                <ComposeEmail
+                    onClose={() => setComposeOpen(false)}
+                    message={composeData}
+                    draftEmailId={isDraft() ? emailId : undefined}
+                    accountId={accountId}
+                />
+            )}
         </Stack>
     );
 }

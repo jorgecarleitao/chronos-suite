@@ -227,12 +227,16 @@ export async function sendMessage(
 
     const defaultIdentity = identities.list[0];
 
-    // Get mailboxes for drafts folder
+    // Get mailboxes for drafts and sent folders
     const [mailboxes] = await client.request(['Mailbox/get', { accountId }]);
     const draftsMailbox = mailboxes.list.find((m: any) => m.role === 'drafts');
+    const sentMailbox = mailboxes.list.find((m: any) => m.role === 'sent');
 
     if (!draftsMailbox) {
         throw new Error('Drafts mailbox not found');
+    }
+    if (!sentMailbox) {
+        throw new Error('Sent mailbox not found');
     }
 
     // Convert Draft to EmailData
@@ -262,10 +266,6 @@ export async function sendMessage(
     const bodyValues: any = {};
     let bodyStructure: any;
 
-    if (!emailData.bodyText && !emailData.bodyHtml) {
-        throw new Error('Email must have at least bodyText or bodyHtml');
-    }
-
     if (emailData.bodyText && emailData.bodyHtml) {
         // Both text and HTML: use multipart/alternative
         bodyValues.text = { value: emailData.bodyText };
@@ -290,12 +290,19 @@ export async function sendMessage(
             partId: 'text',
             type: 'text/plain',
         };
-    } else {
+    } else if (emailData.bodyHtml) {
         // HTML only
         bodyValues.html = { value: emailData.bodyHtml };
         bodyStructure = {
             partId: 'html',
             type: 'text/html',
+        };
+    } else {
+        // Empty body - just use plain text with empty string
+        bodyValues.text = { value: '' };
+        bodyStructure = {
+            partId: 'text',
+            type: 'text/plain',
         };
     }
 
@@ -386,6 +393,12 @@ export async function sendMessage(
                     },
                 },
             } as any,
+            onSuccessUpdateEmail: {
+                '#sub1': {
+                    mailboxIds: { [sentMailbox.id]: true },
+                    'keywords/$draft': null,
+                },
+            },
         },
     ]);
 
@@ -397,26 +410,13 @@ export async function sendMessage(
 }
 
 /**
- * Delete a message
+ * Move messages to trash
  */
-export async function deleteMessage(accountId: string, emailId: string) {
+export async function trashMessages(accountId: string, emailIds: string[]) {
     return withAuthHandling(async () => {
         const client = getAuthenticatedClient();
 
-        // Get the email to check which mailboxes it's in
-        const [emailResponse] = await client.request([
-            'Email/get',
-            {
-                accountId,
-                ids: [emailId],
-                properties: ['mailboxIds'],
-            },
-        ]);
-
-        const email = emailResponse.list[0];
-        if (!email) {
-            throw new Error('Email not found');
-        }
+        if (emailIds.length === 0) return;
 
         // Get mailboxes to find trash folder
         const [mailboxes] = await client.request(['Mailbox/get', { accountId }]);
@@ -426,36 +426,43 @@ export async function deleteMessage(accountId: string, emailId: string) {
             throw new Error('Trash mailbox not found');
         }
 
-        // Check if email is already in trash
-        const isInTrash = email.mailboxIds && trashMailbox.id in email.mailboxIds;
+        const update: Record<string, any> = {};
+        emailIds.forEach((id) => {
+            update[id] = {
+                mailboxIds: { [trashMailbox.id]: true },
+            };
+        });
 
-        if (isInTrash) {
-            // Permanently delete the email
-            const [response] = await client.request([
-                'Email/set',
-                {
-                    accountId,
-                    destroy: [emailId],
-                },
-            ]);
+        const [response] = await client.request([
+            'Email/set',
+            {
+                accountId,
+                update,
+            } as any,
+        ]);
 
-            return response.destroyed?.[0];
-        } else {
-            // Move to trash
-            const [response] = await client.request([
-                'Email/set',
-                {
-                    accountId,
-                    update: {
-                        [emailId]: {
-                            mailboxIds: { [trashMailbox.id]: true },
-                        },
-                    } as any,
-                },
-            ]);
+        return response;
+    });
+}
 
-            return response.updated?.[emailId];
-        }
+/**
+ * Permanently delete messages
+ */
+export async function deleteMessages(accountId: string, emailIds: string[]) {
+    return withAuthHandling(async () => {
+        const client = getAuthenticatedClient();
+
+        if (emailIds.length === 0) return;
+
+        const [response] = await client.request([
+            'Email/set',
+            {
+                accountId,
+                destroy: emailIds,
+            },
+        ]);
+
+        return response;
     });
 }
 

@@ -15,13 +15,24 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import MessageViewer from './MessageViewer';
-import ComposeEmail from './ComposeEmail';
+import ComposeEmail, { DraftMessage } from './ComposeEmail';
 import MessageListItem from './MessageListItem';
 import MessageActionsBar from './MessageActionsBar';
 import BulkActionsBar from './BulkActionsBar';
 import PaginationBar from './PaginationBar';
-import { fetchMessages, fetchMessage, type MessageMetadata } from '../data/message';
+import { fetchMessages, fetchMessage, type MessageMetadata, MessageDetail } from '../data/message';
 import useMessageOperations from '../useMessageOperations';
+
+function messageDetailToDraft(detail: MessageDetail): DraftMessage {
+    return {
+        to: detail.to || '',
+        cc: detail.cc || '',
+        bcc: detail.bcc || '',
+        subject: detail.subject || '',
+        body: detail.textBody || '',
+        attachments: detail.attachments || [],
+    };
+}
 
 interface MessageListProps {
     mailbox: string;
@@ -40,7 +51,7 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
     const [selectedMessage, setSelectedMessage] = useState<string | null>(null);
     const [viewerOpen, setViewerOpen] = useState(false);
     const [composeOpen, setComposeOpen] = useState(false);
-    const [draftMessage, setDraftMessage] = useState<any | null>(null);
+    const [draftMessage, setDraftMessage] = useState<MessageDetail | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
     const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
@@ -251,21 +262,13 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
             {/* Compose Email for Drafts */}
             {composeOpen && draftMessage && (
                 <ComposeEmail
-                    open={composeOpen}
                     onClose={() => {
                         setComposeOpen(false);
                         setDraftMessage(null);
                     }}
-                    mailbox={mailbox}
                     fromName={draftMessage.from_name}
                     fromEmail={draftMessage.from_email}
-                    message={{
-                        to: draftMessage.to || '',
-                        cc: draftMessage.cc || '',
-                        bcc: draftMessage.bcc || '',
-                        subject: draftMessage.subject || '',
-                        body: draftMessage.textBody || '',
-                    }}
+                    message={messageDetailToDraft(draftMessage)}
                     draftEmailId={draftMessage.id}
                     accountId={accountId}
                 />

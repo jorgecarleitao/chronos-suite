@@ -267,11 +267,9 @@ export default function Mail({ path }: MailProps) {
                 </Paper>
             </Box>
 
-            <ComposeEmail
-                open={composeOpen}
-                onClose={() => setComposeOpen(false)}
-                accountId={accountId || ''}
-            />
+            {composeOpen && (
+                <ComposeEmail onClose={() => setComposeOpen(false)} accountId={accountId || ''} />
+            )}
 
             <Menu
                 open={contextMenu !== null}

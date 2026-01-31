@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'preact/hooks';
 import {
     MessageMetadata,
-    deleteMessage,
+    deleteMessages,
+    trashMessages,
     markAsRead,
     markAsUnread,
     markAsFlagged,
@@ -68,10 +69,13 @@ export default function useMessageOperations({
         if (selectedIds.size === 0) return;
 
         try {
-            const deletePromises = Array.from(selectedIds).map((id) =>
-                deleteMessage(mailboxId, id)
-            );
-            await Promise.all(deletePromises);
+            const ids = Array.from(selectedIds);
+            // If we're in the Trash mailbox, permanently delete, otherwise move to trash
+            if (mailboxId.toLowerCase() === 'trash') {
+                await deleteMessages(mailboxId, ids);
+            } else {
+                await trashMessages(mailboxId, ids);
+            }
             clearSelection();
             onMessagesChange();
         } catch (error) {
@@ -111,7 +115,12 @@ export default function useMessageOperations({
     const deleteOne = useCallback(
         async (messageId: string) => {
             try {
-                await deleteMessage(mailboxId, messageId);
+                // If we're in the Trash mailbox, permanently delete, otherwise move to trash
+                if (mailboxId.toLowerCase() === 'trash') {
+                    await deleteMessages(mailboxId, [messageId]);
+                } else {
+                    await trashMessages(mailboxId, [messageId]);
+                }
                 onMessagesChange();
             } catch (error) {
                 console.error('Failed to delete message:', error);

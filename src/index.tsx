@@ -38,7 +38,6 @@ const initializeFromStorage = async () => {
 initializeFromStorage();
 
 export default function App() {
-    const { t, i18n } = useTranslation();
     const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
     const [mode, setMode] = useState<'light' | 'dark'>(prefersDarkMode ? 'dark' : 'light');
 

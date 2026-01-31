@@ -28,7 +28,7 @@ import {
     createDraft,
     updateDraft,
     prepareAndSendMessage,
-    deleteMessage,
+    deleteMessages,
     type Attachment,
     uploadBlob,
 } from '../data/message';
@@ -56,21 +56,13 @@ const fileToBase64 = (file: File): Promise<string> => {
 };
 
 // Types
-interface DraftData {
-    to: string[];
-    subject: string;
-    body: string;
-    cc: string[];
-    bcc: string[];
-    attachments?: Attachment[];
-}
-
 export interface DraftMessage {
     to?: string;
     cc?: string;
     bcc?: string;
     subject?: string;
     body?: string;
+    attachments?: Attachment[];
 }
 
 type AutoSaveStatus = 'idle' | 'saving' | 'saved';
@@ -84,9 +76,7 @@ interface InlineImage {
 }
 
 interface ComposeEmailProps {
-    open: boolean;
     onClose: () => void;
-    mailbox?: string;
     fromName?: string;
     fromEmail?: string;
     message?: DraftMessage;
@@ -450,9 +440,7 @@ function ActionsBar({ saving, onSend, onAttach, onDelete }: ActionsBarProps) {
 
 // Main Component
 export default function ComposeEmail({
-    open,
     onClose,
-    mailbox = 'Drafts',
     fromName = '',
     fromEmail = '',
     message,
@@ -465,7 +453,7 @@ export default function ComposeEmail({
     const [bcc, setBcc] = useState(message?.bcc || '');
     const [subject, setSubject] = useState(message?.subject || '');
     const [body, setBody] = useState(message?.body || '');
-    const [attachments, setAttachments] = useState<Attachment[]>([]);
+    const [attachments, setAttachments] = useState<Attachment[]>(message?.attachments || []);
     const [inlineImages, setInlineImages] = useState<Map<string, InlineImage>>(new Map());
     const [showCc, setShowCc] = useState(!!message?.cc);
     const [showBcc, setShowBcc] = useState(!!message?.bcc);
@@ -475,16 +463,11 @@ export default function ComposeEmail({
     const [success, setSuccess] = useState<string | null>(null);
     const [minimized, setMinimized] = useState(false);
     const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
-    const [currentDraftId, setCurrentDraftId] = useState<string | undefined>(draftEmailId);
     const currentDraftIdRef = useRef<string | undefined>(draftEmailId);
     const autoSaveTimerRef = useRef<number | null>(null);
     const lastSavedContentRef = useRef<string>('');
+    const autoSaveEnabledRef = useRef(true);
     const fileInputRef = useRef<HTMLInputElement>(null);
-
-    // Keep the ref in sync with state
-    useEffect(() => {
-        currentDraftIdRef.current = currentDraftId;
-    }, [currentDraftId]);
 
     // Update fields when message prop changes
     useEffect(() => {
@@ -499,8 +482,8 @@ export default function ComposeEmail({
         }
     }, [message]);
 
-    // Create draft data object
-    const createDraftData = (): DraftData => ({
+    // Helper to create draft data from current form state
+    const createDraftData = () => ({
         to: parseEmailList(to),
         subject,
         body,
@@ -509,10 +492,33 @@ export default function ComposeEmail({
         attachments: attachments.length > 0 ? attachments : undefined,
     });
 
+    // Helper to save draft with change detection
+    const saveDraft = async () => {
+        const draftData = createDraftData();
+        const currentContent = JSON.stringify(draftData);
+
+        // Don't save if content hasn't changed
+        if (currentContent === lastSavedContentRef.current) {
+            return false;
+        }
+
+        if (currentDraftIdRef.current) {
+            await updateDraft(accountId, currentDraftIdRef.current, draftData);
+        } else {
+            const result = await createDraft(accountId, draftData);
+            currentDraftIdRef.current = result?.id;
+        }
+
+        lastSavedContentRef.current = currentContent;
+        return true;
+    };
+
     const handleSend = async () => {
+        autoSaveEnabledRef.current = false;
         setSaving(true);
         setError(null);
         setSuccess(null);
+
         try {
             // Process body to replace inline: markers with cid: references
             let processedBody = body;
@@ -549,6 +555,19 @@ export default function ComposeEmail({
                 bcc: showBcc && bcc ? parseEmailList(bcc) : undefined,
                 attachments: allAttachments.length > 0 ? allAttachments : undefined,
             });
+
+            // Delete the draft if it exists since email was sent successfully
+            const existingDraftId = currentDraftIdRef.current;
+            if (existingDraftId) {
+                try {
+                    await deleteMessages(accountId, [existingDraftId]);
+                    currentDraftIdRef.current = undefined;
+                    lastSavedContentRef.current = '';
+                } catch (err) {
+                    console.error('Failed to delete draft after send:', err);
+                }
+            }
+
             setSuccess(t('compose.emailSentSuccessfully'));
             setTimeout(() => {
                 handleClear();
@@ -556,42 +575,22 @@ export default function ComposeEmail({
             }, 1500);
         } catch (err) {
             setError(err instanceof Error ? err.message : t('compose.failedToSendEmail'));
+            autoSaveEnabledRef.current = true;
         } finally {
             setSaving(false);
         }
     };
 
     const autoSaveDraft = async () => {
-        // Don't auto-save if nothing is entered yet
-        if (!to && !subject && !body && !cc && !bcc) {
+        // Don't auto-save if disabled or if nothing is entered yet
+        if (!autoSaveEnabledRef.current || (!to && !subject && !body && !cc && !bcc)) {
             setAutoSaveStatus('idle');
             return;
         }
 
         setAutoSaveStatus('saving');
         try {
-            const draftData = createDraftData();
-            const currentContent = JSON.stringify(draftData);
-
-            // Don't save if content hasn't changed
-            if (currentContent === lastSavedContentRef.current) {
-                setAutoSaveStatus('saved');
-                return;
-            }
-
-            // Use ref to get the latest draft ID value
-            const existingDraftId = currentDraftIdRef.current;
-
-            if (existingDraftId) {
-                await updateDraft(accountId, existingDraftId, draftData);
-            } else {
-                const result = await createDraft(accountId, draftData);
-                const newDraftId = result?.id;
-                setCurrentDraftId(newDraftId);
-                currentDraftIdRef.current = newDraftId;
-            }
-
-            lastSavedContentRef.current = currentContent;
+            const saved = await saveDraft();
             setAutoSaveStatus('saved');
         } catch (err) {
             console.error('Auto-save failed:', err);
@@ -601,8 +600,6 @@ export default function ComposeEmail({
 
     // Auto-save effect - triggers on content changes
     useEffect(() => {
-        if (!open) return;
-
         // Clear any existing timer
         if (autoSaveTimerRef.current) {
             clearTimeout(autoSaveTimerRef.current);
@@ -622,25 +619,16 @@ export default function ComposeEmail({
                 clearTimeout(autoSaveTimerRef.current);
             }
         };
-    }, [to, cc, bcc, subject, body, showCc, showBcc, attachments, open]);
+    }, [to, cc, bcc, subject, body, showCc, showBcc, attachments]);
 
     const handleClose = async () => {
-        // Save draft before closing if there's content
-        if (to || subject || body || cc || bcc || attachments.length > 0) {
+        // Save draft on close if auto-save is still enabled
+        if (
+            autoSaveEnabledRef.current &&
+            (to || subject || body || cc || bcc || attachments.length > 0)
+        ) {
             try {
-                const draftData = createDraftData();
-                const currentContent = JSON.stringify(draftData);
-
-                // Only save if content has changed since last save
-                if (currentContent !== lastSavedContentRef.current) {
-                    const existingDraftId = currentDraftIdRef.current;
-
-                    if (existingDraftId) {
-                        await updateDraft(accountId, existingDraftId, draftData);
-                    } else {
-                        await createDraft(accountId, draftData);
-                    }
-                }
+                await saveDraft();
             } catch (err) {
                 console.error('Failed to save draft on close:', err);
             }
@@ -650,10 +638,7 @@ export default function ComposeEmail({
     };
 
     const handleDelete = async () => {
-        // Clear auto-save timer immediately to prevent saving while deleting
-        if (autoSaveTimerRef.current) {
-            clearTimeout(autoSaveTimerRef.current);
-        }
+        autoSaveEnabledRef.current = false;
 
         const existingDraftId = currentDraftIdRef.current;
 
@@ -664,7 +649,7 @@ export default function ComposeEmail({
         // Delete in background if draft exists
         if (existingDraftId) {
             try {
-                await deleteMessage(accountId, existingDraftId);
+                await deleteMessages(accountId, [existingDraftId]);
             } catch (err) {
                 console.error('Failed to delete draft:', err);
             }
@@ -685,9 +670,9 @@ export default function ComposeEmail({
         setSuccess(null);
         setMinimized(false);
         setAutoSaveStatus('idle');
-        setCurrentDraftId(undefined);
         currentDraftIdRef.current = undefined;
         lastSavedContentRef.current = '';
+        autoSaveEnabledRef.current = true;
         if (autoSaveTimerRef.current) {
             clearTimeout(autoSaveTimerRef.current);
         }
@@ -775,8 +760,6 @@ export default function ComposeEmail({
             console.error('File input ref is null');
         }
     };
-
-    if (!open) return null;
 
     return (
         <Paper
