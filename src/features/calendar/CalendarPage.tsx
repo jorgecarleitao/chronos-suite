@@ -5,8 +5,19 @@ import Toolbar from '@mui/material/Toolbar';
 import Paper from '@mui/material/Paper';
 import CircularProgress from '@mui/material/CircularProgress';
 import Stack from '@mui/material/Stack';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogActions from '@mui/material/DialogActions';
+import Button from '@mui/material/Button';
 import { getPrimaryAccountId } from '../../data/accounts';
-import { actions, type UICalendarEvent } from './data/calendarEvent';
+import { actions as calendarEventActions, type UICalendarEvent } from './data/calendarEvent';
+import {
+    actions as calendarActions,
+    type UICalendar,
+    type UICalendarFormData,
+} from './data/calendar';
 
 const {
     fetchCalendarEvents,
@@ -15,15 +26,17 @@ const {
     deleteCalendarEvent,
     deleteSingleOccurrence,
     updateSingleOccurrence,
-    fetchCalendars,
     expandRecurringEvents,
-} = actions;
+} = calendarEventActions;
+
+const { fetchCalendars, createCalendar, updateCalendar, deleteCalendar } = calendarActions;
 import type { UICalendarEventFormData } from './data/calendarEvent/ui';
 import CalendarHeader from './components/CalendarHeader';
 import MonthView from './components/MonthView';
 import WeekView from './components/WeekView';
 import EventDialog from './components/EventDialog';
 import CalendarSidebar from './components/CalendarSidebar';
+import CalendarManagementDialog from './components/CalendarManagementDialog';
 import { useDocumentTitle } from '../../utils/useDocumentTitle';
 import { useTranslation } from 'react-i18next';
 
@@ -39,9 +52,12 @@ export default function Calendar({ path }: CalendarProps) {
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [view, setView] = useState<'month' | 'week'>('week');
     const [events, setEvents] = useState<UICalendarEvent[]>([]);
-    const [calendars, setCalendars] = useState<Array<{ id: string; name: string }>>([]);
-    const [selectedCalendar, setSelectedCalendar] = useState<string | null>(null);
+    const [calendars, setCalendars] = useState<UICalendar[]>([]);
+    const [visibleCalendarIds, setVisibleCalendarIds] = useState<string[]>([]);
     const [dialogEvent, setDialogEvent] = useState<UICalendarEvent | null | undefined>(undefined);
+    const [calendarDialogOpen, setCalendarDialogOpen] = useState(false);
+    const [editingCalendar, setEditingCalendar] = useState<UICalendar | null>(null);
+    const [deleteConfirmCalendar, setDeleteConfirmCalendar] = useState<UICalendar | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     // Update document title with next event time/date
@@ -106,13 +122,25 @@ export default function Calendar({ path }: CalendarProps) {
         }
     };
 
-    const loadCalendars = async (accId: string) => {
+    const loadCalendars = async (accId: string, preserveVisibility = false) => {
         try {
             const cals = await fetchCalendars(accId);
             setCalendars(cals);
             if (cals.length > 0) {
-                setSelectedCalendar(cals[0].id);
-                await loadEvents(accId, cals[0].id);
+                if (preserveVisibility) {
+                    // Keep existing visibility, but ensure deleted calendars are removed
+                    const validIds = cals.map((c) => c.id);
+                    setVisibleCalendarIds((prev) => prev.filter((id) => validIds.includes(id)));
+                    const currentVisible = visibleCalendarIds.filter((id) => validIds.includes(id));
+                    if (currentVisible.length > 0) {
+                        await loadEvents(accId, currentVisible);
+                    }
+                } else {
+                    // Set all calendars as visible by default
+                    const allIds = cals.map((c) => c.id);
+                    setVisibleCalendarIds(allIds);
+                    await loadEvents(accId, allIds);
+                }
             }
         } catch (error) {
             console.error('Failed to load calendars:', error);
@@ -120,7 +148,7 @@ export default function Calendar({ path }: CalendarProps) {
         }
     };
 
-    const loadEvents = async (accId: string, calId: string) => {
+    const loadEvents = async (accId: string, calendarIds: string[]) => {
         try {
             let startDate: Date;
             let endDate: Date;
@@ -141,10 +169,15 @@ export default function Calendar({ path }: CalendarProps) {
                 endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
             }
 
-            const evts = await fetchCalendarEvents(accId, calId, startDate, endDate);
+            // Fetch events from all visible calendars
+            const allEvents: UICalendarEvent[] = [];
+            for (const calId of calendarIds) {
+                const evts = await fetchCalendarEvents(accId, calId, startDate, endDate);
+                allEvents.push(...evts);
+            }
 
             // Expand recurring events to individual occurrences
-            const expandedEvents = expandRecurringEvents(evts, startDate, endDate);
+            const expandedEvents = expandRecurringEvents(allEvents, startDate, endDate);
             setEvents(expandedEvents);
         } catch (error) {
             console.error('Failed to load events:', error);
@@ -153,10 +186,10 @@ export default function Calendar({ path }: CalendarProps) {
     };
 
     useEffect(() => {
-        if (accountId && selectedCalendar) {
-            loadEvents(accountId, selectedCalendar);
+        if (accountId && visibleCalendarIds.length > 0) {
+            loadEvents(accountId, visibleCalendarIds);
         }
-    }, [currentDate, selectedCalendar]);
+    }, [currentDate, visibleCalendarIds]);
 
     const previousMonth = () => {
         setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
@@ -200,14 +233,16 @@ export default function Calendar({ path }: CalendarProps) {
         setDialogEvent(event);
     };
 
-    const handleCreateEvent = async (data: UICalendarEventFormData) => {
-        if (!accountId || !selectedCalendar) return;
+    const handleCreateEvent = async (calendarId: string, data: UICalendarEventFormData) => {
+        if (!accountId) return;
 
         try {
-            await createCalendarEvent(accountId, selectedCalendar, data);
+            await createCalendarEvent(accountId, calendarId, data);
 
             setDialogEvent(undefined);
-            await loadEvents(accountId, selectedCalendar);
+            if (visibleCalendarIds.length > 0) {
+                await loadEvents(accountId, visibleCalendarIds);
+            }
         } catch (error) {
             console.error('Failed to create event:', error);
             setError(t('calendar.failedToCreateEvent'));
@@ -233,8 +268,8 @@ export default function Calendar({ path }: CalendarProps) {
             }
 
             setDialogEvent(undefined);
-            if (selectedCalendar) {
-                await loadEvents(accountId, selectedCalendar);
+            if (visibleCalendarIds.length > 0) {
+                await loadEvents(accountId, visibleCalendarIds);
             }
         } catch (error) {
             console.error('Failed to update event:', error);
@@ -243,7 +278,7 @@ export default function Calendar({ path }: CalendarProps) {
     };
 
     const handleDeleteEvent = async (eventId: string, recurrenceId?: string) => {
-        if (!accountId || !selectedCalendar) return;
+        if (!accountId) return;
 
         try {
             if (recurrenceId) {
@@ -255,7 +290,9 @@ export default function Calendar({ path }: CalendarProps) {
             }
 
             setDialogEvent(undefined);
-            await loadEvents(accountId, selectedCalendar);
+            if (visibleCalendarIds.length > 0) {
+                await loadEvents(accountId, visibleCalendarIds);
+            }
         } catch (error) {
             console.error('Failed to delete event:', error);
             setError(t('calendar.failedToDeleteEvent'));
@@ -267,14 +304,101 @@ export default function Calendar({ path }: CalendarProps) {
         openCreateDialog();
     };
 
+    const handleToggleCalendar = (calendarId: string) => {
+        setVisibleCalendarIds((prev) => {
+            if (prev.includes(calendarId)) {
+                // Remove from visible list
+                return prev.filter((id) => id !== calendarId);
+            } else {
+                // Add to visible list
+                return [...prev, calendarId];
+            }
+        });
+    };
+
+    const handleCreateCalendar = () => {
+        setEditingCalendar(null);
+        setCalendarDialogOpen(true);
+    };
+
+    const handleEditCalendar = (calendar: UICalendar) => {
+        setEditingCalendar(calendar);
+        setCalendarDialogOpen(true);
+    };
+
+    const handleDeleteCalendar = (calendar: UICalendar) => {
+        setDeleteConfirmCalendar(calendar);
+    };
+
+    const confirmDeleteCalendar = async () => {
+        if (!accountId || !deleteConfirmCalendar) return;
+
+        try {
+            await deleteCalendar(accountId, deleteConfirmCalendar.id);
+
+            // Remove from visible calendar IDs before reloading
+            const newVisibleIds = visibleCalendarIds.filter(
+                (id) => id !== deleteConfirmCalendar.id
+            );
+            setVisibleCalendarIds(newVisibleIds);
+            setDeleteConfirmCalendar(null);
+
+            // Reload calendars (this will update the list)
+            const cals = await fetchCalendars(accountId);
+            setCalendars(cals);
+
+            // Reload events from remaining visible calendars
+            if (newVisibleIds.length > 0) {
+                await loadEvents(accountId, newVisibleIds);
+            } else {
+                setEvents([]);
+            }
+        } catch (error) {
+            console.error('Failed to delete calendar:', error);
+            setError(t('calendar.failedToDeleteCalendar'));
+        }
+    };
+
+    const handleSaveCalendar = async (calendarData: UICalendarFormData) => {
+        if (!accountId) return;
+
+        try {
+            if (editingCalendar) {
+                // Update existing calendar
+                await updateCalendar(accountId, editingCalendar.id, calendarData);
+                // Reload calendars and preserve visibility
+                await loadCalendars(accountId, true);
+            } else {
+                // Create new calendar and add it to visible list
+                const newCalendar = await createCalendar(accountId, calendarData);
+                // Reload calendars first
+                const cals = await fetchCalendars(accountId);
+                setCalendars(cals);
+                // Add new calendar to visible list
+                setVisibleCalendarIds((prev) => [...prev, newCalendar.id]);
+                // Reload events with new calendar included
+                await loadEvents(accountId, [...visibleCalendarIds, newCalendar.id]);
+            }
+
+            setCalendarDialogOpen(false);
+            setEditingCalendar(null);
+        } catch (error) {
+            console.error('Failed to save calendar:', error);
+            throw error; // Let dialog handle the error
+        }
+    };
+
     return (
         <Box display="flex">
             <CalendarSidebar
                 loading={!accountId}
                 calendars={calendars}
-                selectedCalendar={selectedCalendar}
-                onCalendarSelect={setSelectedCalendar}
+                visibleCalendarIds={visibleCalendarIds}
+                onToggleCalendar={handleToggleCalendar}
                 onCreateEvent={openCreateDialog}
+                onCreateCalendar={handleCreateCalendar}
+                onEditCalendar={handleEditCalendar}
+                onDeleteCalendar={handleDeleteCalendar}
             />
 
             {/* Main calendar view */}
@@ -309,12 +433,14 @@ export default function Calendar({ path }: CalendarProps) {
                                         currentDate={currentDate}
                                         selectedDate={selectedDate}
                                         events={events}
+                                        calendars={calendars}
                                         onDateSelect={setSelectedDate}
                                     />
                                 ) : (
                                     <WeekView
                                         currentDate={currentDate}
                                         events={events}
+                                        calendars={calendars}
                                         onTimeSlotClick={handleTimeSlotClick}
                                         onEventClick={openEditDialog}
                                     />
@@ -329,12 +455,46 @@ export default function Calendar({ path }: CalendarProps) {
                 <EventDialog
                     event={dialogEvent}
                     initialDate={selectedDate}
+                    calendars={calendars}
+                    selectedCalendarId={visibleCalendarIds[0] || null}
                     onClose={() => setDialogEvent(undefined)}
                     onCreate={handleCreateEvent}
                     onUpdate={handleUpdateEvent}
                     onDelete={handleDeleteEvent}
                 />
             )}
+
+            {/* Calendar Management Dialog */}
+            <CalendarManagementDialog
+                open={calendarDialogOpen}
+                calendar={editingCalendar}
+                onClose={() => {
+                    setCalendarDialogOpen(false);
+                    setEditingCalendar(null);
+                }}
+                onSave={handleSaveCalendar}
+            />
+
+            {/* Delete Calendar Confirmation Dialog */}
+            <Dialog
+                open={Boolean(deleteConfirmCalendar)}
+                onClose={() => setDeleteConfirmCalendar(null)}
+            >
+                <DialogTitle>{t('calendar.deleteCalendarTitle')}</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        {t('calendar.deleteCalendarConfirm', { name: deleteConfirmCalendar?.name })}
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setDeleteConfirmCalendar(null)}>
+                        {t('common.cancel')}
+                    </Button>
+                    <Button onClick={confirmDeleteCalendar} color="error" variant="contained">
+                        {t('common.delete')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 }

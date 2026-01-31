@@ -25,6 +25,7 @@ import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import DeleteIcon from '@mui/icons-material/Delete';
 import type { UICalendarEvent } from '../data/calendarEvent';
 import type { UICalendarEventFormData } from '../data/calendarEvent/ui';
+import type { UICalendar } from '../data/calendar';
 import type { UIParticipant } from '../data/participant/ui';
 import { UI as RecurrenceUI } from '../data/recurrenceRule';
 import type { UIRecurrencePattern } from '../data/recurrenceRule/ui';
@@ -328,8 +329,10 @@ function RecurrenceSection({ recurrence, startDate, onRecurrenceChange }: Recurr
 interface EventDialogProps {
     event: UICalendarEvent | null;
     initialDate: Date;
+    calendars: UICalendar[];
+    selectedCalendarId: string | null;
     onClose: () => void;
-    onCreate: (data: UICalendarEventFormData) => void;
+    onCreate: (calendarId: string, data: UICalendarEventFormData) => void;
     onUpdate: (eventId: string, data: UICalendarEventFormData, recurrenceId?: string) => void;
     onDelete: (eventId: string, recurrenceId?: string) => void;
 }
@@ -420,6 +423,8 @@ function RecurrenceModificationDialog({
 export default function EventDialog({
     event,
     initialDate,
+    calendars,
+    selectedCalendarId,
     onClose,
     onCreate,
     onUpdate,
@@ -429,6 +434,7 @@ export default function EventDialog({
     const mode = event ? 'edit' : 'create';
     const [formData, setFormData] = useState({
         title: '',
+        calendarId: selectedCalendarId || (calendars.length > 0 ? calendars[0].id : ''),
         startDate: '',
         startTime: '',
         endDate: '',
@@ -475,6 +481,10 @@ export default function EventDialog({
 
             setFormData({
                 title: event.title,
+                calendarId:
+                    event.calendarId ||
+                    selectedCalendarId ||
+                    (calendars.length > 0 ? calendars[0].id : ''),
                 startDate: event.start.toISOString().split('T')[0],
                 startTime: isAllDay ? '00:00' : event.start.toTimeString().slice(0, 5),
                 endDate: event.end.toISOString().split('T')[0],
@@ -506,6 +516,7 @@ export default function EventDialog({
             const endTime = `${String(startHour + 1).padStart(2, '0')}:00`;
             setFormData({
                 title: '',
+                calendarId: selectedCalendarId || (calendars.length > 0 ? calendars[0].id : ''),
                 startDate: dateStr,
                 startTime: startTime,
                 endDate: dateStr,
@@ -610,7 +621,7 @@ export default function EventDialog({
                 onUpdate(event.id, data);
             }
         } else {
-            onCreate(data);
+            onCreate(formData.calendarId, data);
         }
     };
 
@@ -659,6 +670,50 @@ export default function EventDialog({
                             })
                         }
                     />
+
+                    {/* Calendar Selector */}
+                    <FormControl fullWidth>
+                        <InputLabel id="calendar-select-label">
+                            {t('calendar.selectCalendar')}
+                        </InputLabel>
+                        <Select
+                            labelId="calendar-select-label"
+                            value={formData.calendarId}
+                            label={t('calendar.selectCalendar')}
+                            onChange={(e: any) =>
+                                setFormData({
+                                    ...formData,
+                                    calendarId: e.target.value as string,
+                                })
+                            }
+                            disabled={mode === 'edit'}
+                        >
+                            {calendars.map((cal) => (
+                                <MenuItem key={cal.id} value={cal.id}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Box
+                                            sx={{
+                                                width: 12,
+                                                height: 12,
+                                                borderRadius: '50%',
+                                                backgroundColor: cal.color || '#1976d2',
+                                            }}
+                                        />
+                                        {cal.name}
+                                        {cal.isDefault && (
+                                            <Typography
+                                                variant="caption"
+                                                sx={{ ml: 1, color: 'text.secondary' }}
+                                            >
+                                                ({t('calendar.defaultCalendar')})
+                                            </Typography>
+                                        )}
+                                    </Box>
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+
                     <Stack direction="row" spacing={2}>
                         <TextField
                             label={t('calendar.startDate')}

@@ -5,16 +5,18 @@ import Link from '@mui/material/Link';
 import PersonIcon from '@mui/icons-material/Person';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import RepeatIcon from '@mui/icons-material/Repeat';
-import type { CalendarEvent } from '../data/calendarEvent';
+import type { UICalendarEvent } from '../data/calendarEvent';
+import type { UICalendar } from '../data/calendar';
 import { isSameDay } from '../../../utils/dateHelpers';
 import { getLocalTimezone } from '../../../utils/timezoneHelpers';
 import { useTranslation } from 'react-i18next';
 
 interface WeekViewProps {
     currentDate: Date;
-    events: CalendarEvent[];
+    events: UICalendarEvent[];
+    calendars: UICalendar[];
     onTimeSlotClick: (date: Date) => void;
-    onEventClick: (event: CalendarEvent) => void;
+    onEventClick: (event: UICalendarEvent) => void;
 }
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -37,7 +39,7 @@ const getWeekDays = (startDate: Date) => {
 };
 
 // Get events that should be rendered starting in this time slot for this day
-const getEventsForTimeSlot = (date: Date, timeSlot: number, events: CalendarEvent[]) => {
+const getEventsForTimeSlot = (date: Date, timeSlot: number, events: UICalendarEvent[]) => {
     return events.filter((event) => {
         const eventStart = new Date(event.start);
         const eventEnd = new Date(event.end);
@@ -73,7 +75,7 @@ const getEventsForTimeSlot = (date: Date, timeSlot: number, events: CalendarEven
     });
 };
 
-const getEventStyle = (event: CalendarEvent, date: Date, timeSlot: number) => {
+const getEventStyle = (event: UICalendarEvent, date: Date, timeSlot: number) => {
     const eventStart = new Date(event.start);
     const eventEnd = new Date(event.end);
 
@@ -154,7 +156,7 @@ const getEventOpacity = (status: string | undefined) => {
 };
 
 interface EventTooltipContentProps {
-    event: CalendarEvent;
+    event: UICalendarEvent;
 }
 
 function EventTooltipContent({ event }: EventTooltipContentProps) {
@@ -230,10 +232,17 @@ function EventTooltipContent({ event }: EventTooltipContentProps) {
 export default function WeekView({
     currentDate,
     events,
+    calendars,
     onTimeSlotClick,
     onEventClick,
 }: WeekViewProps) {
     const { t } = useTranslation();
+
+    const getCalendarColor = (calendarId?: string) => {
+        if (!calendarId) return '#1976d2';
+        const calendar = calendars.find((c) => c.id === calendarId);
+        return calendar?.color || '#1976d2';
+    };
     const weekDays = getWeekDays(getWeekStart(currentDate));
 
     const getDayName = (day: string) => {
@@ -363,14 +372,14 @@ export default function WeekView({
                                                         sx={{
                                                             ...getEventStyle(event, day, timeSlot),
                                                             px: 0.5,
-                                                            bgcolor: getEventColor(status),
-                                                            color: 'primary.contrastText',
-                                                            opacity: getEventOpacity(status),
-                                                            border: getEventBorder(status),
-                                                            borderColor:
-                                                                status === 'tentative'
-                                                                    ? 'warning.main'
-                                                                    : undefined,
+                                                            bgcolor: getCalendarColor(
+                                                                event.calendarId
+                                                            ),
+                                                            color: 'white',
+                                                            opacity:
+                                                                status === 'declined' ? 0.5 : 1,
+                                                            border: status === 'tentative' ? 2 : 0,
+                                                            borderColor: 'warning.main',
                                                             borderTopLeftRadius: continuesFromBefore
                                                                 ? 0
                                                                 : 1,
@@ -386,7 +395,8 @@ export default function WeekView({
                                                             cursor: 'pointer',
                                                             overflow: 'hidden',
                                                             '&:hover': {
-                                                                bgcolor: 'primary.dark',
+                                                                opacity: 0.9,
+                                                                filter: 'brightness(0.9)',
                                                             },
                                                         }}
                                                         onClick={(e) => {

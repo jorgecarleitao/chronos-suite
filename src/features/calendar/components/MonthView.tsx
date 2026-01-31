@@ -1,7 +1,7 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import Chip from '@mui/material/Chip';
-import type { CalendarEvent } from '../data/calendarEvent';
+import type { UICalendarEvent } from '../data/calendarEvent';
+import type { UICalendar } from '../data/calendar';
 import { getDaysInMonth, getFirstDayOfMonth, isSameDay } from '../../../utils/dateHelpers';
 import { useTranslation } from 'react-i18next';
 import RepeatIcon from '@mui/icons-material/Repeat';
@@ -9,7 +9,8 @@ import RepeatIcon from '@mui/icons-material/Repeat';
 interface MonthViewProps {
     currentDate: Date;
     selectedDate: Date;
-    events: CalendarEvent[];
+    events: UICalendarEvent[];
+    calendars: UICalendar[];
     onDateSelect: (date: Date) => void;
 }
 
@@ -19,9 +20,16 @@ export default function MonthView({
     currentDate,
     selectedDate,
     events,
+    calendars,
     onDateSelect,
 }: MonthViewProps) {
     const { t } = useTranslation();
+
+    const getCalendarColor = (calendarId?: string) => {
+        if (!calendarId) return '#1976d2';
+        const calendar = calendars.find((c) => c.id === calendarId);
+        return calendar?.color || '#1976d2';
+    };
 
     const getDayName = (day: string) => {
         switch (day) {
@@ -113,17 +121,36 @@ export default function MonthView({
                                 display: 'flex',
                                 gap: 0.5,
                                 mt: 0.5,
-                                alignItems: 'center',
-                                fontSize: '0.7rem',
+                                flexWrap: 'wrap',
+                                maxWidth: '100%',
                             }}
                         >
-                            <Chip
-                                size="small"
-                                label={`${dayEvents.length}`}
-                                variant="outlined"
-                                sx={{ height: 18, fontSize: '0.7rem' }}
-                            />
-                            {hasRecurringEvents && <RepeatIcon sx={{ fontSize: '0.9rem' }} />}
+                            {dayEvents.slice(0, 3).map((event, idx) => (
+                                <Box
+                                    key={idx}
+                                    sx={{
+                                        width: 6,
+                                        height: 6,
+                                        borderRadius: '50%',
+                                        bgcolor: getCalendarColor(event.calendarId),
+                                        flexShrink: 0,
+                                    }}
+                                />
+                            ))}
+                            {dayEvents.length > 3 && (
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        fontSize: '0.65rem',
+                                        color: 'text.secondary',
+                                    }}
+                                >
+                                    +{dayEvents.length - 3}
+                                </Typography>
+                            )}
+                            {hasRecurringEvents && (
+                                <RepeatIcon sx={{ fontSize: '0.8rem', ml: 'auto' }} />
+                            )}
                         </Box>
                     )}
                 </Box>
