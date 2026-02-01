@@ -1,8 +1,3 @@
-/**
- * JMAP CalendarEvent type following JSCalendar RFC 8984
- * Pure server format from JMAP spec
- */
-
 import type { RecurrenceRule } from '../recurrenceRule/jmap';
 import type { Participant } from '../participant/jmap';
 

@@ -22,6 +22,11 @@ import BulkActionsBar from './BulkActionsBar';
 import PaginationBar from './PaginationBar';
 import { fetchMessages, fetchMessage, type MessageMetadata, MessageDetail } from '../data/message';
 import useMessageOperations from '../useMessageOperations';
+import {
+    fetchContacts as fetchContactsForLookup,
+    type ContactInfo,
+} from '../../../data/contactService';
+import { getPrimaryAccountId } from '../../../data/accounts';
 
 function messageDetailToDraft(detail: MessageDetail): DraftMessage {
     return {
@@ -47,6 +52,7 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
     const [messages, setMessages] = useState<MessageMetadata[]>([]);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [contactsMap, setContactsMap] = useState<Map<string, ContactInfo>>(new Map());
     const [error, setError] = useState<string | null>(null);
     const [selectedMessage, setSelectedMessage] = useState<string | null>(null);
     const [viewerOpen, setViewerOpen] = useState(false);
@@ -82,6 +88,46 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
         setCurrentPage(1);
         loadMessages();
     }, [mailbox]);
+
+    // Batch fetch contacts for all messages
+    useEffect(() => {
+        if (messages.length === 0) {
+            setContactsMap(new Map());
+            return;
+        }
+
+        const fetchContacts = async () => {
+            try {
+                const accountId = await getPrimaryAccountId();
+                const uniqueEmails = Array.from(
+                    new Set(
+                        messages
+                            .map((m) => m.from_email)
+                            .filter((email): email is string => !!email)
+                    )
+                );
+
+                if (uniqueEmails.length === 0) {
+                    setContactsMap(new Map());
+                    return;
+                }
+
+                const contacts = await fetchContactsForLookup(accountId, uniqueEmails);
+                const map = new Map<string, ContactInfo>();
+                contacts.forEach((contact) => {
+                    if (contact.email) {
+                        map.set(contact.email.toLowerCase(), contact);
+                    }
+                });
+                setContactsMap(map);
+            } catch (err) {
+                console.error('Failed to fetch contacts:', err);
+                setContactsMap(new Map());
+            }
+        };
+
+        fetchContacts();
+    }, [messages]);
 
     async function loadMessages(page = 1) {
         setLoading(true);
@@ -235,6 +281,11 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
                             <MessageListItem
                                 key={message.id}
                                 message={message}
+                                contact={
+                                    message.from_email
+                                        ? contactsMap.get(message.from_email.toLowerCase())
+                                        : undefined
+                                }
                                 isSelected={selectedMessage === message.id}
                                 isChecked={operations.selectedIds.has(message.id)}
                                 onSelect={handleMessageClick}

@@ -1,12 +1,7 @@
-/**
- * Message/Email CRUD operations with authentication handling
- */
-
-import { jmapClient } from '../../../../data/jmapClient';
 import { withAuthHandling, getAuthenticatedClient } from '../../../../utils/authHandling';
+import { getDefaultIdentity } from '../../../../data/identityService';
 import { marked } from 'marked';
 import type { Email as JmapEmail } from './jmap';
-import type { EmailAddress, EmailData, Attachment } from './jmapTypes';
 import {
     fromJmapToMetadata,
     fromJmapToDetail,
@@ -16,16 +11,13 @@ import {
     type MessageDetail,
     type Draft,
 } from './ui';
-import { getMailboxByName } from '../mailbox/actions';
+import { getMailboxByName, getMailboxByRole } from '../mailbox/actions';
 
-/**
- * Fetch messages from a mailbox
- */
 export async function fetchMessages(
     accountId: string,
     mailbox: string,
     limit = 50,
-    offset = 0
+    position = 0
 ): Promise<Messages> {
     return withAuthHandling(async () => {
         const client = getAuthenticatedClient();
@@ -45,7 +37,7 @@ export async function fetchMessages(
                 filter,
                 sort: [{ property: 'receivedAt', isAscending: false }],
                 limit,
-                position: offset,
+                position,
                 calculateTotal: true,
             });
 
@@ -77,9 +69,6 @@ export async function fetchMessages(
     });
 }
 
-/**
- * Fetch a single message by ID
- */
 export async function fetchMessage(accountId: string, emailId: string): Promise<MessageDetail> {
     return withAuthHandling(async () => {
         const client = getAuthenticatedClient();
@@ -113,9 +102,6 @@ export async function fetchMessage(accountId: string, emailId: string): Promise<
     });
 }
 
-/**
- * Create a new draft
- */
 export async function createDraft(accountId: string, draft: Draft) {
     const client = getAuthenticatedClient();
 
@@ -126,8 +112,7 @@ export async function createDraft(accountId: string, draft: Draft) {
     }
 
     // Get the default identity for the from address
-    const [identities] = await client.request(['Identity/get', { accountId }]);
-    const defaultIdentity = identities.list[0];
+    const defaultIdentity = await getDefaultIdentity(accountId);
 
     // Build the email object using conversion function
     const emailObject = draftToJmap(
@@ -154,17 +139,13 @@ export async function createDraft(accountId: string, draft: Draft) {
     }
 }
 
-/**
- * Update an existing draft
- * Note: JMAP requires creating a new draft and deleting the old one
- */
 export async function updateDraft(accountId: string, emailId: string, draft: Draft) {
     const client = getAuthenticatedClient();
 
-    // Create a new draft first
+    // Create a new draft
     const newDraft = await createDraft(accountId, draft);
 
-    // Only if creation succeeds, delete the old draft
+    // Delete the old draft
     try {
         await client.request([
             'Email/set',
@@ -174,17 +155,12 @@ export async function updateDraft(accountId: string, emailId: string, draft: Dra
             },
         ]);
     } catch (err) {
-        // If deletion fails, we still have the new draft, so just log the error
         console.warn('Failed to delete old draft, but new draft was created:', err);
     }
 
     return newDraft;
 }
 
-/**
- * Prepare and send a message from a draft body (markdown)
- * Converts markdown to HTML and uses markdown as plain text
- */
 export async function prepareAndSendMessage(accountId: string, draft: Draft) {
     // Convert markdown to HTML
     let htmlBody = marked.parse(draft.body);
@@ -205,9 +181,6 @@ export async function prepareAndSendMessage(accountId: string, draft: Draft) {
     );
 }
 
-/**
- * Send a message
- */
 export async function sendMessage(
     accountId: string,
     draft: Draft,
@@ -218,19 +191,12 @@ export async function sendMessage(
 ) {
     const client = getAuthenticatedClient();
 
-    // Get identities
-    const [identities] = await client.request(['Identity/get', { accountId }]);
-
-    if (!identities.list || identities.list.length === 0) {
-        throw new Error('No identities available for this account');
-    }
-
-    const defaultIdentity = identities.list[0];
+    // Get default identity
+    const defaultIdentity = await getDefaultIdentity(accountId);
 
     // Get mailboxes for drafts and sent folders
-    const [mailboxes] = await client.request(['Mailbox/get', { accountId }]);
-    const draftsMailbox = mailboxes.list.find((m: any) => m.role === 'drafts');
-    const sentMailbox = mailboxes.list.find((m: any) => m.role === 'sent');
+    const draftsMailbox = await getMailboxByRole(accountId, 'drafts');
+    const sentMailbox = await getMailboxByRole(accountId, 'sent');
 
     if (!draftsMailbox) {
         throw new Error('Drafts mailbox not found');
@@ -409,18 +375,14 @@ export async function sendMessage(
     return submitResponse.created.sub1;
 }
 
-/**
- * Move messages to trash
- */
 export async function trashMessages(accountId: string, emailIds: string[]) {
     return withAuthHandling(async () => {
         const client = getAuthenticatedClient();
 
         if (emailIds.length === 0) return;
 
-        // Get mailboxes to find trash folder
-        const [mailboxes] = await client.request(['Mailbox/get', { accountId }]);
-        const trashMailbox = mailboxes.list.find((m: any) => m.role === 'trash');
+        // Get trash mailbox
+        const trashMailbox = await getMailboxByRole(accountId, 'trash');
 
         if (!trashMailbox) {
             throw new Error('Trash mailbox not found');
@@ -445,15 +407,10 @@ export async function trashMessages(accountId: string, emailIds: string[]) {
     });
 }
 
-/**
- * Permanently delete messages
- */
 export async function deleteMessages(accountId: string, emailIds: string[]) {
+    if (emailIds.length === 0) return;
     return withAuthHandling(async () => {
         const client = getAuthenticatedClient();
-
-        if (emailIds.length === 0) return;
-
         const [response] = await client.request([
             'Email/set',
             {
@@ -466,9 +423,6 @@ export async function deleteMessages(accountId: string, emailIds: string[]) {
     });
 }
 
-/**
- * Update email keywords (flags) for one or more emails
- */
 async function updateEmailKeywords(
     accountId: string,
     emailIds: string[],
@@ -497,9 +451,6 @@ async function updateEmailKeywords(
     return response.updated;
 }
 
-/**
- * Mark message(s) as read
- */
 export async function markAsRead(accountId: string, emailIds: string | string[]) {
     return withAuthHandling(async () => {
         const ids = Array.isArray(emailIds) ? emailIds : [emailIds];
@@ -507,9 +458,6 @@ export async function markAsRead(accountId: string, emailIds: string | string[])
     });
 }
 
-/**
- * Mark message(s) as unread
- */
 export async function markAsUnread(accountId: string, emailIds: string | string[]) {
     return withAuthHandling(async () => {
         const ids = Array.isArray(emailIds) ? emailIds : [emailIds];
@@ -517,9 +465,6 @@ export async function markAsUnread(accountId: string, emailIds: string | string[
     });
 }
 
-/**
- * Mark message(s) as flagged
- */
 export async function markAsFlagged(accountId: string, emailIds: string | string[]) {
     return withAuthHandling(async () => {
         const ids = Array.isArray(emailIds) ? emailIds : [emailIds];
@@ -527,9 +472,6 @@ export async function markAsFlagged(accountId: string, emailIds: string | string
     });
 }
 
-/**
- * Mark message(s) as unflagged
- */
 export async function markAsUnflagged(accountId: string, emailIds: string | string[]) {
     return withAuthHandling(async () => {
         const ids = Array.isArray(emailIds) ? emailIds : [emailIds];
@@ -537,9 +479,6 @@ export async function markAsUnflagged(accountId: string, emailIds: string | stri
     });
 }
 
-/**
- * Mark message(s) as answered
- */
 export async function markAsAnswered(accountId: string, emailIds: string | string[]) {
     return withAuthHandling(async () => {
         const ids = Array.isArray(emailIds) ? emailIds : [emailIds];
@@ -547,9 +486,6 @@ export async function markAsAnswered(accountId: string, emailIds: string | strin
     });
 }
 
-/**
- * Move messages to a different mailbox
- */
 export async function moveMessages(accountId: string, emailIds: string[], targetMailboxId: string) {
     return withAuthHandling(async () => {
         const client = getAuthenticatedClient();
@@ -577,9 +513,6 @@ export async function moveMessages(accountId: string, emailIds: string[], target
     });
 }
 
-/**
- * Upload a blob (for attachments)
- */
 export async function uploadBlob(
     accountId: string,
     file: File
@@ -596,9 +529,6 @@ export async function uploadBlob(
     };
 }
 
-/**
- * Download blob content (for attachments)
- */
 export async function downloadBlob(
     accountId: string,
     blobId: string,

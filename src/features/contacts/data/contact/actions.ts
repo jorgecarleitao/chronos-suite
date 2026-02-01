@@ -2,7 +2,6 @@
  * Contact CRUD operations
  */
 
-import { jmapClient } from '../../../../data/jmapClient';
 import { withAuthHandling, getAuthenticatedClient } from '../../../../utils/authHandling';
 import type { UIContact, UIContactFormData } from './ui';
 import * as ContactUI from './ui';
@@ -22,46 +21,27 @@ export async function fetchContacts(
         filter.inAddressBook = addressBookId;
     }
 
-    const [queryResponse] = await withAuthHandling(() =>
-        client.request([
-            'ContactCard/query' as any,
-            {
+    const [response] = await withAuthHandling(() =>
+        client.requestMany((ref) => {
+            const query = ref.ContactCard.query({
                 accountId,
                 filter,
-            },
-        ])
-    );
+                // https://github.com/stalwartlabs/stalwart/discussions/2744
+                /*sort: [
+                    { property: 'name/given', isAscending: true },
+                ],*/
+            });
 
-    if (!queryResponse.ids || queryResponse.ids.length === 0) {
-        return [];
-    }
-
-    // Fetch full contact details
-    const [getResponse] = await withAuthHandling(() =>
-        client.request([
-            'ContactCard/get' as any,
-            {
+            const get = ref.ContactCard.get({
                 accountId,
-                ids: queryResponse.ids,
-            },
-        ])
+                ids: query.$ref('/ids'),
+            });
+
+            return { query, get };
+        })
     );
 
-    const contacts = getResponse.list.map((jmapContact: any) => ContactUI.fromJmap(jmapContact));
-
-    // Sort client-side by lastName, then firstName
-    contacts.sort((a, b) => {
-        const lastNameA = (a.lastName || '').toLowerCase();
-        const lastNameB = (b.lastName || '').toLowerCase();
-        if (lastNameA !== lastNameB) {
-            return lastNameA.localeCompare(lastNameB);
-        }
-        const firstNameA = (a.firstName || '').toLowerCase();
-        const firstNameB = (b.firstName || '').toLowerCase();
-        return firstNameA.localeCompare(firstNameB);
-    });
-
-    return contacts;
+    return response.get.list.map((jmapContact: any) => ContactUI.fromJmap(jmapContact));
 }
 
 /**

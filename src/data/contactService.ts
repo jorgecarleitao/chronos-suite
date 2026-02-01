@@ -1,14 +1,5 @@
-/**
- * Shared contact lookup service
- * Used by multiple features (mail, contacts, etc.)
- */
-
-import { jmapClient } from './jmapClient';
 import { withAuthHandling, getAuthenticatedClient } from '../utils/authHandling';
 
-/**
- * Minimal contact info for lookups
- */
 export interface ContactInfo {
     id: string;
     firstName?: string;
@@ -18,19 +9,68 @@ export interface ContactInfo {
     jobTitle?: string;
 }
 
-/**
- * Fetch contacts for lookup purposes (minimal data)
- * This is a shared utility used across features
- */
-export async function fetchContactsForLookup(accountId: string): Promise<ContactInfo[]> {
+function mapContactCardToContactInfo(contact: any): ContactInfo {
+    // Extract name components
+    const nameComponents = contact.name?.components || [];
+    const firstName = nameComponents.find((c: any) => c.kind === 'given')?.value || '';
+    const lastName = nameComponents.find((c: any) => c.kind === 'surname')?.value || '';
+
+    // Extract email
+    let email = '';
+    if (contact.emails) {
+        const emailKeys = Object.keys(contact.emails);
+        if (emailKeys.length > 0) {
+            email = contact.emails[emailKeys[0]]?.address || '';
+        }
+    }
+
+    // Extract organization and title
+    let company: string | undefined;
+    let jobTitle: string | undefined;
+
+    if (contact.organizations) {
+        const orgKeys = Object.keys(contact.organizations);
+        if (orgKeys.length > 0) {
+            company = contact.organizations[orgKeys[0]]?.name;
+        }
+    }
+
+    if (contact.titles) {
+        const titleKeys = Object.keys(contact.titles);
+        if (titleKeys.length > 0) {
+            jobTitle = contact.titles[titleKeys[0]]?.name;
+        }
+    }
+
+    return {
+        id: contact.id,
+        firstName,
+        lastName,
+        email,
+        company,
+        jobTitle,
+    };
+}
+
+export async function fetchContacts(accountId: string, emails?: string[]): Promise<ContactInfo[]> {
     return withAuthHandling(async () => {
         const client = getAuthenticatedClient();
 
-        // Query for all contacts
+        // Build filter if emails are provided
+        const filter =
+            emails && emails.length > 0
+                ? {
+                      operator: 'or',
+                      conditions: emails.map((email) => ({ emailAddress: email })),
+                  }
+                : undefined;
+
+        // Query for contacts with optional email filter
         const [queryResponse] = await client.request([
             'ContactCard/query' as any,
             {
                 accountId,
+                ...(filter && { filter }),
             },
         ]);
 
@@ -38,7 +78,6 @@ export async function fetchContactsForLookup(accountId: string): Promise<Contact
             return [];
         }
 
-        // Fetch contact details (only fields needed for lookup)
         const [getResponse] = await client.request([
             'ContactCard/get' as any,
             {
@@ -48,58 +87,6 @@ export async function fetchContactsForLookup(accountId: string): Promise<Contact
             },
         ]);
 
-        return getResponse.list.map((contact: any) => {
-            // Extract name components
-            const nameComponents = contact.name?.components || [];
-            const firstName = nameComponents.find((c: any) => c.kind === 'given')?.value || '';
-            const lastName = nameComponents.find((c: any) => c.kind === 'surname')?.value || '';
-
-            // Extract email
-            let email = '';
-            if (contact.emails) {
-                const emailKeys = Object.keys(contact.emails);
-                if (emailKeys.length > 0) {
-                    email = contact.emails[emailKeys[0]]?.address || '';
-                }
-            }
-
-            // Extract organization and title
-            let company: string | undefined;
-            let jobTitle: string | undefined;
-
-            if (contact.organizations) {
-                const orgKeys = Object.keys(contact.organizations);
-                if (orgKeys.length > 0) {
-                    company = contact.organizations[orgKeys[0]]?.name;
-                }
-            }
-
-            if (contact.titles) {
-                const titleKeys = Object.keys(contact.titles);
-                if (titleKeys.length > 0) {
-                    jobTitle = contact.titles[titleKeys[0]]?.name;
-                }
-            }
-
-            return {
-                id: contact.id,
-                firstName,
-                lastName,
-                email,
-                company,
-                jobTitle,
-            };
-        });
+        return getResponse.list.map(mapContactCardToContactInfo);
     });
-}
-
-/**
- * Find contact by email address
- */
-export async function findContactByEmail(
-    accountId: string,
-    email: string
-): Promise<ContactInfo | null> {
-    const contacts = await fetchContactsForLookup(accountId);
-    return contacts.find((c) => c.email?.toLowerCase() === email.toLowerCase()) || null;
 }

@@ -13,6 +13,11 @@ import type { Participant } from '../participant/jmap';
 import type { RecurrenceRule } from '../recurrenceRule/jmap';
 import { UI as RecurrenceUI } from '../recurrenceRule';
 import { UI as ParticipantUI } from '../participant';
+import { parseDuration, formatDuration } from '../../../../utils/durationHelpers';
+import { formatDateTime } from '../../../../utils/dateHelpers';
+
+// Re-export for convenience
+export { parseDuration, formatDuration };
 
 /**
  * Recurrence override can either exclude an occurrence or modify its properties
@@ -114,25 +119,14 @@ export function toJmap(
     calendarId: string,
     eventId?: string
 ): JmapCalendarEvent {
-    const duration = calculateDuration(formData.start, formData.end);
+    const durationMs = formData.end.getTime() - formData.start.getTime();
+    const duration = formatDuration(durationMs);
 
     // Format start time based on whether we have a timezone
-    // If timezone is provided: use local time format (no Z)
-    // If no timezone: use UTC format (with Z)
-    let startString: string;
-    if (formData.timeZone && !formData.showWithoutTime) {
-        // Local time format: YYYY-MM-DDTHH:mm:ss
-        const year = formData.start.getFullYear();
-        const month = String(formData.start.getMonth() + 1).padStart(2, '0');
-        const day = String(formData.start.getDate()).padStart(2, '0');
-        const hours = String(formData.start.getHours()).padStart(2, '0');
-        const minutes = String(formData.start.getMinutes()).padStart(2, '0');
-        const seconds = String(formData.start.getSeconds()).padStart(2, '0');
-        startString = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-    } else {
-        // UTC format with Z
-        startString = formData.start.toISOString();
-    }
+    const startString = formatDateTime(
+        formData.start,
+        formData.showWithoutTime ? undefined : formData.timeZone
+    );
 
     const event: JmapCalendarEvent = {
         '@type': 'Event',
@@ -235,43 +229,4 @@ export function toFormData(event: UICalendarEvent, userEmail?: string): UICalend
     }
 
     return formData;
-}
-
-/**
- * Parse ISO 8601 duration to milliseconds
- */
-function parseDuration(duration: string): number {
-    const regex = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/;
-    const matches = duration.match(regex);
-
-    if (!matches) {
-        return 3600000; // Default 1 hour
-    }
-
-    const hours = parseInt(matches[1] || '0', 10);
-    const minutes = parseInt(matches[2] || '0', 10);
-    const seconds = parseInt(matches[3] || '0', 10);
-
-    return (hours * 3600 + minutes * 60 + seconds) * 1000;
-}
-
-/**
- * Calculate ISO 8601 duration between two dates
- */
-function calculateDuration(start: Date, end: Date): string {
-    const diffMs = end.getTime() - start.getTime();
-    const diffMinutes = Math.floor(diffMs / 60000);
-
-    if (diffMinutes < 60) {
-        return `PT${diffMinutes}M`;
-    }
-
-    const hours = Math.floor(diffMinutes / 60);
-    const minutes = diffMinutes % 60;
-
-    if (minutes === 0) {
-        return `PT${hours}H`;
-    }
-
-    return `PT${hours}H${minutes}M`;
 }

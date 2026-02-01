@@ -1,7 +1,3 @@
-/**
- * Mailbox CRUD operations with authentication handling
- */
-
 import { jmapClient } from '../../../../data/jmapClient';
 import { getAllAccounts, getPrimaryAccountId } from '../../../../data/accounts';
 import { withAuthHandling, getAuthenticatedClient } from '../../../../utils/authHandling';
@@ -12,9 +8,6 @@ interface MailboxesResponse {
     mailboxes: UIMailbox[];
 }
 
-/**
- * Fetch mailboxes for a specific account
- */
 export async function fetchMailboxes(accountId: string): Promise<MailboxesResponse> {
     return withAuthHandling(async () => {
         const client = getAuthenticatedClient();
@@ -45,9 +38,6 @@ export async function fetchMailboxes(accountId: string): Promise<MailboxesRespon
     });
 }
 
-/**
- * Fetch shared mailboxes from other accounts
- */
 export async function fetchSharedMailboxes(): Promise<UIMailbox[]> {
     const client = getAuthenticatedClient();
     const primaryAccountId = await getPrimaryAccountId();
@@ -87,9 +77,6 @@ export async function fetchSharedMailboxes(): Promise<UIMailbox[]> {
     return sharedMailboxes;
 }
 
-/**
- * Create a new mailbox/folder
- */
 export async function createMailbox(
     accountId: string,
     name: string,
@@ -122,9 +109,6 @@ export async function createMailbox(
     return response.created.newMailbox;
 }
 
-/**
- * Rename a mailbox/folder
- */
 export async function renameMailbox(
     accountId: string,
     mailboxId: string,
@@ -151,9 +135,6 @@ export async function renameMailbox(
     return response.updated[mailboxId];
 }
 
-/**
- * Delete a mailbox/folder
- */
 export async function deleteMailbox(accountId: string, mailboxId: string): Promise<boolean> {
     const client = getAuthenticatedClient();
 
@@ -172,14 +153,9 @@ export async function deleteMailbox(accountId: string, mailboxId: string): Promi
     return true;
 }
 
-/**
- * Mailbox cache to map names to IDs
- */
 let mailboxCache: Map<string, JmapMailbox> | null = null;
+let mailboxByRoleCache: Map<string, JmapMailbox> | null = null;
 
-/**
- * Get a mailbox by name (case-insensitive)
- */
 export async function getMailboxByName(
     accountId: string,
     name: string
@@ -206,8 +182,22 @@ export async function getMailboxByName(
 
         const mailboxes = response.list as readonly JmapMailbox[];
         mailboxCache = new Map(mailboxes.map((m) => [m.name.toLowerCase(), m]));
+        mailboxByRoleCache = new Map(
+            mailboxes.filter((m) => m.role).map((m) => [m.role!, m])
+        );
     }
     return mailboxCache.get(name.toLowerCase());
+}
+
+export async function getMailboxByRole(
+    accountId: string,
+    role: string
+): Promise<JmapMailbox | undefined> {
+    if (!mailboxByRoleCache) {
+        // Trigger cache population
+        await getMailboxByName(accountId, '');
+    }
+    return mailboxByRoleCache?.get(role);
 }
 
 /**
@@ -215,4 +205,5 @@ export async function getMailboxByName(
  */
 export function clearMailboxCache() {
     mailboxCache = null;
+    mailboxByRoleCache = null;
 }

@@ -18,11 +18,11 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import PersonIcon from '@mui/icons-material/Person';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import { type MessageMetadata } from '../data/message';
-import { getPrimaryAccountId } from '../../../data/accounts';
-import { findContactByEmail, type ContactInfo } from '../../../data/contactService';
+import { type ContactInfo } from '../../../data/contactService';
 
 interface MessageListItemProps {
     message: MessageMetadata;
+    contact?: ContactInfo;
     isSelected: boolean;
     isChecked: boolean;
     onSelect: (message: MessageMetadata) => void;
@@ -49,6 +49,7 @@ const formatDate = (date: Date | null) => {
 
 export default function MessageListItem({
     message,
+    contact,
     isSelected,
     isChecked,
     onSelect,
@@ -57,28 +58,6 @@ export default function MessageListItem({
     onToggleStar,
 }: MessageListItemProps) {
     const { t } = useTranslation();
-    const [contact, setContact] = useState<ContactInfo | null>(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        loadContact();
-    }, [message.from_email]);
-
-    const loadContact = async () => {
-        if (!message.from_email) {
-            setLoading(false);
-            return;
-        }
-        try {
-            const accountId = await getPrimaryAccountId();
-            const matchingContact = await findContactByEmail(accountId, message.from_email);
-            setContact(matchingContact);
-        } catch (err) {
-            console.error('Failed to load contact:', err);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const displayName = message.from_name || message.from_email || t('message.unknownSender');
     const formattedDate = formatDate(message.date);
@@ -86,7 +65,7 @@ export default function MessageListItem({
     const flagged = isFlagged(message.flags);
 
     const renderFromField = () => {
-        if (loading || !contact) {
+        if (!contact) {
             return displayName;
         }
 

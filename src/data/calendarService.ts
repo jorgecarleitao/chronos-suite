@@ -1,11 +1,7 @@
-/**
- * Shared calendar service
- * Used by multiple features (mail for calendar invites, calendar feature itself)
- */
-
-import { jmapClient } from './jmapClient';
 import { withAuthHandling, getAuthenticatedClient } from '../utils/authHandling';
+import { getDefaultIdentity } from './identityService';
 import type { Invite } from '../utils/calendarInviteParser';
+import { parseDuration, formatDuration } from '../utils/durationHelpers';
 
 /**
  * Minimal calendar info
@@ -27,9 +23,6 @@ export interface EventInfo {
     calendarId?: string;
 }
 
-/**
- * Fetch calendars for an account
- */
 export async function fetchCalendars(accountId: string): Promise<CalendarInfo[]> {
     const client = getAuthenticatedClient();
 
@@ -49,50 +42,38 @@ export async function fetchCalendars(accountId: string): Promise<CalendarInfo[]>
     }));
 }
 
-/**
- * Check if an event already exists in the calendar by UID
- */
-export async function checkEventExists(
+export async function getEvent(
     accountId: string,
     calendarId: string,
-    invite: Invite
+    eventId: string,
 ): Promise<EventInfo | null> {
     const client = getAuthenticatedClient();
 
-    // Query for events with the same UID
-    const [queryResponse] = await withAuthHandling(() =>
-        client.request([
-            'CalendarEvent/query' as any,
-            {
+    const [response] = await withAuthHandling(() =>
+        client.requestMany((ref) => {
+            const query = ref.CalendarEvent.query({
                 accountId,
                 filter: {
                     inCalendar: calendarId,
-                    uid: invite.eventId,
+                    uid: eventId,
                 },
-            },
-        ])
-    );
+            });
 
-    if (!queryResponse.ids || queryResponse.ids.length === 0) {
-        return null;
-    }
-
-    // Fetch the event details
-    const [getResponse] = await withAuthHandling(() =>
-        client.request([
-            'CalendarEvent/get' as any,
-            {
+            const get = ref.CalendarEvent.get({
                 accountId,
-                ids: queryResponse.ids.slice(0, 1),
-            },
-        ])
+                ids: query.$ref('/ids'),
+                properties: ['id', 'uid', 'title', 'start', 'duration'],
+            });
+
+            return { query, get };
+        })
     );
 
-    if (!getResponse.list || getResponse.list.length === 0) {
+    if (!response.get.list || response.get.list.length === 0) {
         return null;
     }
 
-    const event = getResponse.list[0];
+    const event = response.get.list[0];
     const startDate = new Date(event.start);
     let endDate = startDate;
 
@@ -119,21 +100,20 @@ export async function importCalendarInvite(
     invite: Invite,
     status: 'accepted' | 'declined' | 'tentative' = 'accepted'
 ): Promise<EventInfo> {
-    // Check if event already exists in calendar
-    const existingEvent = await checkEventExists(accountId, calendarId, invite);
-    if (existingEvent) {
-        throw new Error('This event has already been added to your calendar');
+    if (invite.eventId) {
+        const existingEvent = await getEvent(accountId, calendarId, invite.eventId);
+        if (existingEvent) {
+            throw new Error('This event has already been added to your calendar');
+        }
     }
 
     const client = getAuthenticatedClient();
 
     // Get user's identity
-    const [identities] = await withAuthHandling(() =>
-        client.request(['Identity/get', { accountId }])
-    );
-    const defaultIdentity = identities.list[0];
+    const defaultIdentity = await getDefaultIdentity(accountId);
 
-    const duration = calculateDuration(invite.start, invite.end);
+    const durationMs = invite.end.getTime() - invite.start.getTime();
+    const duration = formatDuration(durationMs);
 
     const calendarEvent: any = {
         '@type': 'Event',
@@ -216,41 +196,4 @@ export async function importCalendarInvite(
     };
 }
 
-/**
- * Parse ISO 8601 duration to milliseconds
- */
-function parseDuration(duration: string): number {
-    const regex = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/;
-    const matches = duration.match(regex);
 
-    if (!matches) {
-        return 3600000; // Default 1 hour
-    }
-
-    const hours = parseInt(matches[1] || '0', 10);
-    const minutes = parseInt(matches[2] || '0', 10);
-    const seconds = parseInt(matches[3] || '0', 10);
-
-    return (hours * 3600 + minutes * 60 + seconds) * 1000;
-}
-
-/**
- * Calculate ISO 8601 duration between two dates
- */
-function calculateDuration(start: Date, end: Date): string {
-    const diffMs = end.getTime() - start.getTime();
-    const diffMinutes = Math.floor(diffMs / 60000);
-
-    if (diffMinutes < 60) {
-        return `PT${diffMinutes}M`;
-    }
-
-    const hours = Math.floor(diffMinutes / 60);
-    const minutes = diffMinutes % 60;
-
-    if (minutes === 0) {
-        return `PT${hours}H`;
-    }
-
-    return `PT${hours}H${minutes}M`;
-}

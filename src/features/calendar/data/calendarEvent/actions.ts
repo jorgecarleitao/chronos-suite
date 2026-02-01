@@ -1,21 +1,11 @@
-/**
- * Calendar Event CRUD operations
- * Handles all server interactions for calendar events
- */
-
-import { jmapClient } from '../../../../data/jmapClient';
 import { withAuthHandling, getAuthenticatedClient } from '../../../../utils/authHandling';
-import { Invite } from '../../../../utils/calendarInviteParser';
-import { UI as RecurrenceUI } from '../recurrenceRule';
-import { UI as ParticipantUI } from '../participant';
-import { generateOccurrencesFromRule, calculateEventDuration } from '../../utils/recurrenceHelpers';
+import { getDefaultIdentity } from '../../../../data/identityService';
+import { generateOccurrencesFromRule } from '../../utils/recurrenceHelpers';
+import { parseDuration, formatDuration } from '../../../../utils/durationHelpers';
+import { formatDateTime } from '../../../../utils/dateHelpers';
 import type { UICalendarEvent, UICalendarEventFormData } from './ui';
 import * as CalendarEventUI from './ui';
-import type { Participant } from '../participant/jmap';
 
-/**
- * Fetch calendar events within a date range
- */
 export async function fetchCalendarEvents(
     accountId: string,
     calendarId?: string,
@@ -25,10 +15,8 @@ export async function fetchCalendarEvents(
     const client = getAuthenticatedClient();
 
     // Get user's identity to determine their email
-    const [identities] = await withAuthHandling(() =>
-        client.request(['Identity/get', { accountId }])
-    );
-    const userEmail = identities.list[0]?.email;
+    const defaultIdentity = await getDefaultIdentity(accountId);
+    const organizerEmail = defaultIdentity.email;
 
     // Build filter
     const filter: any = {};
@@ -42,39 +30,27 @@ export async function fetchCalendarEvents(
         filter.after = startDate.toISOString().split('.')[0];
     }
 
-    // Query for events
-    const [queryResponse] = await withAuthHandling(() =>
-        client.request([
-            'CalendarEvent/query' as any,
-            {
+    // Query and fetch events in a single batch request
+    const [response] = await withAuthHandling(() =>
+        client.requestMany((ref) => {
+            const query = ref.CalendarEvent.query({
                 accountId,
                 timeZone: 'UTC',
                 filter: Object.keys(filter).length > 0 ? filter : undefined,
-            },
-        ])
-    );
+            });
 
-    if (!queryResponse.ids || queryResponse.ids.length === 0) {
-        return [];
-    }
-
-    // Fetch full event details
-    const [getResponse] = await withAuthHandling(() =>
-        client.request([
-            'CalendarEvent/get' as any,
-            {
+            const get = ref.CalendarEvent.get({
                 accountId,
-                ids: queryResponse.ids,
-            },
-        ])
+                ids: query.$ref('/ids'),
+            });
+
+            return { query, get };
+        })
     );
 
-    return getResponse.list.map((event: any) => CalendarEventUI.fromJmap(event, userEmail));
+    return response.get.list.map((event: any) => CalendarEventUI.fromJmap(event, organizerEmail));
 }
 
-/**
- * Create a new calendar event
- */
 export async function createCalendarEvent(
     accountId: string,
     calendarId: string,
@@ -85,41 +61,32 @@ export async function createCalendarEvent(
     const calendarEvent = CalendarEventUI.toJmap(eventData, calendarId);
 
     const [response] = await withAuthHandling(() =>
-        client.request([
-            'CalendarEvent/set' as any,
-            {
+        client.requestMany((ref) => {
+            const set = ref.CalendarEvent.set({
                 accountId,
                 create: {
                     'new-event': calendarEvent,
                 },
                 sendSchedulingMessages: true,
-            },
-        ])
+            });
+
+            const get = ref.CalendarEvent.get({
+                accountId,
+                ids: set.$ref('/created/new-event/id'),
+            });
+
+            return { set, get };
+        })
     );
 
-    const createdId = response.created?.['new-event']?.id;
+    const createdId = response.set.created?.['new-event']?.id;
     if (!createdId) {
         throw new Error('Failed to create event');
     }
 
-    // Fetch the created event to verify what was actually stored
-    const [getResponse] = await withAuthHandling(() =>
-        client.request([
-            'CalendarEvent/get' as any,
-            {
-                accountId,
-                ids: [createdId],
-            },
-        ])
-    );
-
-    const createdEvent = getResponse.list[0];
-    return CalendarEventUI.fromJmap(createdEvent);
+    return CalendarEventUI.fromJmap(response.get.list[0]);
 }
 
-/**
- * Update a calendar event
- */
 export async function updateCalendarEvent(
     accountId: string,
     calendarId: string,
@@ -144,9 +111,6 @@ export async function updateCalendarEvent(
     );
 }
 
-/**
- * Delete a calendar event
- */
 export async function deleteCalendarEvent(accountId: string, eventId: string): Promise<void> {
     const client = getAuthenticatedClient();
 
@@ -162,9 +126,6 @@ export async function deleteCalendarEvent(accountId: string, eventId: string): P
     );
 }
 
-/**
- * Delete a single occurrence of a recurring event by adding it to recurrenceOverrides
- */
 export async function deleteSingleOccurrence(
     accountId: string,
     eventId: string,
@@ -172,22 +133,22 @@ export async function deleteSingleOccurrence(
 ): Promise<void> {
     const client = getAuthenticatedClient();
 
-    // Fetch the current event to get existing recurrenceOverrides
-    const [getResponse] = await withAuthHandling(() =>
-        client.request([
-            'CalendarEvent/get' as any,
-            {
+    const [response] = await withAuthHandling(() =>
+        client.requestMany((ref) => {
+            const get = ref.CalendarEvent.get({
                 accountId,
                 ids: [eventId],
-            },
-        ])
+            });
+
+            return { get };
+        })
     );
 
-    if (!getResponse.list || getResponse.list.length === 0) {
+    if (!response.get.list || response.get.list.length === 0) {
         throw new Error('Event not found');
     }
 
-    const event = getResponse.list[0];
+    const event = response.get.list[0];
     const existingOverrides = event.recurrenceOverrides || {};
 
     // Add the excluded override for this occurrence
@@ -313,37 +274,37 @@ export async function respondToCalendarInvite(
 ): Promise<void> {
     const client = getAuthenticatedClient();
 
-    // Get user's identity to find their participant entry
-    const [identities] = await withAuthHandling(() =>
-        client.request(['Identity/get', { accountId }])
-    );
-    const defaultIdentity = identities.list[0];
-    const userEmail = defaultIdentity.email;
+    // Get the default identity from cache
+    const defaultIdentity = await getDefaultIdentity(accountId);
+    const scheduleId = `mailto:${defaultIdentity.email}`;
 
     // Get the event to find the user's participant ID
-    const [getResponse] = await withAuthHandling(() =>
-        client.request([
-            'CalendarEvent/get' as any,
-            {
+    const [response] = await withAuthHandling(() =>
+        client.requestMany((ref) => {
+            const get = ref.CalendarEvent.get({
                 accountId,
                 ids: [eventId],
-            },
-        ])
+            });
+
+            return { get };
+        })
     );
 
-    if (!getResponse.list || getResponse.list.length === 0) {
+    if (!response.get.list || response.get.list.length === 0) {
         throw new Error('Event not found');
     }
 
-    const event = getResponse.list[0];
+    const event = response.get.list[0];
 
-    // Find the participant entry for the current user
+    // Find the participant entry by matching scheduleId or sendTo
     let userParticipantId: string | null = null;
     if (event.participants) {
         for (const [participantId, participant] of Object.entries(
             event.participants as Record<string, any>
         )) {
-            if (participant.email === userEmail) {
+            // Match by scheduleId or sendTo.imip
+            if (participant.scheduleId === scheduleId || 
+                (participant.sendTo?.imip === scheduleId)) {
                 userParticipantId = participantId;
                 break;
             }
@@ -367,157 +328,10 @@ export async function respondToCalendarInvite(
                 update: {
                     [eventId]: patch,
                 },
-                sendSchedulingMessages: true, // Automatically send iTIP reply to organizer
-            },
-        ])
-    );
-}
-
-/**
- * Check if an event already exists in the calendar by UID
- */
-export async function checkEventExists(
-    accountId: string,
-    calendarId: string,
-    invite: Invite
-): Promise<UICalendarEvent | null> {
-    // If no UID, cannot check for duplicates
-    if (!invite.eventId) {
-        return null;
-    }
-
-    const client = getAuthenticatedClient();
-
-    // Query for events with matching UID
-    const [queryResponse] = await withAuthHandling(() =>
-        client.request([
-            'CalendarEvent/query' as any,
-            {
-                accountId,
-                filter: {
-                    inCalendar: calendarId,
-                    uid: invite.eventId,
-                },
-            },
-        ])
-    );
-
-    if (!queryResponse.ids || queryResponse.ids.length === 0) {
-        return null;
-    }
-
-    // Event with same UID exists - fetch details
-    const [getResponse] = await withAuthHandling(() =>
-        client.request([
-            'CalendarEvent/get' as any,
-            {
-                accountId,
-                ids: [queryResponse.ids[0]],
-            },
-        ])
-    );
-
-    if (!getResponse.list || getResponse.list.length === 0) {
-        return null;
-    }
-
-    const event = getResponse.list[0];
-    return CalendarEventUI.fromJmap(event);
-}
-
-/**
- * Import a calendar invite from an email into the user's calendar
- */
-export async function importCalendarInvite(
-    accountId: string,
-    calendarId: string,
-    invite: Invite,
-    status: 'accepted' | 'declined' | 'tentative' = 'accepted'
-): Promise<UICalendarEvent> {
-    // Check if event already exists in calendar
-    const existingEvent = await checkEventExists(accountId, calendarId, invite);
-    if (existingEvent) {
-        throw new Error('This event has already been added to your calendar');
-    }
-
-    const client = getAuthenticatedClient();
-
-    // Get user's identity
-    const [identities] = await withAuthHandling(() =>
-        client.request(['Identity/get', { accountId }])
-    );
-    const defaultIdentity = identities.list[0];
-
-    // Convert invite to form data format
-    const formData: UICalendarEventFormData = {
-        title: invite.title,
-        start: invite.start,
-        end: invite.end,
-        description: invite.description,
-        location: invite.location,
-        participants: [],
-    };
-
-    // Convert to JMAP and add extra fields
-    const jmapEvent = CalendarEventUI.toJmap(formData, calendarId, invite.eventId);
-
-    // Add attendee participant
-    const attendeeParticipant: Participant = {
-        '@type': 'Participant',
-        email: defaultIdentity.email,
-        name: defaultIdentity.name || defaultIdentity.email,
-        calendarAddress: `mailto:${defaultIdentity.email}`,
-        roles: { attendee: true },
-        participationStatus: status,
-        expectReply: false,
-    };
-
-    jmapEvent.participants = {
-        attendee: ParticipantUI.createJmapParticipant(attendeeParticipant),
-    };
-
-    // Add organizer if present
-    if (invite.organizer) {
-        jmapEvent.participants.organizer = {
-            '@type': 'Participant',
-            email: invite.organizer,
-            calendarAddress: `mailto:${invite.organizer}`,
-            roles: { owner: true },
-            participationStatus: 'accepted',
-            expectReply: false,
-        };
-        (jmapEvent as any).replyTo = {
-            imip: `mailto:${invite.organizer}`,
-        };
-    }
-
-    const [response] = await withAuthHandling(() =>
-        client.request([
-            'CalendarEvent/set' as any,
-            {
-                accountId,
-                create: {
-                    'new-event': jmapEvent,
-                },
                 sendSchedulingMessages: true,
             },
         ])
     );
-
-    const createdId = response.created?.['new-event']?.id;
-    if (!createdId) {
-        throw new Error('Failed to create event');
-    }
-
-    return {
-        id: createdId,
-        title: invite.title,
-        start: invite.start,
-        end: invite.end,
-        calendarId,
-        description: invite.description,
-        userParticipationStatus: status,
-    };
 }
 
 /**
@@ -532,115 +346,82 @@ export function expandRecurringEvents(
     const expandedEvents: UICalendarEvent[] = [];
 
     for (const event of events) {
-        if (event.recurrenceRule) {
-            // Calculate event duration
-            const duration = calculateEventDuration(event.start, event.end);
-
-            const occurrences = generateOccurrencesFromRule(
-                event.recurrenceRule,
-                event.start,
-                endDate,
-                duration
-            );
-
-            const overrides = event.recurrenceOverrides || {};
-
-            // Filter occurrences to be within range and create event instances
-            for (const occurrence of occurrences) {
-                if (occurrence.start >= startDate && occurrence.start <= endDate) {
-                    const recurrenceId = formatRecurrenceId(occurrence.start, event.timeZone);
-                    const override = overrides[recurrenceId];
-
-                    // Skip excluded occurrences
-                    if (override?.excluded) {
-                        continue;
-                    }
-
-                    // Create the instance with overrides applied
-                    const instance: UICalendarEvent = {
-                        ...event,
-                        id: `${event.id}#${recurrenceId}`, // Unique ID for each occurrence
-                        start: occurrence.start,
-                        end: occurrence.end,
-                        isRecurringEventInstance: true, // Mark as instance of recurring event
-                        recurrenceId, // Store the recurrence ID for later use
-                    };
-
-                    // Apply overrides if they exist
-                    if (override) {
-                        if (override.title !== undefined) instance.title = override.title;
-                        if (override.start !== undefined) {
-                            // Convert string date to Date object
-                            const newStart =
-                                typeof override.start === 'string'
-                                    ? new Date(override.start)
-                                    : override.start;
-                            instance.start = newStart;
-
-                            // Recalculate end date if duration is also overridden
-                            if ((override as any).duration) {
-                                const durationMs = parseDurationOverride(
-                                    (override as any).duration
-                                );
-                                instance.end = new Date(newStart.getTime() + durationMs);
-                            } else {
-                                // Maintain the same duration
-                                const originalDuration =
-                                    occurrence.end.getTime() - occurrence.start.getTime();
-                                instance.end = new Date(newStart.getTime() + originalDuration);
-                            }
-                        }
-                        if (override.description !== undefined)
-                            instance.description = override.description;
-                        if (override.location !== undefined) instance.location = override.location;
-                        // Apply other override fields as needed
-                    }
-
-                    expandedEvents.push(instance);
-                }
-            }
-        } else {
+        if (!event.recurrenceRule) {
             // Non-recurring event - add as is
             expandedEvents.push(event);
+            continue;
+        }
+
+        // Calculate event duration
+        const durationMs = event.end.getTime() - event.start.getTime();
+        const duration = formatDuration(durationMs);
+
+        const occurrences = generateOccurrencesFromRule(
+            event.recurrenceRule,
+            event.start,
+            endDate,
+            duration
+        );
+
+        const overrides = event.recurrenceOverrides || {};
+
+        // Filter occurrences to be within range and create event instances
+        for (const occurrence of occurrences) {
+            if (occurrence.start >= startDate && occurrence.start <= endDate) {
+                const recurrenceId = formatDateTime(occurrence.start, event.timeZone);
+                const override = overrides[recurrenceId];
+
+                // Skip excluded occurrences
+                if (override?.excluded) {
+                    continue;
+                }
+
+                // Create the instance with overrides applied
+                const instance: UICalendarEvent = {
+                    ...event,
+                    id: `${event.id}#${recurrenceId}`, // Unique ID for each occurrence
+                    start: occurrence.start,
+                    end: occurrence.end,
+                    isRecurringEventInstance: true, // Mark as instance of recurring event
+                    recurrenceId, // Store the recurrence ID for later use
+                };
+
+                // Apply overrides if they exist
+                if (override) {
+                    if (override.title !== undefined) instance.title = override.title;
+                    if (override.start !== undefined) {
+                        // Convert string date to Date object
+                        const newStart =
+                            typeof override.start === 'string'
+                                ? new Date(override.start)
+                                : override.start;
+                        instance.start = newStart;
+
+                        // Recalculate end date if duration is also overridden
+                        if ((override as any).duration) {
+                            const durationMs = parseDuration(
+                                (override as any).duration
+                            );
+                            instance.end = new Date(newStart.getTime() + durationMs);
+                        } else {
+                            // Maintain the same duration
+                            const originalDuration =
+                                occurrence.end.getTime() - occurrence.start.getTime();
+                            instance.end = new Date(newStart.getTime() + originalDuration);
+                        }
+                    }
+                    if (override.description !== undefined)
+                        instance.description = override.description;
+                    if (override.location !== undefined) instance.location = override.location;
+                    // Apply other override fields as needed
+                }
+
+                expandedEvents.push(instance);
+            }
         }
     }
 
     return expandedEvents;
 }
 
-/**
- * Format a recurrence ID from a Date, matching the event's timezone format
- */
-function formatRecurrenceId(date: Date, timeZone?: string): string {
-    if (timeZone) {
-        // Local time format: YYYY-MM-DDTHH:mm:ss
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        const seconds = String(date.getSeconds()).padStart(2, '0');
-        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-    } else {
-        // UTC format with Z
-        return date.toISOString();
-    }
-}
 
-/**
- * Parse ISO 8601 duration string to milliseconds
- */
-function parseDurationOverride(duration: string): number {
-    const regex = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/;
-    const matches = duration.match(regex);
-
-    if (!matches) {
-        return 3600000; // Default 1 hour
-    }
-
-    const hours = parseInt(matches[1] || '0', 10);
-    const minutes = parseInt(matches[2] || '0', 10);
-    const seconds = parseInt(matches[3] || '0', 10);
-
-    return (hours * 3600 + minutes * 60 + seconds) * 1000;
-}

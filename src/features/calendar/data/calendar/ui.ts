@@ -1,7 +1,3 @@
-/**
- * UI-friendly Calendar types
- */
-
 export interface UICalendar {
     id: string;
     name: string;
@@ -20,9 +16,6 @@ export interface UICalendarFormData {
     color?: string;
 }
 
-/**
- * Convert from JMAP Calendar to UI Calendar
- */
 export function fromJmap(jmapCalendar: any): UICalendar {
     return {
         id: jmapCalendar.id,
@@ -37,9 +30,6 @@ export function fromJmap(jmapCalendar: any): UICalendar {
     };
 }
 
-/**
- * Convert from UI form data to JMAP Calendar create/update payload
- */
 export function toJmap(formData: UICalendarFormData): Partial<any> {
     return {
         name: formData.name.trim(),

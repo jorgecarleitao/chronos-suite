@@ -34,6 +34,8 @@ import {
     type MessageDetail,
 } from '../data/message';
 import { fetchCalendars } from '../../../data/calendarService';
+import { fetchContacts, type ContactInfo } from '../../../data/contactService';
+import { getPrimaryAccountId } from '../../../data/accounts';
 
 interface MessageViewerProps {
     onClose: () => void;
@@ -70,6 +72,7 @@ export default function MessageViewer({
     const [composeData, setComposeData] = useState<DraftMessage>({});
     const [parsedInvite, setParsedInvite] = useState<Invite | null>(null);
     const [calendarId, setCalendarId] = useState<string | null>(null);
+    const [contact, setContact] = useState<ContactInfo | undefined>(undefined);
 
     useEffect(() => {
         if (emailId) {
@@ -90,6 +93,31 @@ export default function MessageViewer({
             }
         })();
     }, [accountId]);
+
+    // Fetch contact for message sender
+    useEffect(() => {
+        if (!message?.from_email) {
+            setContact(undefined);
+            return;
+        }
+
+        const fetchContact = async () => {
+            try {
+                const primaryAccountId = await getPrimaryAccountId();
+                const contacts = await fetchContacts(primaryAccountId, [message.from_email]);
+                if (contacts.length > 0) {
+                    setContact(contacts[0]);
+                } else {
+                    setContact(undefined);
+                }
+            } catch (err) {
+                console.error('Failed to fetch contact:', err);
+                setContact(undefined);
+            }
+        };
+
+        fetchContact();
+    }, [message?.from_email]);
 
     // Download and parse ICS attachment when message loads
     useEffect(() => {
@@ -304,6 +332,7 @@ export default function MessageViewer({
                                 toName={message.to_name}
                                 toEmail={message.to_email}
                                 date={message.date}
+                                contact={contact}
                             />
                         </Stack>
                         <Divider />

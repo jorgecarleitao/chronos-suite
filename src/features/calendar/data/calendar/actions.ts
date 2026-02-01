@@ -1,15 +1,7 @@
-/**
- * Calendar CRUD operations
- * Handles all server interactions for calendar management
- */
-
 import { withAuthHandling, getAuthenticatedClient } from '../../../../utils/authHandling';
 import type { UICalendar, UICalendarFormData } from './ui';
 import * as CalendarUI from './ui';
 
-/**
- * Fetch all calendars for the account
- */
 export async function fetchCalendars(accountId: string): Promise<UICalendar[]> {
     const client = getAuthenticatedClient();
 
@@ -25,9 +17,6 @@ export async function fetchCalendars(accountId: string): Promise<UICalendar[]> {
     return response.list.map((calendar: any) => CalendarUI.fromJmap(calendar));
 }
 
-/**
- * Create a new calendar
- */
 export async function createCalendar(
     accountId: string,
     calendarData: UICalendarFormData
@@ -37,39 +26,31 @@ export async function createCalendar(
     const calendarPayload = CalendarUI.toJmap(calendarData);
 
     const [response] = await withAuthHandling(() =>
-        client.request([
-            'Calendar/set' as any,
-            {
+        client.requestMany((ref) => {
+            const set = ref.Calendar.set({
                 accountId,
                 create: {
                     'new-calendar': calendarPayload,
                 },
-            },
-        ])
+            });
+
+            const get = ref.Calendar.get({
+                accountId,
+                ids: set.$ref('/created/new-calendar/id'),
+            });
+
+            return { set, get };
+        })
     );
 
-    const createdId = response.created?.['new-calendar']?.id;
+    const createdId = response.set.created?.['new-calendar']?.id;
     if (!createdId) {
         throw new Error('Failed to create calendar');
     }
 
-    // Fetch the created calendar to get full details
-    const [getResponse] = await withAuthHandling(() =>
-        client.request([
-            'Calendar/get' as any,
-            {
-                accountId,
-                ids: [createdId],
-            },
-        ])
-    );
-
-    return CalendarUI.fromJmap(getResponse.list[0]);
+    return CalendarUI.fromJmap(response.get.list[0]);
 }
 
-/**
- * Update an existing calendar
- */
 export async function updateCalendar(
     accountId: string,
     calendarId: string,
@@ -80,74 +61,40 @@ export async function updateCalendar(
     const calendarPayload = CalendarUI.toJmap(calendarData);
 
     const [response] = await withAuthHandling(() =>
-        client.request([
-            'Calendar/set' as any,
-            {
+        client.requestMany((ref) => {
+            const set = ref.Calendar.set({
                 accountId,
                 update: {
                     [calendarId]: calendarPayload,
                 },
-            },
-        ])
+            });
+
+            const get = ref.Calendar.get({
+                accountId,
+                ids: [calendarId],
+            });
+
+            return { set, get };
+        })
     );
 
-    if (!response.updated?.[calendarId]) {
+    if (!response.set.updated?.[calendarId]) {
         throw new Error('Failed to update calendar');
     }
 
-    // Fetch the updated calendar to get full details
-    const [getResponse] = await withAuthHandling(() =>
-        client.request([
-            'Calendar/get' as any,
-            {
-                accountId,
-                ids: [calendarId],
-            },
-        ])
-    );
-
-    return CalendarUI.fromJmap(getResponse.list[0]);
+    return CalendarUI.fromJmap(response.get.list[0]);
 }
 
-/**
- * Delete a calendar (and all its events)
- */
 export async function deleteCalendar(accountId: string, calendarId: string): Promise<void> {
     const client = getAuthenticatedClient();
 
-    // First, fetch all events in this calendar
-    const [queryResponse] = await withAuthHandling(() =>
-        client.request([
-            'CalendarEvent/query' as any,
-            {
-                accountId,
-                filter: {
-                    inCalendar: calendarId,
-                },
-            },
-        ])
-    );
-
-    // Delete all events in the calendar first
-    if (queryResponse.ids && queryResponse.ids.length > 0) {
-        await withAuthHandling(() =>
-            client.request([
-                'CalendarEvent/set' as any,
-                {
-                    accountId,
-                    destroy: queryResponse.ids,
-                },
-            ])
-        );
-    }
-
-    // Now delete the calendar
     const [response] = await withAuthHandling(() =>
         client.request([
             'Calendar/set' as any,
             {
                 accountId,
                 destroy: [calendarId],
+                onDestroyRemoveEvents: true,
             },
         ])
     );

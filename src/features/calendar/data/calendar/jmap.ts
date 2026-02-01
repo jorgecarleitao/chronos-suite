@@ -1,7 +1,3 @@
-/**
- * JMAP Calendar types and utilities
- */
-
 export interface JMAPCalendar {
     id: string;
     name: string;

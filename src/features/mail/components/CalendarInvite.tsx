@@ -8,7 +8,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import EventIcon from '@mui/icons-material/Event';
-import { importCalendarInvite, checkEventExists } from '../../../data/calendarService';
+import { importCalendarInvite, getEvent } from '../../../data/calendarService';
 import { type Invite } from '../../../utils/calendarInviteParser';
 import { useTranslation } from 'react-i18next';
 import Alert from '@mui/material/Alert';
@@ -39,7 +39,7 @@ export default function CalendarInvite({
     useEffect(() => {
         (async () => {
             try {
-                const existing = await checkEventExists(accountId, calendarId, invite);
+                const existing = await getEvent(accountId, calendarId, invite.eventId);
                 setAlreadyExists(!!existing);
             } catch (err) {
                 console.error('Failed to check existing event:', err);

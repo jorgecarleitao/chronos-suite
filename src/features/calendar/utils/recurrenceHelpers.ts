@@ -5,6 +5,7 @@
  */
 
 import type { RecurrenceRule } from '../data/recurrenceRule/jmap';
+import { parseDuration } from '../../../utils/durationHelpers';
 
 /**
  * Generate occurrences from a single JMAP RecurrenceRule
@@ -12,20 +13,21 @@ import type { RecurrenceRule } from '../data/recurrenceRule/jmap';
  * @param rule - Single JMAP RecurrenceRule
  * @param startDate - Start date of first occurrence
  * @param endDate - End date of occurrence search range
- * @param duration - Duration of event in milliseconds
+ * @param duration - Duration string in ISO 8601 format (e.g., "PT1H30M")
  * @returns Array of event occurrences with start and end dates
  */
 export function generateOccurrencesFromRule(
     rule: RecurrenceRule,
     startDate: Date,
     endDate: Date,
-    duration: number
+    duration: string
 ): Array<{ start: Date; end: Date }> {
     if (!rule.frequency) {
         console.error('Invalid JMAP RecurrenceRule: missing frequency', rule);
         return [];
     }
 
+    const durationMs = parseDuration(duration);
     const occurrences: Array<{ start: Date; end: Date }> = [];
     const frequency = rule.frequency.toLowerCase();
     const interval = rule.interval || 1;
@@ -196,9 +198,4 @@ function advanceDate(date: Date, frequency: string, interval: number): Date {
     return next;
 }
 
-/**
- * Calculate duration between two dates in milliseconds
- */
-export function calculateEventDuration(startDate: Date, endDate: Date): number {
-    return endDate.getTime() - startDate.getTime();
-}
+

@@ -1,26 +1,11 @@
-/**
- * UI Participant interface and JMAP conversion utilities
- * Handles conversion between JMAP Participant and UI-friendly participant
- */
-
 import type { Participant, JmapParticipant, ParticipationStatus } from './jmap';
 
-/**
- * UI-friendly participant for form editing
- * Simplified interface for common use cases
- */
 export interface UIParticipant {
     email: string;
     name?: string;
     required: boolean; // Maps to expectReply in JMAP
 }
 
-/**
- * Convert UI participant to JMAP Participant
- * @param ui - UI participant
- * @param index - Index for generating unique participant ID
- * @returns Tuple of [participantId, JmapParticipant]
- */
 export function toJmap(ui: UIParticipant, index: number): [string, Participant] {
     const participant: Participant = {
         '@type': 'Participant',
@@ -34,21 +19,10 @@ export function toJmap(ui: UIParticipant, index: number): [string, Participant] 
     return [`participant${index}`, participant];
 }
 
-/**
- * Convert multiple UI participants to JMAP participants record
- * @param uiParticipants - Array of UI participants
- * @returns Record of participant IDs to JMAP Participants
- */
 export function toJmapRecord(uiParticipants: UIParticipant[]): Record<string, Participant> {
     return Object.fromEntries(uiParticipants.map((ui, index) => toJmap(ui, index)));
 }
 
-/**
- * Convert JMAP participants to UI participants array
- * @param jmapParticipants - Record of JMAP participants
- * @param userEmail - Current user's email to filter out
- * @returns Array of UI participants (excluding the user)
- */
 export function fromJmap(
     jmapParticipants?: Record<string, Participant>,
     userEmail?: string
@@ -67,12 +41,6 @@ export function fromJmap(
         .filter((p) => p.email); // Filter out participants without email
 }
 
-/**
- * Parse JMAP participants to extract user participation status
- * @param jmapParticipants - Record of JMAP participants
- * @param userEmail - Current user's email
- * @returns Object with participants record and user's participation status
- */
 export function parseJmap(
     jmapParticipants?: Record<string, Participant>,
     userEmail?: string
@@ -102,12 +70,6 @@ export function parseJmap(
     };
 }
 
-/**
- * Create a strict JMAP participant for server submission
- * Ensures all required fields are present
- * @param participant - Partial participant data
- * @returns JmapParticipant with all required fields
- */
 export function createJmapParticipant(participant: Participant): JmapParticipant {
     return {
         '@type': 'Participant',

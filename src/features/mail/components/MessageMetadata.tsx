@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'preact/hooks';
 import { useTranslation } from 'react-i18next';
 import Typography from '@mui/material/Typography';
 import Stack from '@mui/material/Stack';
@@ -7,8 +6,7 @@ import Chip from '@mui/material/Chip';
 import Tooltip from '@mui/material/Tooltip';
 import Box from '@mui/material/Box';
 import PersonIcon from '@mui/icons-material/Person';
-import { getPrimaryAccountId } from '../../../data/accounts';
-import { findContactByEmail, type ContactInfo } from '../../../data/contactService';
+import { type ContactInfo } from '../../../data/contactService';
 
 interface MessageMetadataProps {
     fromName: string;
@@ -16,6 +14,7 @@ interface MessageMetadataProps {
     toName?: string;
     toEmail: string;
     date: Date | null;
+    contact?: ContactInfo;
 }
 
 export default function MessageMetadata({
@@ -24,38 +23,13 @@ export default function MessageMetadata({
     toName,
     toEmail,
     date,
+    contact,
 }: MessageMetadataProps) {
     const { t } = useTranslation();
-    const [contact, setContact] = useState<ContactInfo | null>(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        loadContact();
-    }, [fromEmail]);
-
-    const loadContact = async () => {
-        try {
-            const accountId = await getPrimaryAccountId();
-            const matchingContact = await findContactByEmail(accountId, fromEmail);
-            setContact(matchingContact);
-        } catch (err) {
-            console.error('Failed to load contact:', err);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const toDisplay = toName ? `${toName} <${toEmail}>` : toEmail;
 
     const renderFromField = () => {
-        if (loading) {
-            return (
-                <Typography variant="body2">
-                    {fromName} &lt;{fromEmail}&gt;
-                </Typography>
-            );
-        }
-
         if (contact) {
             const contactInfo = [
                 contact.company && `${t('contacts.company')}: ${contact.company}`,

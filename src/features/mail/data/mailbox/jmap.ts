@@ -1,12 +1,3 @@
-/**
- * JMAP Mailbox types following JMAP Mail RFC 8621
- * Pure server format from JMAP spec
- */
-
-/**
- * JMAP Mailbox - Pure JMAP spec format
- * Following JMAP Mail RFC 8621
- */
 export interface Mailbox {
     id: string;
     name: string;
@@ -21,9 +12,6 @@ export interface Mailbox {
     myRights?: MailboxRights;
 }
 
-/**
- * Mailbox rights
- */
 export interface MailboxRights {
     mayReadItems?: boolean;
     mayAddItems?: boolean;
