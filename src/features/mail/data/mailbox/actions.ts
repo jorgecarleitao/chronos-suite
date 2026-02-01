@@ -182,9 +182,7 @@ export async function getMailboxByName(
 
         const mailboxes = response.list as readonly JmapMailbox[];
         mailboxCache = new Map(mailboxes.map((m) => [m.name.toLowerCase(), m]));
-        mailboxByRoleCache = new Map(
-            mailboxes.filter((m) => m.role).map((m) => [m.role!, m])
-        );
+        mailboxByRoleCache = new Map(mailboxes.filter((m) => m.role).map((m) => [m.role!, m]));
     }
     return mailboxCache.get(name.toLowerCase());
 }

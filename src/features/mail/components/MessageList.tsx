@@ -168,7 +168,14 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
     const handleDeleteClick = (message: MessageMetadata, event: Event) => {
         event.stopPropagation();
         setMessageToDelete(message.id);
-        setDeleteDialogOpen(true);
+        
+        // Only show confirmation dialog when deleting from Trash
+        if (mailbox.toLowerCase() === 'trash') {
+            setDeleteDialogOpen(true);
+        } else {
+            // Delete directly for other mailboxes
+            handleDeleteConfirm();
+        }
     };
 
     const handleDeleteConfirm = async () => {
@@ -190,7 +197,13 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
 
     const handleBulkDeleteClick = () => {
         if (operations.selectedIds.size > 0) {
-            setBulkDeleteDialogOpen(true);
+            // Only show confirmation dialog when deleting from Trash
+            if (mailbox.toLowerCase() === 'trash') {
+                setBulkDeleteDialogOpen(true);
+            } else {
+                // Delete directly for other mailboxes
+                handleBulkDeleteConfirm();
+            }
         }
     };
 
@@ -266,6 +279,7 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
                 <MessageViewer
                     onClose={handleViewerClose}
                     onDelete={() => loadMessages(currentPage)}
+                    onMailboxChange={onMailboxChange}
                     mailbox={mailbox}
                     emailId={selectedMessage}
                     accountId={accountId}

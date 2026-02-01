@@ -181,30 +181,18 @@ export async function prepareAndSendMessage(accountId: string, draft: Draft) {
     );
 }
 
-export async function sendMessage(
-    accountId: string,
+/**
+ * Build JMAP email object from draft
+ */
+function buildEmailObject(
     draft: Draft,
+    draftsMailboxId: string,
+    defaultIdentity: { email: string; name?: string },
     options?: {
         isHtml?: boolean;
         plainText?: string;
     }
-) {
-    const client = getAuthenticatedClient();
-
-    // Get default identity
-    const defaultIdentity = await getDefaultIdentity(accountId);
-
-    // Get mailboxes for drafts and sent folders
-    const draftsMailbox = await getMailboxByRole(accountId, 'drafts');
-    const sentMailbox = await getMailboxByRole(accountId, 'sent');
-
-    if (!draftsMailbox) {
-        throw new Error('Drafts mailbox not found');
-    }
-    if (!sentMailbox) {
-        throw new Error('Sent mailbox not found');
-    }
-
+): any {
     // Convert Draft to EmailData
     const emailData = draftToEmailData(draft);
 
@@ -218,7 +206,7 @@ export async function sendMessage(
     }
 
     const emailObject: any = {
-        mailboxIds: { [draftsMailbox.id]: true },
+        mailboxIds: { [draftsMailboxId]: true },
         keywords: { $draft: true },
         from: [{ email: defaultIdentity.email, name: defaultIdentity.name }],
         to: emailData.to,
@@ -321,31 +309,55 @@ export async function sendMessage(
         }
     }
 
-    // Create the email
-    const [createResponse] = await client.request([
-        'Email/set',
-        {
+    return { emailObject, emailData };
+}
+
+export async function sendMessage(
+    accountId: string,
+    draft: Draft,
+    options?: {
+        isHtml?: boolean;
+        plainText?: string;
+    }
+) {
+    const client = getAuthenticatedClient();
+
+    // Get default identity
+    const defaultIdentity = await getDefaultIdentity(accountId);
+
+    // Get mailboxes for drafts and sent folders
+    const draftsMailbox = await getMailboxByRole(accountId, 'drafts');
+    const sentMailbox = await getMailboxByRole(accountId, 'sent');
+
+    if (!draftsMailbox) {
+        throw new Error('Drafts mailbox not found');
+    }
+    if (!sentMailbox) {
+        throw new Error('Sent mailbox not found');
+    }
+
+    // Build email object
+    const { emailObject, emailData } = buildEmailObject(
+        draft,
+        draftsMailbox.id,
+        defaultIdentity,
+        options
+    );
+
+    // Create and submit the email in a single batch request
+    const [response] = await client.requestMany((ref) => {
+        const emailSet = ref.Email.set({
             accountId,
             create: {
                 email1: emailObject,
             },
-        },
-    ]);
+        });
 
-    if (createResponse.notCreated) {
-        throw new Error(`Failed to create email: ${JSON.stringify(createResponse.notCreated)}`);
-    }
-
-    const createdEmail = createResponse.created.email1;
-
-    // Submit the email
-    const [submitResponse] = await client.request([
-        'EmailSubmission/set',
-        {
+        const submission = ref.EmailSubmission.set({
             accountId,
             create: {
                 sub1: {
-                    emailId: createdEmail.id,
+                    emailId: '#email1',
                     identityId: defaultIdentity.id,
                     envelope: {
                         mailFrom: {
@@ -365,14 +377,22 @@ export async function sendMessage(
                     'keywords/$draft': null,
                 },
             },
-        },
-    ]);
+        });
 
-    if (submitResponse.notCreated) {
-        throw new Error(`Failed to submit email: ${JSON.stringify(submitResponse.notCreated)}`);
+        return { emailSet, submission };
+    });
+
+    if (response.emailSet.notCreated) {
+        throw new Error(`Failed to create email: ${JSON.stringify(response.emailSet.notCreated)}`);
     }
 
-    return submitResponse.created.sub1;
+    if (response.submission.notCreated) {
+        throw new Error(
+            `Failed to submit email: ${JSON.stringify(response.submission.notCreated)}`
+        );
+    }
+
+    return response.submission.created?.sub1;
 }
 
 export async function trashMessages(accountId: string, emailIds: string[]) {

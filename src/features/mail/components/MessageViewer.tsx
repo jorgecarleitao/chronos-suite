@@ -40,6 +40,7 @@ import { getPrimaryAccountId } from '../../../data/accounts';
 interface MessageViewerProps {
     onClose: () => void;
     onDelete?: () => void;
+    onMailboxChange?: () => void;
     mailbox: string;
     emailId: string;
     accountId: string;
@@ -58,6 +59,7 @@ interface MessageViewerProps {
 export default function MessageViewer({
     onClose,
     onDelete,
+    onMailboxChange,
     mailbox,
     emailId,
     accountId,
@@ -170,6 +172,8 @@ export default function MessageViewer({
             if (isUnread) {
                 try {
                     await apiMarkAsRead(accountId, emailId);
+                    // Refresh mailbox counts after marking as read
+                    onMailboxChange?.();
                 } catch (err) {
                     console.error('Failed to mark message as read:', err);
                 }
@@ -186,7 +190,13 @@ export default function MessageViewer({
     };
 
     const handleDeleteClick = () => {
-        setDeleteDialogOpen(true);
+        // Only show confirmation dialog when deleting from Trash
+        if (mailbox.toLowerCase() === 'trash') {
+            setDeleteDialogOpen(true);
+        } else {
+            // Delete directly for other mailboxes
+            handleDeleteConfirm();
+        }
     };
 
     const handleDeleteConfirm = async () => {

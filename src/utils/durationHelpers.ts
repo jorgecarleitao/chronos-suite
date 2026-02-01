@@ -6,7 +6,7 @@ export function parseDuration(duration: string): number {
     const matches = duration.match(regex);
 
     if (!matches) {
-        return 3600000; // Default 1 hour
+        return 0;
     }
 
     const hours = parseInt(matches[1] || '0', 10);
@@ -29,11 +29,9 @@ export function formatDuration(durationMs: number): string {
     if (hours > 0) result += `${hours}H`;
     if (minutes > 0) result += `${minutes}M`;
     if (seconds > 0) result += `${seconds}S`;
-    
+
     // If duration is 0, return PT0S
     if (result === 'PT') result = 'PT0S';
-    
+
     return result;
 }
-
-

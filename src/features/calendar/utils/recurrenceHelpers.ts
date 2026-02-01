@@ -197,5 +197,3 @@ function advanceDate(date: Date, frequency: string, interval: number): Date {
 
     return next;
 }
-
-

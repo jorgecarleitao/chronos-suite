@@ -3,18 +3,12 @@ import { getDefaultIdentity } from './identityService';
 import type { Invite } from '../utils/calendarInviteParser';
 import { parseDuration, formatDuration } from '../utils/durationHelpers';
 
-/**
- * Minimal calendar info
- */
 export interface CalendarInfo {
     id: string;
     name: string;
     isDefault?: boolean;
 }
 
-/**
- * Minimal event info for checking existence
- */
 export interface EventInfo {
     id: string;
     title: string;
@@ -45,7 +39,7 @@ export async function fetchCalendars(accountId: string): Promise<CalendarInfo[]>
 export async function getEvent(
     accountId: string,
     calendarId: string,
-    eventId: string,
+    eventId: string
 ): Promise<EventInfo | null> {
     const client = getAuthenticatedClient();
 
@@ -91,9 +85,6 @@ export async function getEvent(
     };
 }
 
-/**
- * Import a calendar invite from an email into the user's calendar
- */
 export async function importCalendarInvite(
     accountId: string,
     calendarId: string,
@@ -195,5 +186,3 @@ export async function importCalendarInvite(
         calendarId,
     };
 }
-
-

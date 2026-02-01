@@ -303,8 +303,7 @@ export async function respondToCalendarInvite(
             event.participants as Record<string, any>
         )) {
             // Match by scheduleId or sendTo.imip
-            if (participant.scheduleId === scheduleId || 
-                (participant.sendTo?.imip === scheduleId)) {
+            if (participant.scheduleId === scheduleId || participant.sendTo?.imip === scheduleId) {
                 userParticipantId = participantId;
                 break;
             }
@@ -399,9 +398,7 @@ export function expandRecurringEvents(
 
                         // Recalculate end date if duration is also overridden
                         if ((override as any).duration) {
-                            const durationMs = parseDuration(
-                                (override as any).duration
-                            );
+                            const durationMs = parseDuration((override as any).duration);
                             instance.end = new Date(newStart.getTime() + durationMs);
                         } else {
                             // Maintain the same duration
@@ -423,5 +420,3 @@ export function expandRecurringEvents(
 
     return expandedEvents;
 }
-
-

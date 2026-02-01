@@ -53,40 +53,36 @@ function mapContactCardToContactInfo(contact: any): ContactInfo {
 }
 
 export async function fetchContacts(accountId: string, emails?: string[]): Promise<ContactInfo[]> {
+    // Build filter if emails are provided
+    const filter =
+        emails && emails.length > 0
+            ? {
+                  operator: 'or',
+                  conditions: emails.map((email) => ({ emailAddress: email })),
+              }
+            : undefined;
+
     return withAuthHandling(async () => {
         const client = getAuthenticatedClient();
-
-        // Build filter if emails are provided
-        const filter =
-            emails && emails.length > 0
-                ? {
-                      operator: 'or',
-                      conditions: emails.map((email) => ({ emailAddress: email })),
-                  }
-                : undefined;
-
-        // Query for contacts with optional email filter
-        const [queryResponse] = await client.request([
-            'ContactCard/query' as any,
-            {
+        const [response] = await client.requestMany((ref) => {
+            const query = ref.ContactCard.query({
                 accountId,
                 ...(filter && { filter }),
-            },
-        ]);
+            });
 
-        if (!queryResponse.ids || queryResponse.ids.length === 0) {
+            const get = ref.ContactCard.get({
+                accountId,
+                ids: query.$ref('/ids'),
+                properties: ['id', 'name', 'emails', 'organizations', 'titles'],
+            });
+
+            return { query, get };
+        });
+
+        if (!response.get.list || response.get.list.length === 0) {
             return [];
         }
 
-        const [getResponse] = await client.request([
-            'ContactCard/get' as any,
-            {
-                accountId,
-                ids: queryResponse.ids,
-                properties: ['id', 'name', 'emails', 'organizations', 'titles'],
-            },
-        ]);
-
-        return getResponse.list.map(mapContactCardToContactInfo);
+        return response.get.list.map(mapContactCardToContactInfo);
     });
 }
