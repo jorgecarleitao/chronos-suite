@@ -17,6 +17,15 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+import FormatBoldIcon from '@mui/icons-material/FormatBold';
+import FormatItalicIcon from '@mui/icons-material/FormatItalic';
+import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
+import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
+import FormatQuoteIcon from '@mui/icons-material/FormatQuote';
+import CodeIcon from '@mui/icons-material/Code';
+import LinkIcon from '@mui/icons-material/Link';
+import ImageIcon from '@mui/icons-material/Image';
+import Tooltip from '@mui/material/Tooltip';
 
 import ExpandableWindow from '../../../components/ExpandableWindow';
 
@@ -194,6 +203,7 @@ interface BodyEditorProps {
 
 function BodyEditor({ body, onBodyChange, onImageUpload, inlineImages }: BodyEditorProps) {
     const [showPreview, setShowPreview] = useState(false);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
     const theme = useTheme();
     const { t } = useTranslation();
 
@@ -223,6 +233,85 @@ function BodyEditor({ body, onBodyChange, onImageUpload, inlineImages }: BodyEdi
         return previewBody;
     };
 
+    // Markdown formatting functions
+    const insertMarkdown = (before: string, after: string = '', placeholder: string = '') => {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const selectedText = body.substring(start, end);
+        const textToInsert = selectedText || placeholder;
+        
+        const newText = body.substring(0, start) + before + textToInsert + after + body.substring(end);
+        onBodyChange(newText);
+
+        // Set cursor position after insertion
+        setTimeout(() => {
+            const newCursorPos = start + before.length + textToInsert.length;
+            textarea.focus();
+            textarea.setSelectionRange(newCursorPos, newCursorPos);
+        }, 0);
+    };
+
+    const insertLineMarkdown = (prefix: string) => {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        
+        // Find the start of the current line
+        const lineStart = body.lastIndexOf('\n', start - 1) + 1;
+        const lineEnd = body.indexOf('\n', end);
+        const actualLineEnd = lineEnd === -1 ? body.length : lineEnd;
+        
+        const selectedLines = body.substring(lineStart, actualLineEnd);
+        const lines = selectedLines.split('\n');
+        
+        const formattedLines = lines.map(line => prefix + line).join('\n');
+        
+        const newText = body.substring(0, lineStart) + formattedLines + body.substring(actualLineEnd);
+        onBodyChange(newText);
+
+        setTimeout(() => {
+            textarea.focus();
+            const cursorPos = lineStart + prefix.length;
+            textarea.setSelectionRange(cursorPos, cursorPos);
+        }, 0);
+    };
+
+    const formatBold = () => insertMarkdown('**', '**', 'bold text');
+    const formatItalic = () => insertMarkdown('*', '*', 'italic text');
+    const formatCode = () => insertMarkdown('`', '`', 'code');
+    const formatLink = () => insertMarkdown('[', '](url)', 'link text');
+    const formatH1 = () => insertLineMarkdown('# ');
+    const formatH2 = () => insertLineMarkdown('## ');
+    const formatH3 = () => insertLineMarkdown('### ');
+    const formatBulletList = () => insertLineMarkdown('- ');
+    const formatNumberList = () => insertLineMarkdown('1. ');
+    const formatQuote = () => insertLineMarkdown('> ');
+
+    // Handle keyboard shortcuts
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (e.ctrlKey || e.metaKey) {
+            switch (e.key.toLowerCase()) {
+                case 'b':
+                    e.preventDefault();
+                    formatBold();
+                    break;
+                case 'i':
+                    e.preventDefault();
+                    formatItalic();
+                    break;
+                case 'k':
+                    e.preventDefault();
+                    formatLink();
+                    break;
+            }
+        }
+    };
+
     return (
         <Box flex={1} minHeight={0} display="flex" flexDirection="column" px={2} pt={2}>
             {/* Editor Tabs */}
@@ -243,17 +332,78 @@ function BodyEditor({ body, onBodyChange, onImageUpload, inlineImages }: BodyEdi
                 </Button>
             </Stack>
 
+            {/* Markdown Toolbar - only show when editing */}
+            {!showPreview && (
+                <Stack direction="row" spacing={0.5} mb={1} flexWrap="wrap" gap={0.5}>
+                    <Tooltip title="Bold (Ctrl+B)">
+                        <IconButton size="small" onClick={formatBold}>
+                            <FormatBoldIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Italic (Ctrl+I)">
+                        <IconButton size="small" onClick={formatItalic}>
+                            <FormatItalicIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                    <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
+                    <Tooltip title="Heading 1">
+                        <IconButton size="small" onClick={formatH1}>
+                            <Typography variant="caption" fontWeight="bold">H1</Typography>
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Heading 2">
+                        <IconButton size="small" onClick={formatH2}>
+                            <Typography variant="caption" fontWeight="bold">H2</Typography>
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Heading 3">
+                        <IconButton size="small" onClick={formatH3}>
+                            <Typography variant="caption" fontWeight="bold">H3</Typography>
+                        </IconButton>
+                    </Tooltip>
+                    <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
+                    <Tooltip title="Bullet List">
+                        <IconButton size="small" onClick={formatBulletList}>
+                            <FormatListBulletedIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Numbered List">
+                        <IconButton size="small" onClick={formatNumberList}>
+                            <FormatListNumberedIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Quote">
+                        <IconButton size="small" onClick={formatQuote}>
+                            <FormatQuoteIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                    <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
+                    <Tooltip title="Code">
+                        <IconButton size="small" onClick={formatCode}>
+                            <CodeIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Link (Ctrl+K)">
+                        <IconButton size="small" onClick={formatLink}>
+                            <LinkIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                </Stack>
+            )}
+
             {!showPreview ? (
                 <TextField
                     value={body}
                     onChange={(e) => onBodyChange((e.target as HTMLTextAreaElement).value)}
                     onPaste={handlePaste}
+                    onKeyDown={handleKeyDown}
                     placeholder={t('compose.writeMessageMarkdown')}
                     multiline
                     minRows={10}
                     maxRows={20}
                     fullWidth
                     variant="outlined"
+                    inputRef={textareaRef}
                     InputProps={{
                         sx: {
                             fontFamily: 'monospace',
