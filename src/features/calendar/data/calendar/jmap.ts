@@ -1,3 +1,13 @@
+export interface JMAPShareRights {
+    mayReadFreeBusy?: boolean;
+    mayReadItems?: boolean;
+    mayWriteAll?: boolean;
+    mayWriteOwn?: boolean;
+    mayUpdatePrivate?: boolean;
+    mayRSVP?: boolean;
+    mayAdmin?: boolean;
+}
+
 export interface JMAPCalendar {
     id: string;
     name: string;
@@ -8,12 +18,14 @@ export interface JMAPCalendar {
     isSubscribed?: boolean;
     isDefault?: boolean;
     role?: string;
-    shareWith?: Record<string, any>;
+    shareWith?: Record<string, JMAPShareRights>;
     myRights?: {
+        mayReadFreeBusy: boolean;
         mayReadItems: boolean;
-        mayAddItems: boolean;
-        mayModifyItems: boolean;
-        mayRemoveItems: boolean;
+        mayWriteAll: boolean;
+        mayWriteOwn: boolean;
+        mayUpdatePrivate: boolean;
+        mayRSVP: boolean;
         mayAdmin: boolean;
         mayRename: boolean;
         mayDelete: boolean;

@@ -465,6 +465,7 @@ export default function Calendar() {
             <CalendarManagementDialog
                 open={calendarDialogOpen}
                 calendar={editingCalendar}
+                accountId={accountId}
                 onClose={() => {
                     setCalendarDialogOpen(false);
                     setEditingCalendar(null);
