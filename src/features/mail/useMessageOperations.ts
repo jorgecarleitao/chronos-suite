@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'preact/hooks';
+import { useState, useCallback, useMemo } from 'preact/hooks';
 import {
     MessageMetadata,
     deleteMessages,
@@ -179,7 +179,7 @@ export default function useMessageOperations({
         [accountId, onMessagesChange]
     );
 
-    return {
+    return useMemo(() => ({
         selectedIds,
         selectAll,
         clearSelection,
@@ -192,5 +192,18 @@ export default function useMessageOperations({
         bulkMarkAsUnflagged,
         deleteOne,
         toggleStar,
-    };
+    }), [
+        selectedIds,
+        selectAll,
+        clearSelection,
+        toggleSelectAll,
+        toggleSelection,
+        bulkDelete,
+        bulkMarkAsRead,
+        bulkMarkAsUnread,
+        bulkMarkAsFlagged,
+        bulkMarkAsUnflagged,
+        deleteOne,
+        toggleStar,
+    ]);
 }

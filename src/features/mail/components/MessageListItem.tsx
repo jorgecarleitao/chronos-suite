@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'preact/hooks';
-import { useTranslation } from 'react-i18next';
+import { useMemo } from 'preact/hooks';
+import { memo } from 'preact/compat';
 import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
@@ -29,6 +29,17 @@ interface MessageListItemProps {
     onCheckboxChange: (messageId: string) => void;
     onDelete: (message: MessageMetadata, event: Event) => void;
     onToggleStar: (messageId: string, isFlagged: boolean, event: Event) => void;
+    translations: {
+        unknownSender: string;
+        noSubject: string;
+        toggleStar: string;
+        delete: string;
+        attachments: string;
+        company: string;
+        title: string;
+        email: string;
+        contactInAddressBook: string;
+    };
 }
 
 const isUnread = (flags: string[]) => !flags.some((flag) => flag === 'seen');
@@ -47,7 +58,7 @@ const formatDate = (date: Date | null) => {
     }
 };
 
-export default function MessageListItem({
+function MessageListItem({
     message,
     contact,
     isSelected,
@@ -56,23 +67,22 @@ export default function MessageListItem({
     onCheckboxChange,
     onDelete,
     onToggleStar,
+    translations,
 }: MessageListItemProps) {
-    const { t } = useTranslation();
-
-    const displayName = message.from_name || message.from_email || t('message.unknownSender');
+    const displayName = message.from_name || message.from_email || translations.unknownSender;
     const formattedDate = formatDate(message.date);
     const unread = isUnread(message.flags);
     const flagged = isFlagged(message.flags);
 
-    const renderFromField = () => {
+    const renderFromField = useMemo(() => {
         if (!contact) {
             return displayName;
         }
 
         const contactInfo = [
-            contact.company && `${t('contacts.company')}: ${contact.company}`,
-            contact.jobTitle && `${t('contacts.title')}: ${contact.jobTitle}`,
-            contact.email && `${t('contacts.email')}: ${contact.email}`,
+            contact.company && `${translations.company}: ${contact.company}`,
+            contact.jobTitle && `${translations.title}: ${contact.jobTitle}`,
+            contact.email && `${translations.email}: ${contact.email}`,
         ]
             .filter(Boolean)
             .join('\n');
@@ -81,7 +91,7 @@ export default function MessageListItem({
             <Tooltip
                 title={
                     <Box sx={{ whiteSpace: 'pre-line' }}>
-                        {contactInfo || t('message.contactInAddressBook')}
+                        {contactInfo || translations.contactInAddressBook}
                     </Box>
                 }
                 arrow
@@ -100,7 +110,7 @@ export default function MessageListItem({
                 />
             </Tooltip>
         );
-    };
+    }, [contact, displayName, translations]);
 
     return (
         <ListItem
@@ -121,7 +131,7 @@ export default function MessageListItem({
                 <Stack direction="row" spacing={0.5}>
                     <IconButton
                         edge="end"
-                        aria-label={t('messageList.toggleStar')}
+                        aria-label={translations.toggleStar}
                         onClick={(e) => onToggleStar(message.id, flagged, e)}
                         size="small"
                     >
@@ -129,7 +139,7 @@ export default function MessageListItem({
                     </IconButton>
                     <IconButton
                         edge="end"
-                        aria-label={t('common.delete')}
+                        aria-label={translations.delete}
                         onClick={(e) => onDelete(message, e)}
                         size="small"
                     >
@@ -143,8 +153,8 @@ export default function MessageListItem({
                 <Stack direction="row" spacing={1} alignItems="center" width="100%" sx={{ pr: 10 }}>
                     {unread ? <MailIcon color="primary" /> : <DraftsIcon />}
                     <ListItemText
-                        primary={renderFromField()}
-                        secondary={message.subject || t('messageHeader.noSubject')}
+                        primary={renderFromField}
+                        secondary={message.subject || translations.noSubject}
                         primaryTypographyProps={{
                             fontWeight: unread ? 'bold' : 'normal',
                         }}
@@ -152,7 +162,7 @@ export default function MessageListItem({
                     />
                     <Stack direction="row" spacing={0.5} alignItems="center" sx={{ flexShrink: 0 }}>
                         {message.hasAttachment && (
-                            <Tooltip title={t('attachments.attachments')}>
+                            <Tooltip title={translations.attachments}>
                                 <AttachFileIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
                             </Tooltip>
                         )}
@@ -165,3 +175,5 @@ export default function MessageListItem({
         </ListItem>
     );
 }
+
+export default memo(MessageListItem);

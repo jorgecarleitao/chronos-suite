@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'preact/hooks';
+import { useState, useEffect, useCallback, useMemo } from 'preact/hooks';
 import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import List from '@mui/material/List';
@@ -86,15 +86,27 @@ export default function MessageList({ mailbox, accountId, mailboxRole, onMailbox
         },
     });
 
+    // Memoize translations to avoid re-creating on every render
+    const translations = useMemo(() => ({
+        unknownSender: t('message.unknownSender'),
+        noSubject: t('messageHeader.noSubject'),
+        toggleStar: t('messageList.toggleStar'),
+        delete: t('common.delete'),
+        attachments: t('attachments.attachments'),
+        company: t('contacts.company'),
+        title: t('contacts.title'),
+        email: t('contacts.email'),
+        contactInAddressBook: t('message.contactInAddressBook'),
+    }), [t]);
+
     useEffect(() => {
         setCurrentPage(1);
         loadMessages();
     }, [mailbox]);
 
-    // Batch fetch contacts for all messages
+    // Batch fetch contacts for all messages - non-blocking
     useEffect(() => {
         if (messages.length === 0) {
-            setContactsMap(new Map());
             return;
         }
 
@@ -110,7 +122,6 @@ export default function MessageList({ mailbox, accountId, mailboxRole, onMailbox
                 );
 
                 if (uniqueEmails.length === 0) {
-                    setContactsMap(new Map());
                     return;
                 }
 
@@ -124,10 +135,10 @@ export default function MessageList({ mailbox, accountId, mailboxRole, onMailbox
                 setContactsMap(map);
             } catch (err) {
                 console.error('Failed to fetch contacts:', err);
-                setContactsMap(new Map());
             }
         };
 
+        // Don't block rendering - fetch contacts in background
         fetchContacts();
     }, [messages]);
 
@@ -147,7 +158,7 @@ export default function MessageList({ mailbox, accountId, mailboxRole, onMailbox
         }
     }
 
-    const handleMessageClick = async (message: MessageMetadata) => {
+    const handleMessageClick = useCallback(async (message: MessageMetadata) => {
         if (mailbox.toLowerCase() === 'drafts') {
             try {
                 const data = await fetchMessage(accountId, message.id);
@@ -157,17 +168,19 @@ export default function MessageList({ mailbox, accountId, mailboxRole, onMailbox
                 setError(t('messageList.failedToLoadDraft'));
             }
         } else {
+            // Update selection state immediately for instant visual feedback
             setSelectedMessage(message.id);
-            setViewerOpen(true);
+            // Defer opening viewer to not block the UI
+            setTimeout(() => setViewerOpen(true), 0);
         }
-    };
+    }, [accountId, mailbox, t]);
 
     const handleViewerClose = () => {
         setViewerOpen(false);
         loadMessages(currentPage);
     };
 
-    const handleDeleteClick = (message: MessageMetadata, event: Event) => {
+    const handleDeleteClick = useCallback((message: MessageMetadata, event: Event) => {
         event.stopPropagation();
         setMessageToDelete(message.id);
 
@@ -176,11 +189,11 @@ export default function MessageList({ mailbox, accountId, mailboxRole, onMailbox
             setDeleteDialogOpen(true);
         } else {
             // Delete directly for other mailboxes
-            handleDeleteConfirm();
+            operations.deleteOne(message.id);
         }
-    };
+    }, [mailbox, operations]);
 
-    const handleDeleteConfirm = async () => {
+    const handleDeleteConfirm = useCallback(async () => {
         if (!messageToDelete) return;
         try {
             await operations.deleteOne(messageToDelete);
@@ -190,14 +203,33 @@ export default function MessageList({ mailbox, accountId, mailboxRole, onMailbox
             setDeleteDialogOpen(false);
             setMessageToDelete(null);
         }
-    };
+    }, [messageToDelete, operations, t]);
 
-    const handleDeleteCancel = () => {
+    const handleDeleteCancel = useCallback(() => {
         setDeleteDialogOpen(false);
         setMessageToDelete(null);
-    };
+    }, []);
 
-    const handleBulkDeleteClick = () => {
+    const handleToggleStar = useCallback((messageId: string, isFlagged: boolean, event: Event) => {
+        event.stopPropagation();
+        operations.toggleStar(messageId, isFlagged);
+    }, [operations]);
+
+    const handleBulkDeleteConfirm = useCallback(async () => {
+        try {
+            await operations.bulkDelete();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : t('messageList.failedToDeleteMultiple'));
+        } finally {
+            setBulkDeleteDialogOpen(false);
+        }
+    }, [operations, t]);
+
+    const handleBulkDeleteCancel = useCallback(() => {
+        setBulkDeleteDialogOpen(false);
+    }, []);
+
+    const handleBulkDeleteClick = useCallback(() => {
         if (operations.selectedIds.size > 0) {
             // Only show confirmation dialog when deleting from Trash
             if (mailbox.toLowerCase() === 'trash') {
@@ -207,21 +239,7 @@ export default function MessageList({ mailbox, accountId, mailboxRole, onMailbox
                 handleBulkDeleteConfirm();
             }
         }
-    };
-
-    const handleBulkDeleteConfirm = async () => {
-        try {
-            await operations.bulkDelete();
-        } catch (err) {
-            setError(err instanceof Error ? err.message : t('messageList.failedToDeleteMultiple'));
-        } finally {
-            setBulkDeleteDialogOpen(false);
-        }
-    };
-
-    const handleBulkDeleteCancel = () => {
-        setBulkDeleteDialogOpen(false);
-    };
+    }, [operations.selectedIds.size, mailbox, handleBulkDeleteConfirm]);
 
     if (loading) {
         return (
@@ -307,10 +325,8 @@ export default function MessageList({ mailbox, accountId, mailboxRole, onMailbox
                                 onSelect={handleMessageClick}
                                 onCheckboxChange={operations.toggleSelection}
                                 onDelete={handleDeleteClick}
-                                onToggleStar={(messageId, isFlagged, event) => {
-                                    event.stopPropagation();
-                                    operations.toggleStar(messageId, isFlagged);
-                                }}
+                                onToggleStar={handleToggleStar}
+                                translations={translations}
                             />
                         ))}
                     </List>
