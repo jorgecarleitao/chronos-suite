@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'preact/hooks';
 import Box from '@mui/material/Box';
-import Paper from '@mui/material/Paper';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
@@ -9,19 +8,17 @@ import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
-import Collapse from '@mui/material/Collapse';
 import Chip from '@mui/material/Chip';
 import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 
-import CloseIcon from '@mui/icons-material/Close';
 import SendIcon from '@mui/icons-material/Send';
-import MinimizeIcon from '@mui/icons-material/Minimize';
-import MaximizeIcon from '@mui/icons-material/Maximize';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+
+import ExpandableWindow from '../../../components/ExpandableWindow';
 
 import Markdown from 'preact-markdown';
 import {
@@ -34,8 +31,8 @@ import {
 } from '../data/message';
 import AttachmentsSection from './AttachmentsSection';
 
-const composerWidth = 600;
-const composerHeight = 600;
+const COMPOSER_WIDTH = 600;
+const COMPOSER_HEIGHT = 600;
 const AUTO_SAVE_DELAY = 3000; // 3 seconds
 
 // Utility functions
@@ -82,83 +79,6 @@ interface ComposeEmailProps {
     message?: DraftMessage;
     draftEmailId?: string;
     accountId: string;
-}
-
-// Header Component
-interface ComposerHeaderProps {
-    autoSaveStatus: AutoSaveStatus;
-    minimized: boolean;
-    onMinimize: () => void;
-    onClose: () => void;
-    onExpandClick: () => void;
-}
-
-function ComposerHeader({
-    autoSaveStatus,
-    minimized,
-    onMinimize,
-    onClose,
-    onExpandClick,
-}: ComposerHeaderProps) {
-    const { t } = useTranslation();
-    return (
-        <Stack
-            direction="row"
-            justifyContent="space-between"
-            alignItems="center"
-            bgcolor="primary.main"
-            color="primary.contrastText"
-            px={2}
-            py={1}
-            onClick={onExpandClick}
-        >
-            <Stack direction="row" alignItems="center" spacing={1}>
-                <Typography variant="subtitle1" fontWeight="medium">
-                    {t('compose.newMessage')}
-                </Typography>
-                {autoSaveStatus === 'saving' && (
-                    <Chip
-                        size="small"
-                        label={t('compose.saving')}
-                        icon={<CircularProgress size={12} color="inherit" />}
-                    />
-                )}
-                {autoSaveStatus === 'saved' && (
-                    <Chip
-                        size="small"
-                        label={t('compose.saved')}
-                        icon={<CheckCircleIcon fontSize="small" />}
-                    />
-                )}
-            </Stack>
-            <Stack direction="row" spacing={0.5}>
-                <IconButton
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onMinimize();
-                    }}
-                    size="small"
-                    color="inherit"
-                >
-                    {minimized ? (
-                        <MaximizeIcon fontSize="small" />
-                    ) : (
-                        <MinimizeIcon fontSize="small" />
-                    )}
-                </IconButton>
-                <IconButton
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onClose();
-                    }}
-                    size="small"
-                    color="inherit"
-                >
-                    <CloseIcon fontSize="small" />
-                </IconButton>
-            </Stack>
-        </Stack>
-    );
 }
 
 // Email Fields Component
@@ -461,7 +381,6 @@ export default function ComposeEmail({
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
-    const [minimized, setMinimized] = useState(false);
     const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
     const currentDraftIdRef = useRef<string | undefined>(draftEmailId);
     const autoSaveTimerRef = useRef<number | null>(null);
@@ -668,7 +587,6 @@ export default function ComposeEmail({
         setShowBcc(false);
         setError(null);
         setSuccess(null);
-        setMinimized(false);
         setAutoSaveStatus('idle');
         currentDraftIdRef.current = undefined;
         lastSavedContentRef.current = '';
@@ -761,111 +679,113 @@ export default function ComposeEmail({
         }
     };
 
+    // Header actions showing auto-save status
+    const headerActions = (
+        <>
+            {autoSaveStatus === 'saving' && (
+                <Chip
+                    size="small"
+                    label={t('compose.saving')}
+                    icon={<CircularProgress size={12} color="inherit" />}
+                />
+            )}
+            {autoSaveStatus === 'saved' && (
+                <Chip
+                    size="small"
+                    label={t('compose.saved')}
+                    icon={<CheckCircleIcon fontSize="small" />}
+                />
+            )}
+        </>
+    );
+
     return (
-        <Paper
-            elevation={8}
-            sx={{
-                position: 'fixed',
-                bottom: 16,
-                right: 16,
-                width: composerWidth,
-                height: minimized ? 'auto' : composerHeight,
-                display: 'flex',
-                flexDirection: 'column',
-                zIndex: 1300,
-                overflow: 'hidden',
-                borderRadius: 2,
-            }}
+        <ExpandableWindow
+            title={t('compose.newMessage')}
+            onClose={handleClose}
+            defaultWidth={COMPOSER_WIDTH}
+            defaultHeight={COMPOSER_HEIGHT}
+            headerActions={headerActions}
         >
-            <ComposerHeader
-                autoSaveStatus={autoSaveStatus}
-                minimized={minimized}
-                onMinimize={() => setMinimized(!minimized)}
-                onClose={handleClose}
-                onExpandClick={() => minimized && setMinimized(false)}
-            />
+            <Stack display="flex" flexDirection="column" height="100%">
+                {/* Success/Error messages */}
+                {(success || error) && (
+                    <Box px={2} pt={1}>
+                        {success && (
+                            <Alert
+                                severity="success"
+                                onClose={() => setSuccess(null)}
+                                sx={{ mb: 1 }}
+                            >
+                                {success}
+                            </Alert>
+                        )}
+                        {error && (
+                            <Alert
+                                severity="error"
+                                onClose={() => setError(null)}
+                                sx={{ mb: 1 }}
+                            >
+                                {error}
+                            </Alert>
+                        )}
+                    </Box>
+                )}
 
-            <Collapse in={!minimized} timeout="auto" unmountOnExit>
-                <Stack height={composerHeight - 48} display="flex" flexDirection="column">
-                    {/* Success/Error messages */}
-                    {(success || error) && (
-                        <Box px={2} pt={1}>
-                            {success && (
-                                <Alert
-                                    severity="success"
-                                    onClose={() => setSuccess(null)}
-                                    sx={{ mb: 1 }}
-                                >
-                                    {success}
-                                </Alert>
-                            )}
-                            {error && (
-                                <Alert
-                                    severity="error"
-                                    onClose={() => setError(null)}
-                                    sx={{ mb: 1 }}
-                                >
-                                    {error}
-                                </Alert>
-                            )}
-                        </Box>
-                    )}
+                <EmailFields
+                    fromName={fromName}
+                    fromEmail={fromEmail}
+                    to={to}
+                    cc={cc}
+                    bcc={bcc}
+                    subject={subject}
+                    showCc={showCc}
+                    showBcc={showBcc}
+                    onToChange={setTo}
+                    onCcChange={setCc}
+                    onBccChange={setBcc}
+                    onSubjectChange={setSubject}
+                    onToggleCc={() => setShowCc(!showCc)}
+                    onToggleBcc={() => setShowBcc(!showBcc)}
+                />
 
-                    <EmailFields
-                        fromName={fromName}
-                        fromEmail={fromEmail}
-                        to={to}
-                        cc={cc}
-                        bcc={bcc}
-                        subject={subject}
-                        showCc={showCc}
-                        showBcc={showBcc}
-                        onToChange={setTo}
-                        onCcChange={setCc}
-                        onBccChange={setBcc}
-                        onSubjectChange={setSubject}
-                        onToggleCc={() => setShowCc(!showCc)}
-                        onToggleBcc={() => setShowBcc(!showBcc)}
-                    />
+                <BodyEditor
+                    body={body}
+                    onBodyChange={setBody}
+                    onImageUpload={handleImageUpload}
+                    inlineImages={inlineImages}
+                />
 
-                    <BodyEditor
-                        body={body}
-                        onBodyChange={setBody}
-                        onImageUpload={handleImageUpload}
-                        inlineImages={inlineImages}
-                    />
+                {/* Hidden file input - always rendered */}
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    style={{ display: 'none' }}
+                    onChange={handleFileAttach}
+                    accept="*/*"
+                />
 
-                    {/* Hidden file input - always rendered */}
-                    <input
-                        ref={fileInputRef}
-                        type="file"
-                        multiple
-                        style={{ display: 'none' }}
-                        onChange={handleFileAttach}
-                        accept="*/*"
-                    />
+                {attachments.length > 0 && (
+                    <Box px={2} pb={1}>
+                        <AttachmentsSection
+                            attachments={attachments}
+                            uploading={uploading}
+                            saving={saving}
+                            fileInputRef={fileInputRef}
+                            onFileAttach={handleFileAttach}
+                            onRemoveAttachment={handleRemoveAttachment}
+                        />
+                    </Box>
+                )}
 
-                    {attachments.length > 0 && (
-                        <Box px={2} pb={1}>
-                            <AttachmentsSection
-                                attachments={attachments}
-                                uploading={uploading}
-                                saving={saving}
-                                fileInputRef={fileInputRef}
-                                onFileAttach={handleFileAttach}
-                                onRemoveAttachment={handleRemoveAttachment}
-                            />
-                        </Box>
-                    )}
-
-                    <ActionsBar
-                        saving={saving}
-                        onSend={handleSend}
-                        onAttach={handleAttachClick}
-                        onDelete={handleDelete}
-                    />
-                </Stack>
-            </Collapse>
-        </Paper>
+                <ActionsBar
+                    saving={saving}
+                    onSend={handleSend}
+                    onAttach={handleAttachClick}
+                    onDelete={handleDelete}
+                />
+            </Stack>
+        </ExpandableWindow>
     );
 }

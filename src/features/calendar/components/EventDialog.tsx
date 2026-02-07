@@ -23,6 +23,7 @@ import RadioGroup from '@mui/material/RadioGroup';
 import Radio from '@mui/material/Radio';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import DeleteIcon from '@mui/icons-material/Delete';
+import ExpandableWindow from '../../../components/ExpandableWindow';
 import type { UICalendarEvent } from '../data/calendarEvent';
 import type { UICalendarEventFormData } from '../data/calendarEvent/ui';
 import type { UICalendar } from '../data/calendar';
@@ -652,12 +653,14 @@ export default function EventDialog({
     };
 
     return (
-        <Dialog open={true} onClose={onClose} maxWidth="sm" fullWidth>
-            <DialogTitle>
-                {mode === 'create' ? t('calendar.create') : t('calendar.edit')}
-            </DialogTitle>
-            <DialogContent>
-                <Stack spacing={2} sx={{ mt: 1 }}>
+        <>
+            <ExpandableWindow
+                title={mode === 'create' ? t('calendar.create') : t('calendar.edit')}
+                onClose={onClose}
+                defaultWidth={600}
+                defaultHeight={700}
+            >
+                <Stack spacing={2} px={3} py={2} sx={{ flex: 1, overflow: 'auto' }}>
                     <TextField
                         label={t('calendar.event.title')}
                         fullWidth
@@ -866,25 +869,36 @@ export default function EventDialog({
                         }
                     />
                 </Stack>
-            </DialogContent>
-            <DialogActions>
-                {mode === 'edit' && event && (
-                    <Button
-                        onClick={handleDelete}
-                        color="error"
-                        startIcon={<DeleteIcon />}
-                        sx={{ mr: 'auto' }}
-                    >
-                        {t('common.delete')}
+
+                {/* Actions Bar */}
+                <Stack
+                    direction="row"
+                    spacing={2}
+                    px={3}
+                    py={2}
+                    borderTop={1}
+                    borderColor="divider"
+                    justifyContent="space-between"
+                    alignItems="center"
+                >
+                    {mode === 'edit' && event && (
+                        <Button
+                            onClick={handleDelete}
+                            color="error"
+                            startIcon={<DeleteIcon />}
+                        >
+                            {t('common.delete')}
+                        </Button>
+                    )}
+                    <Box flex={1} />
+                    <Button onClick={onClose}>{t('common.cancel')}</Button>
+                    <Button onClick={handleSubmit} variant="contained" disabled={!formData.title}>
+                        {mode === 'create'
+                            ? t('calendar.createAndSendInvites')
+                            : t('calendar.saveAndUpdateInvites')}
                     </Button>
-                )}
-                <Button onClick={onClose}>{t('common.cancel')}</Button>
-                <Button onClick={handleSubmit} variant="contained" disabled={!formData.title}>
-                    {mode === 'create'
-                        ? t('calendar.createAndSendInvites')
-                        : t('calendar.saveAndUpdateInvites')}
-                </Button>
-            </DialogActions>
+                </Stack>
+            </ExpandableWindow>
 
             {/* Recurrence modification choice dialog */}
             {pendingModification && (
@@ -900,6 +914,6 @@ export default function EventDialog({
                     action={pendingModification.action}
                 />
             )}
-        </Dialog>
+        </>
     );
 }
