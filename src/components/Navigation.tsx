@@ -84,17 +84,15 @@ export default function Navigation({ mode, toggleTheme }: NavigationProps) {
 
     const drawerContent = (
         <Box onClick={handleDrawerToggle} textAlign="center">
-            <Typography
-                variant="h6"
+            <Box
                 component="a"
                 href="/"
                 marginY={2}
                 display="block"
-                color="inherit"
                 style={{ textDecoration: 'none' }}
             >
-                {brandLabel}
-            </Typography>
+                <img src="/icon.svg" alt="Logo" style={{ height: '40px', width: '40px' }} />
+            </Box>
             <Divider />
             <List>
                 {navItems.map((item) => (
@@ -126,15 +124,13 @@ export default function Navigation({ mode, toggleTheme }: NavigationProps) {
                             <MenuIcon />
                         </IconButton>
                     )}
-                    <Typography
-                        variant="h6"
+                    <Box
                         component="a"
                         href="/"
-                        color="inherit"
-                        style={{ textDecoration: 'none', marginRight: '16px' }}
+                        style={{ textDecoration: 'none', marginRight: '16px', display: 'flex', alignItems: 'center' }}
                     >
-                        {brandLabel}
-                    </Typography>
+                        <img src="/icon.svg" alt="Logo" style={{ height: '40px', width: '40px' }} />
+                    </Box>
                     {!isMobile && (
                         <Stack direction="row" spacing={1} sx={{ flexGrow: 1 }}>
                             {navItems.map((item) => (
