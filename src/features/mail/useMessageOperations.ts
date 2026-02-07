@@ -10,7 +10,8 @@ import {
 } from './data/message';
 
 interface UseMessageOperationsProps {
-    mailboxId: string;
+    accountId: string;
+    mailboxRole?: string;
     messages: MessageMetadata[];
     onMessagesChange: () => void;
 }
@@ -31,7 +32,8 @@ export interface MessageOperationsState {
 }
 
 export default function useMessageOperations({
-    mailboxId,
+    accountId,
+    mailboxRole,
     messages,
     onMessagesChange,
 }: UseMessageOperationsProps): MessageOperationsState {
@@ -71,10 +73,10 @@ export default function useMessageOperations({
         try {
             const ids = Array.from(selectedIds);
             // If we're in the Trash mailbox, permanently delete, otherwise move to trash
-            if (mailboxId.toLowerCase() === 'trash') {
-                await deleteMessages(mailboxId, ids);
+            if (mailboxRole === 'trash') {
+                await deleteMessages(accountId, ids);
             } else {
-                await trashMessages(mailboxId, ids);
+                await trashMessages(accountId, ids);
             }
             clearSelection();
             onMessagesChange();
@@ -82,13 +84,13 @@ export default function useMessageOperations({
             console.error('Failed to delete messages:', error);
             alert('Failed to delete some messages. Please try again.');
         }
-    }, [selectedIds, mailboxId, clearSelection, onMessagesChange]);
+    }, [selectedIds, accountId, mailboxRole, clearSelection, onMessagesChange]);
 
     const bulkMarkAsRead = useCallback(async () => {
         if (selectedIds.size === 0) return;
 
         try {
-            const markPromises = Array.from(selectedIds).map((id) => markAsRead(mailboxId, id));
+            const markPromises = Array.from(selectedIds).map((id) => markAsRead(accountId, id));
             await Promise.all(markPromises);
             clearSelection();
             onMessagesChange();
@@ -96,13 +98,13 @@ export default function useMessageOperations({
             console.error('Failed to mark messages as read:', error);
             alert('Failed to mark messages as read. Please try again.');
         }
-    }, [selectedIds, mailboxId, clearSelection, onMessagesChange]);
+    }, [selectedIds, accountId, clearSelection, onMessagesChange]);
 
     const bulkMarkAsUnread = useCallback(async () => {
         if (selectedIds.size === 0) return;
 
         try {
-            const markPromises = Array.from(selectedIds).map((id) => markAsUnread(mailboxId, id));
+            const markPromises = Array.from(selectedIds).map((id) => markAsUnread(accountId, id));
             await Promise.all(markPromises);
             clearSelection();
             onMessagesChange();
@@ -110,16 +112,16 @@ export default function useMessageOperations({
             console.error('Failed to mark messages as unread:', error);
             alert('Failed to mark messages as unread. Please try again.');
         }
-    }, [selectedIds, mailboxId, clearSelection, onMessagesChange]);
+    }, [selectedIds, accountId, clearSelection, onMessagesChange]);
 
     const deleteOne = useCallback(
         async (messageId: string) => {
             try {
                 // If we're in the Trash mailbox, permanently delete, otherwise move to trash
-                if (mailboxId.toLowerCase() === 'trash') {
-                    await deleteMessages(mailboxId, [messageId]);
+                if (mailboxRole === 'trash') {
+                    await deleteMessages(accountId, [messageId]);
                 } else {
-                    await trashMessages(mailboxId, [messageId]);
+                    await trashMessages(accountId, [messageId]);
                 }
                 onMessagesChange();
             } catch (error) {
@@ -127,14 +129,14 @@ export default function useMessageOperations({
                 alert('Failed to delete message. Please try again.');
             }
         },
-        [mailboxId, onMessagesChange]
+        [accountId, mailboxRole, onMessagesChange]
     );
 
     const bulkMarkAsFlagged = useCallback(async () => {
         if (selectedIds.size === 0) return;
 
         try {
-            const markPromises = Array.from(selectedIds).map((id) => markAsFlagged(mailboxId, id));
+            const markPromises = Array.from(selectedIds).map((id) => markAsFlagged(accountId, id));
             await Promise.all(markPromises);
             clearSelection();
             onMessagesChange();
@@ -142,14 +144,14 @@ export default function useMessageOperations({
             console.error('Failed to star messages:', error);
             alert('Failed to star messages. Please try again.');
         }
-    }, [selectedIds, mailboxId, clearSelection, onMessagesChange]);
+    }, [selectedIds, accountId, clearSelection, onMessagesChange]);
 
     const bulkMarkAsUnflagged = useCallback(async () => {
         if (selectedIds.size === 0) return;
 
         try {
             const markPromises = Array.from(selectedIds).map((id) =>
-                markAsUnflagged(mailboxId, id)
+                markAsUnflagged(accountId, id)
             );
             await Promise.all(markPromises);
             clearSelection();
@@ -158,15 +160,15 @@ export default function useMessageOperations({
             console.error('Failed to unstar messages:', error);
             alert('Failed to unstar messages. Please try again.');
         }
-    }, [selectedIds, mailboxId, clearSelection, onMessagesChange]);
+    }, [selectedIds, accountId, clearSelection, onMessagesChange]);
 
     const toggleStar = useCallback(
         async (messageId: string, isFlagged: boolean) => {
             try {
                 if (isFlagged) {
-                    await markAsUnflagged(mailboxId, messageId);
+                    await markAsUnflagged(accountId, messageId);
                 } else {
-                    await markAsFlagged(mailboxId, messageId);
+                    await markAsFlagged(accountId, messageId);
                 }
                 onMessagesChange();
             } catch (error) {
@@ -174,7 +176,7 @@ export default function useMessageOperations({
                 alert('Failed to toggle star. Please try again.');
             }
         },
-        [mailboxId, onMessagesChange]
+        [accountId, onMessagesChange]
     );
 
     return {

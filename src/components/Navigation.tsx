@@ -24,7 +24,6 @@ import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/Logout';
-import PersonIcon from '@mui/icons-material/Person';
 
 const drawerWidth = 240;
 
@@ -77,10 +76,10 @@ export default function Navigation({ mode, toggleTheme }: NavigationProps) {
 
     const navItems = isAuthenticated
         ? [
-              { path: '/mail', label: t('navigation.mail') },
-              { path: '/contacts', label: t('navigation.contacts') },
-              { path: '/calendar', label: t('navigation.calendar') },
-          ]
+            { path: '/mail', label: t('navigation.mail') },
+            { path: '/contacts', label: t('navigation.contacts') },
+            { path: '/calendar', label: t('navigation.calendar') },
+        ]
         : [{ path: '/login', label: t('navigation.login') }];
 
     const drawerContent = (

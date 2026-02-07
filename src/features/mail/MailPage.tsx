@@ -73,7 +73,7 @@ export default function Mail({ path }: MailProps) {
         try {
             const id = await getPrimaryAccountId();
             setAccountId(id);
-            loadMailboxes(id);
+            loadMailboxes(id, true);
         } catch (error) {
             console.error('Failed to load account:', error);
             if (error instanceof Error && error.message.includes('not initialized')) {
@@ -82,15 +82,17 @@ export default function Mail({ path }: MailProps) {
         }
     };
 
-    const loadMailboxes = async (accId: string) => {
+    const loadMailboxes = async (accId: string, isInitialLoad = false) => {
         try {
             const data = await fetchMailboxes(accId);
             setMailboxes(data.mailboxes || []);
 
-            // Auto-select inbox mailbox
-            const inboxMailbox = findInbox(data.mailboxes || []);
-            if (inboxMailbox) {
-                setSelectedMailbox(inboxMailbox.name);
+            // Auto-select inbox mailbox only on initial load
+            if (isInitialLoad) {
+                const inboxMailbox = findInbox(data.mailboxes || []);
+                if (inboxMailbox) {
+                    setSelectedMailbox(inboxMailbox.name);
+                }
             }
 
             // Fetch shared mailboxes
@@ -226,6 +228,20 @@ export default function Mail({ path }: MailProps) {
     const mailboxTree = sortMailboxes(mailboxes.map(convertToNode));
     const isActualMailbox = isSelectableMailbox(selectedMailbox, mailboxes);
 
+    // Check if selected mailbox is trash
+    const findMailboxByName = (name: string, mailboxList: Mailbox[]): Mailbox | null => {
+        for (const mb of mailboxList) {
+            if (mb.name === name) return mb;
+            if (mb.children.length > 0) {
+                const found = findMailboxByName(name, mb.children);
+                if (found) return found;
+            }
+        }
+        return null;
+    };
+    const selectedMailboxObj = findMailboxByName(selectedMailbox, mailboxes);
+    const mailboxRole = selectedMailboxObj?.role;
+
     return (
         <Box display="flex">
             <MailSidebar
@@ -253,6 +269,7 @@ export default function Mail({ path }: MailProps) {
                             key={`${selectedMailbox}-${refreshTrigger}`}
                             mailbox={selectedMailbox}
                             accountId={accountId}
+                            mailboxRole={mailboxRole}
                             onMailboxChange={refreshMailboxes}
                         />
                     ) : (

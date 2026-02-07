@@ -42,12 +42,13 @@ function messageDetailToDraft(detail: MessageDetail): DraftMessage {
 interface MessageListProps {
     mailbox: string;
     accountId: string;
+    mailboxRole?: string;
     onMailboxChange?: () => void;
 }
 
 const PAGE_SIZE = 50;
 
-export default function MessageList({ mailbox, accountId, onMailboxChange }: MessageListProps) {
+export default function MessageList({ mailbox, accountId, mailboxRole, onMailboxChange }: MessageListProps) {
     const { t } = useTranslation();
     const [messages, setMessages] = useState<MessageMetadata[]>([]);
     const [total, setTotal] = useState(0);
@@ -74,7 +75,8 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
     } | null>(null);
 
     const operations = useMessageOperations({
-        mailboxId: accountId,
+        accountId: accountId,
+        mailboxRole: mailboxRole,
         messages,
         onMessagesChange: () => {
             loadMessages(currentPage);
@@ -168,7 +170,7 @@ export default function MessageList({ mailbox, accountId, onMailboxChange }: Mes
     const handleDeleteClick = (message: MessageMetadata, event: Event) => {
         event.stopPropagation();
         setMessageToDelete(message.id);
-        
+
         // Only show confirmation dialog when deleting from Trash
         if (mailbox.toLowerCase() === 'trash') {
             setDeleteDialogOpen(true);
