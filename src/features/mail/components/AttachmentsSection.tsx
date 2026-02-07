@@ -1,4 +1,4 @@
-import { RefObject } from 'preact';
+import { RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
@@ -15,7 +15,7 @@ interface AttachmentsSectionProps {
     uploading: boolean;
     saving: boolean;
     fileInputRef: RefObject<HTMLInputElement>;
-    onFileAttach: (event: Event) => void;
+    onFileAttach: (event: React.ChangeEvent<HTMLInputElement>) => void;
     onRemoveAttachment: (index: number) => void;
 }
 

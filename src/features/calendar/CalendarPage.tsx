@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'preact/hooks';
-import { route } from 'preact-router';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
 import Paper from '@mui/material/Paper';
@@ -40,12 +40,9 @@ import CalendarManagementDialog from './components/CalendarManagementDialog';
 import { useDocumentTitle } from '../../utils/useDocumentTitle';
 import { useTranslation } from 'react-i18next';
 
-interface CalendarProps {
-    path: string;
-}
-
-export default function Calendar({ path }: CalendarProps) {
+export default function Calendar() {
     const { t, i18n } = useTranslation();
+    const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [accountId, setAccountId] = useState<string | null>(null);
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -115,7 +112,7 @@ export default function Calendar({ path }: CalendarProps) {
         } catch (error) {
             console.error('Failed to load account:', error);
             if (error instanceof Error && error.message.includes('not initialized')) {
-                route('/login');
+                navigate('/login');
             }
         } finally {
             setLoading(false);

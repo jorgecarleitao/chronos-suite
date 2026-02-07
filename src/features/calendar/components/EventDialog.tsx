@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'preact/hooks';
-import type { JSX } from 'preact';
+import { useState, useEffect } from 'react';
+import type { JSX } from 'react';
 import { useTranslation } from 'react-i18next';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';

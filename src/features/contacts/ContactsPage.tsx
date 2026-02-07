@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'preact/hooks';
-import { route } from 'preact-router';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
@@ -33,12 +33,9 @@ import type { UIContactFormData } from './data/contact/ui';
 import { getPrimaryAccountId } from '../../data/accounts';
 import { useTranslation } from 'react-i18next';
 
-interface ContactsProps {
-    path: string;
-}
-
-export default function Contacts({ path }: ContactsProps) {
+export default function Contacts() {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const [contacts, setContacts] = useState<UIContact[]>([]);
     const [addressBooks, setAddressBooks] = useState<UIAddressBook[]>([]);
     const [selectedAddressBook, setSelectedAddressBook] = useState<string | undefined>(undefined);
@@ -71,7 +68,7 @@ export default function Contacts({ path }: ContactsProps) {
         } catch (error) {
             console.error('Failed to load account:', error);
             if (error instanceof Error && error.message.includes('not initialized')) {
-                route('/login');
+                navigate('/login');
             }
         }
     };
@@ -514,6 +511,7 @@ export default function Contacts({ path }: ContactsProps) {
                                                     )}
                                                 </>
                                             }
+                                            secondaryTypographyProps={{ component: 'div' }}
                                         />
                                     </ListItem>
                                 ))}

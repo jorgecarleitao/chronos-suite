@@ -2,7 +2,7 @@
  * Dialog for creating and editing calendars
  */
 
-import { useState, useEffect } from 'preact/hooks';
+import { useState, useEffect } from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';

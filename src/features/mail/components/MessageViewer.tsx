@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'preact/hooks';
-import { JSX } from 'preact';
+import { useState, useEffect } from 'react';
+import { JSX } from 'react';
 import Box from '@mui/material/Box';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';

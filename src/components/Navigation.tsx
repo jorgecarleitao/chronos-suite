@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'preact/hooks';
-import { route } from 'preact-router';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import locale from 'locale-code';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -34,6 +34,7 @@ interface NavigationProps {
 
 export default function Navigation({ mode, toggleTheme }: NavigationProps) {
     const { t, i18n } = useTranslation();
+    const navigate = useNavigate();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const [mobileOpen, setMobileOpen] = useState(false);
@@ -71,7 +72,7 @@ export default function Navigation({ mode, toggleTheme }: NavigationProps) {
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('token_expires_at');
         setIsAuthenticated(false);
-        route('/login');
+        navigate('/login');
     };
 
     const navItems = isAuthenticated
@@ -85,8 +86,8 @@ export default function Navigation({ mode, toggleTheme }: NavigationProps) {
     const drawerContent = (
         <Box onClick={handleDrawerToggle} textAlign="center">
             <Box
-                component="a"
-                href="/"
+                component={Link}
+                to="/"
                 marginY={2}
                 display="block"
                 style={{ textDecoration: 'none' }}
@@ -97,7 +98,7 @@ export default function Navigation({ mode, toggleTheme }: NavigationProps) {
             <List>
                 {navItems.map((item) => (
                     <ListItem key={item.path} disablePadding>
-                        <ListItemButton component="a" href={item.path}>
+                        <ListItemButton component={Link} to={item.path}>
                             <ListItemText
                                 primary={item.label}
                                 primaryTypographyProps={{ textAlign: 'center' }}
@@ -125,8 +126,8 @@ export default function Navigation({ mode, toggleTheme }: NavigationProps) {
                         </IconButton>
                     )}
                     <Box
-                        component="a"
-                        href="/"
+                        component={Link}
+                        to="/"
                         style={{ textDecoration: 'none', marginRight: '16px', display: 'flex', alignItems: 'center' }}
                     >
                         <img src="/icon.svg" alt="Logo" style={{ height: '40px', width: '40px' }} />
@@ -136,8 +137,8 @@ export default function Navigation({ mode, toggleTheme }: NavigationProps) {
                             {navItems.map((item) => (
                                 <Button
                                     key={item.path}
-                                    component="a"
-                                    href={item.path}
+                                    component={Link}
+                                    to={item.path}
                                     color="inherit"
                                 >
                                     {item.label}

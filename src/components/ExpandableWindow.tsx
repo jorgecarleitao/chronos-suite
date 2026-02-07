@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'preact/compat';
+import { useState, type ReactNode } from 'react';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import IconButton from '@mui/material/IconButton';

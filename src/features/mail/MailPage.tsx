@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'preact/hooks';
-import { route } from 'preact-router';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Toolbar from '@mui/material/Toolbar';
@@ -31,11 +31,8 @@ import {
 } from './utils/mailboxHelpers';
 import { useDocumentTitle } from '../../utils/useDocumentTitle';
 
-interface MailProps {
-    path: string;
-}
-
-export default function Mail({ path }: MailProps) {
+export default function Mail() {
+    const navigate = useNavigate();
     const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
     const [sharedMailboxes, setSharedMailboxes] = useState<Mailbox[]>([]);
     const [selectedMailbox, setSelectedMailbox] = useState<string>('INBOX');
@@ -77,7 +74,7 @@ export default function Mail({ path }: MailProps) {
         } catch (error) {
             console.error('Failed to load account:', error);
             if (error instanceof Error && error.message.includes('not initialized')) {
-                route('/login');
+                navigate('/login');
             }
         }
     };
@@ -107,7 +104,7 @@ export default function Mail({ path }: MailProps) {
                 error instanceof Error ? error.message : String(error) || 'Unknown error';
             console.error('Failed to load mailboxes:', errorMessage, error);
             if (errorMessage.includes('not initialized')) {
-                route('/login');
+                navigate('/login');
             }
         } finally {
             setLoading(false);

@@ -1,5 +1,4 @@
-import { useState } from 'preact/hooks';
-import { route } from 'preact-router';
+import { useState } from 'react';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -11,11 +10,7 @@ import Stack from '@mui/material/Stack';
 import { oauthService } from '../data/authService';
 import { useTranslation } from 'react-i18next';
 
-interface LoginProps {
-    path: string;
-}
-
-export default function Login({ path }: LoginProps) {
+export default function Login() {
     const { t } = useTranslation();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);

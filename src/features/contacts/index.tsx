@@ -1,3 +1,3 @@
-import { lazy } from 'preact/compat';
+import { lazy } from 'react';
 
 export const ContactsPage = lazy(() => import('./ContactsPage'));

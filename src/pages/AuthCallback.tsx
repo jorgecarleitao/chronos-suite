@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'preact/hooks';
-import { route } from 'preact-router';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Stack from '@mui/material/Stack';
 import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
@@ -8,12 +8,9 @@ import { oauthService } from '../data/authService';
 import { jmapClient } from '../data/jmapClient';
 import { useTranslation } from 'react-i18next';
 
-interface AuthCallbackProps {
-    path: string;
-}
-
-export default function AuthCallback({ path }: AuthCallbackProps) {
+export default function AuthCallback() {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -26,7 +23,7 @@ export default function AuthCallback({ path }: AuthCallbackProps) {
 
                 if (errorParam) {
                     setError(`Authorization failed: ${errorDescription || errorParam}`);
-                    setTimeout(() => route('/login'), 3000);
+                    setTimeout(() => navigate('/login'), 3000);
                     return;
                 }
 
@@ -42,11 +39,11 @@ export default function AuthCallback({ path }: AuthCallbackProps) {
                 await jmapClient.initialize(accessToken);
 
                 // Redirect to mail page
-                setTimeout(() => route('/mail'), 500);
+                setTimeout(() => navigate('/mail'), 500);
             } catch (err) {
                 console.error('OAuth callback error:', err);
                 setError(err instanceof Error ? err.message : 'Authentication failed');
-                setTimeout(() => route('/login'), 3000);
+                setTimeout(() => navigate('/login'), 3000);
             }
         };
 

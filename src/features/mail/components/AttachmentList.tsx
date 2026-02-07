@@ -1,4 +1,4 @@
-import { JSX } from 'preact';
+import { JSX } from 'react';
 import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';

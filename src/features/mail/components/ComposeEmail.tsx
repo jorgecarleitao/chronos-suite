@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'preact/hooks';
+import { useState, useEffect, useRef } from 'react';
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
@@ -20,7 +20,8 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 
 import ExpandableWindow from '../../../components/ExpandableWindow';
 
-import Markdown from 'preact-markdown';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import {
     createDraft,
     updateDraft,
@@ -196,7 +197,7 @@ function BodyEditor({ body, onBodyChange, onImageUpload, inlineImages }: BodyEdi
     const theme = useTheme();
     const { t } = useTranslation();
 
-    const handlePaste = async (event: ClipboardEvent) => {
+    const handlePaste = async (event: React.ClipboardEvent<HTMLDivElement>) => {
         const items = event.clipboardData?.items;
         if (!items) return;
 
@@ -307,7 +308,7 @@ function BodyEditor({ body, onBodyChange, onImageUpload, inlineImages }: BodyEdi
                         },
                     }}
                 >
-                    {Markdown({ markdown: getPreviewBody() })}
+                    <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked(getPreviewBody()) as string) }} />
                 </Box>
             )}
         </Box>
@@ -632,7 +633,7 @@ export default function ComposeEmail({
         }
     };
 
-    const handleFileAttach = async (event: Event) => {
+    const handleFileAttach = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const input = event.target as HTMLInputElement;
         const files = input.files;
         if (!files || files.length === 0) return;

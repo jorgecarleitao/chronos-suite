@@ -1,5 +1,5 @@
-import { useMemo } from 'preact/hooks';
-import { memo } from 'preact/compat';
+import { useMemo } from 'react';
+import { memo } from 'react';
 import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';

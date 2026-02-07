@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Stack from '@mui/material/Stack';
 import List from '@mui/material/List';
@@ -217,9 +217,7 @@ export default function MailSidebar({
                             fullWidth
                             select
                             value={parentMailboxId}
-                            onChange={(e) =>
-                                setParentMailboxId((e.target as HTMLSelectElement).value)
-                            }
+                            onChange={(e) => setParentMailboxId(e.target.value)}
                             disabled={creating}
                             helperText={t('mailSidebar.leaveEmptyForTopLevel')}
                         >

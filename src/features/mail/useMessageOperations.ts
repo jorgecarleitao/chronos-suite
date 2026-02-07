@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'preact/hooks';
+import { useState, useCallback, useMemo } from 'react';
 import {
     MessageMetadata,
     deleteMessages,

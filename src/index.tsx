@@ -1,11 +1,10 @@
-import { render } from 'preact';
-import { useMemo, useState, Suspense } from 'preact/compat';
-import { useTranslation } from 'react-i18next';
-import Router from 'preact-router';
+import { useMemo, useState, Suspense, useEffect } from 'react';
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 import { createTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
-import { ThemeProvider } from '@emotion/react';
+import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -22,24 +21,32 @@ import { jmapClient } from './data/jmapClient';
 
 import './i18n';
 
-// Auto-initialize JMAP client if we have a valid token
-const initializeFromStorage = async () => {
-    const accessToken = oauthService.getAccessToken();
-    if (accessToken && !oauthService.isTokenExpired()) {
-        try {
-            await jmapClient.initialize(accessToken);
-        } catch (error) {
-            console.error('Failed to initialize JMAP client:', error);
-            oauthService.logout();
-        }
-    }
-};
+const LoadingFallback = () => (
+    <Stack justifyContent="center" alignItems="center" minHeight="100vh">
+        <CircularProgress size={60} />
+    </Stack>
+);
 
-initializeFromStorage();
-
-export default function App() {
+function App() {
     const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
     const [mode, setMode] = useState<'light' | 'dark'>(prefersDarkMode ? 'dark' : 'light');
+
+    // Auto-initialize JMAP client if we have a valid token
+    useEffect(() => {
+        const initializeFromStorage = async () => {
+            const accessToken = oauthService.getAccessToken();
+            if (accessToken && !oauthService.isTokenExpired()) {
+                try {
+                    await jmapClient.initialize(accessToken);
+                } catch (error) {
+                    console.error('Failed to initialize JMAP client:', error);
+                    oauthService.logout();
+                }
+            }
+        };
+
+        initializeFromStorage();
+    }, []);
 
     const theme = useMemo(
         () =>
@@ -55,32 +62,32 @@ export default function App() {
         setMode(theme.palette.mode === 'dark' ? 'light' : 'dark');
     };
 
-    const LoadingFallback = () => (
-        <Stack justifyContent="center" alignItems="center" minHeight="100vh">
-            <CircularProgress size={60} />
-        </Stack>
-    );
-
     return (
         <ThemeProvider theme={theme}>
             <CssBaseline enableColorScheme />
-            <Box>
-                <Navigation mode={mode} toggleTheme={toggleTheme} />
-                <Box component="main">
-                    <Suspense fallback={<LoadingFallback />}>
-                        <Router>
-                            <Login path="/login" />
-                            <AuthCallback path="/auth/callback" />
-                            <MailPage path="/mail" />
-                            <ContactsPage path="/contacts" />
-                            <CalendarPage path="/calendar" />
-                            <Login path="/" />
-                        </Router>
-                    </Suspense>
+            <BrowserRouter>
+                <Box>
+                    <Navigation mode={mode} toggleTheme={toggleTheme} />
+                    <Box component="main">
+                        <Suspense fallback={<LoadingFallback />}>
+                            <Routes>
+                                <Route path="/login" element={<Login />} />
+                                <Route path="/auth/callback" element={<AuthCallback />} />
+                                <Route path="/mail" element={<MailPage />} />
+                                <Route path="/contacts" element={<ContactsPage />} />
+                                <Route path="/calendar" element={<CalendarPage />} />
+                                <Route path="/" element={<Navigate to="/login" replace />} />
+                            </Routes>
+                        </Suspense>
+                    </Box>
                 </Box>
-            </Box>
+            </BrowserRouter>
         </ThemeProvider>
     );
 }
 
-render(<App />, document.getElementById('app')!);
+const container = document.getElementById('app');
+if (container) {
+    const root = createRoot(container);
+    root.render(<App />);
+}
