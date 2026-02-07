@@ -203,7 +203,7 @@
     "messageMetadata.from": "From",
     "messageMetadata.to": "To",
     "messageMetadata.date": "Date",
-    "pagination.showing": "Showing {{start}}-{{end}} of {{total}} messages",
+    "pagination.showing": "Showing {{start}}-{{end}} of {{total}}",
     "pagination.previousPage": "Previous page",
     "pagination.page": "Page {{current}} of {{total}}",
     "pagination.nextPage": "Next page",

@@ -6,13 +6,20 @@ import { withAuthHandling, getAuthenticatedClient } from '../../../../utils/auth
 import type { UIContact, UIContactFormData } from './ui';
 import * as ContactUI from './ui';
 
+export interface ContactsResponse {
+    contacts: UIContact[];
+    total: number;
+}
+
 /**
  * Fetch contacts from an address book
  */
 export async function fetchContacts(
     accountId: string,
-    addressBookId?: string
-): Promise<UIContact[]> {
+    addressBookId?: string,
+    limit = 50,
+    position = 0
+): Promise<ContactsResponse> {
     const client = getAuthenticatedClient();
 
     // Query for contacts
@@ -26,6 +33,9 @@ export async function fetchContacts(
             const query = ref.ContactCard.query({
                 accountId,
                 filter,
+                limit,
+                position,
+                calculateTotal: true,
                 // https://github.com/stalwartlabs/stalwart/discussions/2744
                 /*sort: [
                     { property: 'name/given', isAscending: true },
@@ -41,7 +51,10 @@ export async function fetchContacts(
         })
     );
 
-    return response.get.list.map((jmapContact: any) => ContactUI.fromJmap(jmapContact));
+    return {
+        contacts: response.get.list.map((jmapContact: any) => ContactUI.fromJmap(jmapContact)),
+        total: response.query.total || 0,
+    };
 }
 
 /**

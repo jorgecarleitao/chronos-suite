@@ -20,6 +20,7 @@ export { UI };
 // Re-export UI types for convenience (client format)
 export type { UIContact, UIContactFormData } from './ui';
 
-// Re-export actions namespace
+// Re-export actions namespace and related types
 import * as actions from './actions';
 export { actions };
+export type { ContactsResponse } from './actions';

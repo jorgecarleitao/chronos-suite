@@ -26,6 +26,7 @@ import ContactsIcon from '@mui/icons-material/Contacts';
 import CloseIcon from '@mui/icons-material/Close';
 import SaveIcon from '@mui/icons-material/Save';
 import Sidebar, { drawerWidth } from '../../components/Sidebar';
+import PaginationBar from '../mail/components/PaginationBar';
 // Contact data modules
 import { actions as contactActions, type UIContact } from './data/contact';
 import { actions as addressBookActions, type UIAddressBook } from './data/addressBook';
@@ -33,10 +34,18 @@ import type { UIContactFormData } from './data/contact/ui';
 import { getPrimaryAccountId } from '../../data/accounts';
 import { useTranslation } from 'react-i18next';
 
-export default function Contacts() {
+const PAGE_SIZE = 50;
+
+interface ContactsProps {
+    path: string;
+}
+
+export default function Contacts({ path }: ContactsProps) {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const [contacts, setContacts] = useState<UIContact[]>([]);
+    const [totalContacts, setTotalContacts] = useState(0);
+    const [currentPage, setCurrentPage] = useState(1);
     const [addressBooks, setAddressBooks] = useState<UIAddressBook[]>([]);
     const [selectedAddressBook, setSelectedAddressBook] = useState<string | undefined>(undefined);
     const [loading, setLoading] = useState(true);
@@ -82,12 +91,15 @@ export default function Contacts() {
         }
     };
 
-    const loadContacts = async (accId: string, addressBookId?: string) => {
+    const loadContacts = async (accId: string, addressBookId?: string, page = 1) => {
         setLoading(true);
         setError(null);
         try {
-            const data = await contactActions.fetchContacts(accId, addressBookId);
-            setContacts(data);
+            const offset = (page - 1) * PAGE_SIZE;
+            const data = await contactActions.fetchContacts(accId, addressBookId, PAGE_SIZE, offset);
+            setContacts(data.contacts);
+            setTotalContacts(data.total);
+            setCurrentPage(page);
         } catch (err) {
             setError(err instanceof Error ? err.message : t('contacts.failedToLoadContacts'));
             console.error('Failed to load contacts:', err);
@@ -98,8 +110,9 @@ export default function Contacts() {
 
     const handleAddressBookClick = (addressBookId: string | undefined) => {
         setSelectedAddressBook(addressBookId);
+        setCurrentPage(1);
         if (accountId) {
-            loadContacts(accountId, addressBookId);
+            loadContacts(accountId, addressBookId, 1);
         }
     };
 
@@ -109,7 +122,7 @@ export default function Contacts() {
 
         try {
             await contactActions.deleteContact(accountId, contactId);
-            loadContacts(accountId, selectedAddressBook);
+            loadContacts(accountId, selectedAddressBook, currentPage);
         } catch (err) {
             setError(err instanceof Error ? err.message : t('contacts.failedToDeleteContact'));
         }
@@ -122,7 +135,7 @@ export default function Contacts() {
             await contactActions.updateContact(accountId, contact.id, {
                 isFavorite: !contact.isFavorite,
             });
-            loadContacts(accountId, selectedAddressBook);
+            loadContacts(accountId, selectedAddressBook, currentPage);
         } catch (err) {
             setError(err instanceof Error ? err.message : t('contacts.failedToUpdateContact'));
         }
@@ -202,7 +215,7 @@ export default function Contacts() {
 
             setIsCreating(false);
             setEditingContact(null);
-            await loadContacts(accountId, selectedAddressBook);
+            await loadContacts(accountId, selectedAddressBook, currentPage);
             setError(null);
         } catch (err) {
             setError(
@@ -516,6 +529,19 @@ export default function Contacts() {
                                     </ListItem>
                                 ))}
                             </List>
+                            {totalContacts > 0 && (
+                                <PaginationBar
+                                    currentPage={currentPage}
+                                    totalPages={Math.ceil(totalContacts / PAGE_SIZE)}
+                                    totalMessages={totalContacts}
+                                    pageSize={PAGE_SIZE}
+                                    onPageChange={(page) => {
+                                        if (accountId) {
+                                            loadContacts(accountId, selectedAddressBook, page);
+                                        }
+                                    }}
+                                />
+                            )}
                         </Paper>
                     )}
                 </Box>
