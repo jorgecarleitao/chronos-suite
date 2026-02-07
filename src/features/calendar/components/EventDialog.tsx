@@ -135,22 +135,21 @@ function ParticipantSection({
 
 interface RecurrenceSectionProps {
     recurrence: UIRecurrencePattern;
-    startDate: Date;
     onRecurrenceChange: (pattern: UIRecurrencePattern) => void;
 }
 
-function RecurrenceSection({ recurrence, startDate, onRecurrenceChange }: RecurrenceSectionProps) {
+function RecurrenceSection({ recurrence, onRecurrenceChange }: RecurrenceSectionProps) {
     const { t } = useTranslation();
 
     const daysOfWeek = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
     const dayLabels = [
-        'calendar.monday',
-        'calendar.tuesday',
-        'calendar.wednesday',
-        'calendar.thursday',
-        'calendar.friday',
-        'calendar.saturday',
-        'calendar.sunday',
+        t('calendar.monday'),
+        t('calendar.tuesday'),
+        t('calendar.wednesday'),
+        t('calendar.thursday'),
+        t('calendar.friday'),
+        t('calendar.saturday'),
+        t('calendar.sunday'),
     ];
 
     return (
@@ -228,8 +227,8 @@ function RecurrenceSection({ recurrence, startDate, onRecurrenceChange }: Recurr
                                                     const newDays = e.currentTarget.checked
                                                         ? [...(recurrence.byDayOfWeek || []), day]
                                                         : (recurrence.byDayOfWeek || []).filter(
-                                                              (d) => d !== day
-                                                          );
+                                                            (d) => d !== day
+                                                        );
                                                     onRecurrenceChange({
                                                         ...recurrence,
                                                         byDayOfWeek:
@@ -242,7 +241,7 @@ function RecurrenceSection({ recurrence, startDate, onRecurrenceChange }: Recurr
                                         }
                                         label={
                                             <Typography variant="caption">
-                                                {t(dayLabels[idx])}
+                                                {dayLabels[idx]}
                                             </Typography>
                                         }
                                     />
@@ -660,7 +659,7 @@ export default function EventDialog({
             <DialogContent>
                 <Stack spacing={2} sx={{ mt: 1 }}>
                     <TextField
-                        label={t('calendar.title')}
+                        label={t('calendar.event.title')}
                         fullWidth
                         value={formData.title}
                         onChange={(e: JSX.TargetedEvent<HTMLInputElement>) =>
@@ -859,7 +858,6 @@ export default function EventDialog({
 
                     <RecurrenceSection
                         recurrence={formData.recurrence}
-                        startDate={new Date(`${formData.startDate}T${formData.startTime}`)}
                         onRecurrenceChange={(pattern) =>
                             setFormData({
                                 ...formData,

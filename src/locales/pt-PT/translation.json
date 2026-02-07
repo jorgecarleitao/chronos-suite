@@ -72,6 +72,7 @@
     "common.save": "Guardar",
     "calendar.create": "Criar",
     "calendar.edit": "Editar",
+    "calendar.event.title": "Título do Evento",
     "calendar.startDate": "Data de início",
     "calendar.startTime": "Hora de início",
     "calendar.endDate": "Data de fim",

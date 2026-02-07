@@ -4,9 +4,10 @@
 
 /**
  * Get a list of common IANA timezone identifiers
+ * Automatically includes the user's local timezone if not in the curated list
  */
 export function getCommonTimezones(): string[] {
-    return [
+    const commonTzs = [
         'UTC',
         'America/New_York',
         'America/Chicago',
@@ -20,6 +21,7 @@ export function getCommonTimezones(): string[] {
         'America/Sao_Paulo',
         'America/Argentina/Buenos_Aires',
         'Europe/London',
+        'Europe/Lisbon',
         'Europe/Paris',
         'Europe/Berlin',
         'Europe/Madrid',
@@ -58,6 +60,15 @@ export function getCommonTimezones(): string[] {
         'Pacific/Auckland',
         'Pacific/Fiji',
     ];
+
+    // Always include user's local timezone if not in list
+    const localTz = getLocalTimezone();
+    if (!commonTzs.includes(localTz)) {
+        commonTzs.push(localTz);
+        commonTzs.sort();
+    }
+
+    return commonTzs;
 }
 
 /**
