@@ -269,7 +269,14 @@ export default function WeekView({
     return (
         <Box sx={{ overflowX: 'auto' }}>
             <Box
-                sx={{ display: 'grid', gridTemplateColumns: '60px repeat(7, 1fr)', minWidth: 800 }}
+                sx={{
+                    display: 'grid',
+                    gridTemplateColumns: {
+                        xs: '40px repeat(7, minmax(80px, 1fr))',
+                        sm: '60px repeat(7, 1fr)'
+                    },
+                    minWidth: { xs: 600, sm: 800 }
+                }}
             >
                 {/* Header row with weekdays */}
                 <Box sx={{ borderRight: 1, borderColor: 'divider' }} />

@@ -113,7 +113,7 @@ function ParticipantSection({
                                     {t('calendar.required')}
                                 </Typography>
                             }
-                            sx={{ minWidth: 110, mr: 0 }}
+                            sx={{ minWidth: { xs: 90, sm: 110 }, mr: 0 }}
                         />
                         {row.email && (
                             <IconButton
@@ -196,7 +196,7 @@ function RecurrenceSection({ recurrence, onRecurrenceChange }: RecurrenceSection
                                     interval: parseInt(e.currentTarget.value) || 1,
                                 })
                             }
-                            sx={{ width: 80 }}
+                            sx={{ width: { xs: '100%', sm: 80 } }}
                         />
                         <Typography variant="body2">
                             {recurrence.frequency === 'daily' && t('calendar.intervalDays')}
@@ -265,7 +265,7 @@ function RecurrenceSection({ recurrence, onRecurrenceChange }: RecurrenceSection
                                     endDate: undefined,
                                 })
                             }
-                            sx={{ width: 120 }}
+                            sx={{ width: { xs: '100%', sm: 120 } }}
                         >
                             <MenuItem value="never">
                                 {t('calendar.recurrence.endType.never')}

@@ -4,6 +4,8 @@ import Stack from '@mui/material/Stack';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import Collapse from '@mui/material/Collapse';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import { useTheme } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
 import MinimizeIcon from '@mui/icons-material/Minimize';
 import MaximizeIcon from '@mui/icons-material/Maximize';
@@ -32,6 +34,9 @@ export default function ExpandableWindow({
     headerActions,
 }: ExpandableWindowProps) {
     const [mode, setMode] = useState<WindowMode>('normal');
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+    const isTablet = useMediaQuery(theme.breakpoints.down('md'));
 
     // Toggle between normal and maximized
     const toggleMaximize = () => {
@@ -51,9 +56,22 @@ export default function ExpandableWindow({
             flexDirection: 'column' as const,
             zIndex: 1300,
             overflow: 'hidden',
-            borderRadius: mode === 'maximized' ? 0 : 2,
+            borderRadius: mode === 'maximized' || isMobile ? 0 : 2,
             transition: 'all 0.3s ease-in-out',
         };
+
+        // On mobile, always use full screen
+        if (isMobile) {
+            return {
+                ...baseStyles,
+                top: 0,
+                left: 0,
+                bottom: 0,
+                right: 0,
+                width: '100vw',
+                height: '100vh',
+            };
+        }
 
         switch (mode) {
             case 'minimized':
@@ -61,7 +79,7 @@ export default function ExpandableWindow({
                     ...baseStyles,
                     bottom: 16,
                     right: 16,
-                    width: defaultWidth,
+                    width: isTablet ? '90vw' : Math.min(defaultWidth, window.innerWidth - 32),
                     height: 'auto',
                 };
             case 'maximized':
@@ -78,8 +96,8 @@ export default function ExpandableWindow({
                     ...baseStyles,
                     bottom: 16,
                     right: 16,
-                    width: defaultWidth,
-                    height: defaultHeight,
+                    width: isTablet ? '90vw' : Math.min(defaultWidth, window.innerWidth - 32),
+                    height: isTablet ? '80vh' : Math.min(defaultHeight, window.innerHeight - 32),
                 };
         }
     };
@@ -156,9 +174,11 @@ export default function ExpandableWindow({
                 <Stack
                     sx={{
                         height:
-                            mode === 'maximized'
+                            mode === 'maximized' || isMobile
                                 ? 'calc(100vh - 48px)'
-                                : `${defaultHeight - 48}px`,
+                                : isTablet
+                                    ? 'calc(80vh - 48px)'
+                                    : `${defaultHeight - 48}px`,
                         display: 'flex',
                         flexDirection: 'column',
                         overflow: 'auto',

@@ -41,8 +41,6 @@ import {
 } from '../data/message';
 import AttachmentsSection from './AttachmentsSection';
 
-const COMPOSER_WIDTH = 600;
-const COMPOSER_HEIGHT = 600;
 const AUTO_SAVE_DELAY = 3000; // 3 seconds
 
 // Utility functions
@@ -242,7 +240,7 @@ function BodyEditor({ body, onBodyChange, onImageUpload, inlineImages }: BodyEdi
         const end = textarea.selectionEnd;
         const selectedText = body.substring(start, end);
         const textToInsert = selectedText || placeholder;
-        
+
         const newText = body.substring(0, start) + before + textToInsert + after + body.substring(end);
         onBodyChange(newText);
 
@@ -260,17 +258,17 @@ function BodyEditor({ body, onBodyChange, onImageUpload, inlineImages }: BodyEdi
 
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
-        
+
         // Find the start of the current line
         const lineStart = body.lastIndexOf('\n', start - 1) + 1;
         const lineEnd = body.indexOf('\n', end);
         const actualLineEnd = lineEnd === -1 ? body.length : lineEnd;
-        
+
         const selectedLines = body.substring(lineStart, actualLineEnd);
         const lines = selectedLines.split('\n');
-        
+
         const formattedLines = lines.map(line => prefix + line).join('\n');
-        
+
         const newText = body.substring(0, lineStart) + formattedLines + body.substring(actualLineEnd);
         onBodyChange(newText);
 
@@ -854,8 +852,8 @@ export default function ComposeEmail({
         <ExpandableWindow
             title={t('compose.newMessage')}
             onClose={handleClose}
-            defaultWidth={COMPOSER_WIDTH}
-            defaultHeight={COMPOSER_HEIGHT}
+            defaultWidth={600}
+            defaultHeight={600}
             headerActions={headerActions}
         >
             <Stack display="flex" flexDirection="column" height="100%">

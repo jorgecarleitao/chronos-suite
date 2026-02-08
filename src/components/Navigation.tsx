@@ -86,11 +86,8 @@ export default function Navigation({ mode, toggleTheme }: NavigationProps) {
     const drawerContent = (
         <Box onClick={handleDrawerToggle} textAlign="center">
             <Box
-                component={Link}
-                to="/"
                 marginY={2}
                 display="block"
-                style={{ textDecoration: 'none' }}
             >
                 <img src="/icon.svg" alt="Logo" style={{ height: '40px', width: '40px' }} />
             </Box>
@@ -126,9 +123,7 @@ export default function Navigation({ mode, toggleTheme }: NavigationProps) {
                         </IconButton>
                     )}
                     <Box
-                        component={Link}
-                        to="/"
-                        style={{ textDecoration: 'none', marginRight: '16px', display: 'flex', alignItems: 'center' }}
+                        style={{ marginRight: '16px', display: 'flex', alignItems: 'center' }}
                     >
                         <img src="/icon.svg" alt="Logo" style={{ height: '40px', width: '40px' }} />
                     </Box>

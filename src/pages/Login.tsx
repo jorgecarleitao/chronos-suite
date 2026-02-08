@@ -32,7 +32,7 @@ export default function Login() {
     return (
         <Container maxWidth="sm">
             <Stack marginTop={8} alignItems="center">
-                <Card style={{ minWidth: 400 }}>
+                <Card sx={{ minWidth: { xs: '100%', sm: 400 }, width: '100%' }}>
                     <CardContent>
                         <Typography variant="h5" component="h1" gutterBottom align="center">
                             {t('login.pleaseLogIn')}
